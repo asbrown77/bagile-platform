@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>dotnet-Bagile.EtlService-0ff16cc1-1c0d-4fe5-8812-0ce042799af6</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Bagile.Application\Bagile.Application.csproj" />
+    <ProjectReference Include="..\Bagile.Infrastructure\Bagile.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

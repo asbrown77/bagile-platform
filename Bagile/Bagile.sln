@@ -1,0 +1,67 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36518.9 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bagile.Domain", "Bagile.Domain\Bagile.Domain.csproj", "{4DF1140A-D58F-49DD-AA7A-F1A97BB966C9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bagile.Application", "Bagile.Application\Bagile.Application.csproj", "{AC68A9B2-7F10-4AA6-8098-61DF98D2E466}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bagile.Infrastructure", "Bagile.Infrastructure\Bagile.Infrastructure.csproj", "{2734EBF5-9A3C-4E09-B85D-69340CD5C96F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bagile.api", "Bagile.api\Bagile.api.csproj", "{A20C2EEE-0B3C-4580-B298-A2D208B05E2C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bagile.EtlService", "Bagile.EtlService\Bagile.EtlService.csproj", "{0E5B8B74-CAB7-45FE-BCE8-35D3D0962A88}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bagile.UnitTests", "Bagile.Tests\Bagile.UnitTests.csproj", "{544F8E37-C5A1-41E5-8C9A-F9D1399D8A1B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bagile.IntergrationTests", "Bagile.IntergrationTests\Bagile.IntergrationTests.csproj", "{E0177055-74A2-4FDF-A279-7A1552E22D8B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4DF1140A-D58F-49DD-AA7A-F1A97BB966C9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4DF1140A-D58F-49DD-AA7A-F1A97BB966C9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4DF1140A-D58F-49DD-AA7A-F1A97BB966C9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4DF1140A-D58F-49DD-AA7A-F1A97BB966C9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AC68A9B2-7F10-4AA6-8098-61DF98D2E466}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AC68A9B2-7F10-4AA6-8098-61DF98D2E466}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AC68A9B2-7F10-4AA6-8098-61DF98D2E466}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AC68A9B2-7F10-4AA6-8098-61DF98D2E466}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2734EBF5-9A3C-4E09-B85D-69340CD5C96F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2734EBF5-9A3C-4E09-B85D-69340CD5C96F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2734EBF5-9A3C-4E09-B85D-69340CD5C96F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2734EBF5-9A3C-4E09-B85D-69340CD5C96F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A20C2EEE-0B3C-4580-B298-A2D208B05E2C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A20C2EEE-0B3C-4580-B298-A2D208B05E2C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A20C2EEE-0B3C-4580-B298-A2D208B05E2C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A20C2EEE-0B3C-4580-B298-A2D208B05E2C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0E5B8B74-CAB7-45FE-BCE8-35D3D0962A88}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0E5B8B74-CAB7-45FE-BCE8-35D3D0962A88}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0E5B8B74-CAB7-45FE-BCE8-35D3D0962A88}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0E5B8B74-CAB7-45FE-BCE8-35D3D0962A88}.Release|Any CPU.Build.0 = Release|Any CPU
+		{544F8E37-C5A1-41E5-8C9A-F9D1399D8A1B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{544F8E37-C5A1-41E5-8C9A-F9D1399D8A1B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{544F8E37-C5A1-41E5-8C9A-F9D1399D8A1B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{544F8E37-C5A1-41E5-8C9A-F9D1399D8A1B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E0177055-74A2-4FDF-A279-7A1552E22D8B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E0177055-74A2-4FDF-A279-7A1552E22D8B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E0177055-74A2-4FDF-A279-7A1552E22D8B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E0177055-74A2-4FDF-A279-7A1552E22D8B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{544F8E37-C5A1-41E5-8C9A-F9D1399D8A1B} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{E0177055-74A2-4FDF-A279-7A1552E22D8B} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {4B834565-C004-4D9D-ACBB-71FD12E98EFB}
+	EndGlobalSection
+EndGlobal
