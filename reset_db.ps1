@@ -19,8 +19,13 @@ if (-not $containerStatus) {
 # Export password so psql inside container can use it
 $env:PGPASSWORD = $Password
 
+Write-Host "Terminating active connections to $DbName..."
+docker exec -e PGPASSWORD=$Password $ContainerName psql -U $User -d postgres -c `
+  "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '$DbName' AND pid <> pg_backend_pid();"
+
 Write-Host "Dropping database $DbName if exists..."
 docker exec -e PGPASSWORD=$Password $ContainerName psql -U $User -d postgres -c "DROP DATABASE IF EXISTS $DbName;"
+
 
 Write-Host "Creating database $DbName..."
 docker exec -e PGPASSWORD=$Password $ContainerName psql -U $User -d postgres -c "CREATE DATABASE $DbName;"
