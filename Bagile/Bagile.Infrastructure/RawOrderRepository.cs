@@ -18,7 +18,7 @@ namespace Bagile.Infrastructure
         {
             const string sql = @"
                 INSERT INTO raw_orders (source, payload)
-                VALUES (@Source, @Payload)
+                VALUES (@Source, CAST(@Payload AS jsonb))
                 RETURNING id;
             ";
 
