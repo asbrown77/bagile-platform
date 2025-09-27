@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Bagile.Application\Bagile.Application.csproj" />
+    <ProjectReference Include="..\Bagile.Domain\Bagile.Domain.csproj" />
+  </ItemGroup>
+
+</Project>
