@@ -15,24 +15,24 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bagile.EtlService", "Bagile
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bagile.UnitTests", "Bagile.Tests\Bagile.UnitTests.csproj", "{544F8E37-C5A1-41E5-8C9A-F9D1399D8A1B}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bagile.IntergrationTests", "Bagile.IntergrationTests\Bagile.IntergrationTests.csproj", "{E0177055-74A2-4FDF-A279-7A1552E22D8B}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "db", "db", "{9657352C-467B-43D0-988E-673241ECB436}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "migrations", "migrations", "{6386DA17-2EA1-4415-A7D2-976B084871CC}"
 	ProjectSection(SolutionItems) = preProject
-		db\migrations\001_schema.sql = db\migrations\001_schema.sql
-		db\migrations\010_raw_orders.sql = db\migrations\010_raw_orders.sql
-		db\migrations\020_students.sql = db\migrations\020_students.sql
-		db\migrations\021_courses.sql = db\migrations\021_courses.sql
-		db\migrations\022_orders.sql = db\migrations\022_orders.sql
-		db\migrations\023_order_lines.sql = db\migrations\023_order_lines.sql
-		db\migrations\024_enrolments.sql = db\migrations\024_enrolments.sql
-		db\migrations\025_order_events.sql = db\migrations\025_order_events.sql
-		db\migrations\999_drop_all.sql = db\migrations\999_drop_all.sql
+		..\db\migrations\001_schema.sql = ..\db\migrations\001_schema.sql
+		..\db\migrations\010_raw_orders.sql = ..\db\migrations\010_raw_orders.sql
+		..\db\migrations\020_students.sql = ..\db\migrations\020_students.sql
+		..\db\migrations\021_courses.sql = ..\db\migrations\021_courses.sql
+		..\db\migrations\022_orders.sql = ..\db\migrations\022_orders.sql
+		..\db\migrations\023_order_lines.sql = ..\db\migrations\023_order_lines.sql
+		..\db\migrations\024_enrolments.sql = ..\db\migrations\024_enrolments.sql
+		..\db\migrations\025_order_events.sql = ..\db\migrations\025_order_events.sql
+		..\db\migrations\999_drop_all.sql = ..\db\migrations\999_drop_all.sql
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bagile.UnitTests", "Tests\Bagile.UnitTests\Bagile.UnitTests.csproj", "{F4ABEAC4-6F69-AC7B-201A-CB73C58AA415}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bagile.IntergrationTests", "Tests\Bagile.IntergrationTests\Bagile.IntergrationTests.csproj", "{982F78EF-F69A-F07E-3250-C05EE5BA64DC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -60,22 +60,22 @@ Global
 		{0E5B8B74-CAB7-45FE-BCE8-35D3D0962A88}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0E5B8B74-CAB7-45FE-BCE8-35D3D0962A88}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0E5B8B74-CAB7-45FE-BCE8-35D3D0962A88}.Release|Any CPU.Build.0 = Release|Any CPU
-		{544F8E37-C5A1-41E5-8C9A-F9D1399D8A1B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{544F8E37-C5A1-41E5-8C9A-F9D1399D8A1B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{544F8E37-C5A1-41E5-8C9A-F9D1399D8A1B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{544F8E37-C5A1-41E5-8C9A-F9D1399D8A1B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E0177055-74A2-4FDF-A279-7A1552E22D8B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E0177055-74A2-4FDF-A279-7A1552E22D8B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E0177055-74A2-4FDF-A279-7A1552E22D8B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E0177055-74A2-4FDF-A279-7A1552E22D8B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F4ABEAC4-6F69-AC7B-201A-CB73C58AA415}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F4ABEAC4-6F69-AC7B-201A-CB73C58AA415}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F4ABEAC4-6F69-AC7B-201A-CB73C58AA415}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F4ABEAC4-6F69-AC7B-201A-CB73C58AA415}.Release|Any CPU.Build.0 = Release|Any CPU
+		{982F78EF-F69A-F07E-3250-C05EE5BA64DC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{982F78EF-F69A-F07E-3250-C05EE5BA64DC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{982F78EF-F69A-F07E-3250-C05EE5BA64DC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{982F78EF-F69A-F07E-3250-C05EE5BA64DC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{544F8E37-C5A1-41E5-8C9A-F9D1399D8A1B} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
-		{E0177055-74A2-4FDF-A279-7A1552E22D8B} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{6386DA17-2EA1-4415-A7D2-976B084871CC} = {9657352C-467B-43D0-988E-673241ECB436}
+		{F4ABEAC4-6F69-AC7B-201A-CB73C58AA415} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{982F78EF-F69A-F07E-3250-C05EE5BA64DC} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {4B834565-C004-4D9D-ACBB-71FD12E98EFB}
