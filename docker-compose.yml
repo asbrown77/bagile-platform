@@ -1,0 +1,15 @@
+services:
+  postgres:
+    container_name: bagile-db
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - bagile-data:/var/lib/postgresql/data
+      - ./db/migrations:/scripts
+
+volumes:
+  bagile-data:

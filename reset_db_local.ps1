@@ -1,5 +1,5 @@
 param(
-    [string]$Host = "localhost",
+    [string]$DbHost = "localhost",
     [string]$Port = "5432",
     [string]$User = "postgres",
     [string]$Password = "postgres",
@@ -10,15 +10,18 @@ param(
 $env:PGPASSWORD = $Password
 
 Write-Host "Dropping database $DbName if exists..."
-psql -h $Host -p $Port -U $User -d postgres -c "DROP DATABASE IF EXISTS $DbName;"
+psql -h $DbHost -p $Port -U $User -d postgres -c "DROP DATABASE IF EXISTS $DbName;"
 
 Write-Host "Creating database $DbName..."
-psql -h $Host -p $Port -U $User -d postgres -c "CREATE DATABASE $DbName;"
+psql -h $DbHost -p $Port -U $User -d postgres -c "CREATE DATABASE $DbName;"
 
 Write-Host "Applying migrations..."
 Get-ChildItem -Path "db/migrations" -Filter *.sql | Sort-Object Name | ForEach-Object {
-    Write-Host "Running $($_.Name)..."
-    psql -h $Host -p $Port -U $User -d $DbName -f $_.FullName
+    if ($_.Name -ne "999_drop_all.sql") {
+        Write-Host "Running $($_.Name)..."
+        psql -h $DbHost -p $Port -U $User -d $DbName -f $_.FullName
+    }
 }
+
 
 Write-Host "Database reset complete."
