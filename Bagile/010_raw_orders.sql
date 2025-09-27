@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS bagile.raw_orders (
+  id BIGSERIAL PRIMARY KEY,
+  source TEXT NOT NULL,
+  payload JSONB NOT NULL,
+  imported_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  processed_at TIMESTAMPTZ NULL
+);
