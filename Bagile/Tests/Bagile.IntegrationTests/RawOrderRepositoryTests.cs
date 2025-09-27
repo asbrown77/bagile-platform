@@ -19,12 +19,13 @@ namespace Bagile.IntegrationTests
         [Test]
         public async Task Insert_And_GetAll_Should_Work()
         {
-            var id = await _repo.InsertAsync("woo", "{ \"orderId\": 123 }");
+            var id = await _repo.InsertAsync("woo", "123", "{ \"orderId\": 123 }");
 
             id.Should().BeGreaterThan(0);
 
             var orders = await _repo.GetAllAsync();
             orders.Should().NotBeEmpty();
+            orders.Should().ContainSingle(o => o.ExternalId == "123" && o.Source == "woo");
         }
     }
 }
