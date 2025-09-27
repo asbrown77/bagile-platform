@@ -19,19 +19,19 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bagile.UnitTests", "Bagile.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bagile.IntergrationTests", "Bagile.IntergrationTests\Bagile.IntergrationTests.csproj", "{E0177055-74A2-4FDF-A279-7A1552E22D8B}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "db", "db", "{52F1561B-9C6D-4184-8D98-CF85E42AF673}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "db", "db", "{9657352C-467B-43D0-988E-673241ECB436}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "migrations", "migrations", "{FF855BD7-EAF9-46F0-A250-5F084B853379}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "migrations", "migrations", "{6386DA17-2EA1-4415-A7D2-976B084871CC}"
 	ProjectSection(SolutionItems) = preProject
-		001_schema.sql = 001_schema.sql
-		010_raw_orders.sql = 010_raw_orders.sql
-		020_students.sql = 020_students.sql
-		021_courses.sql = 021_courses.sql
-		022_orders.sql = 022_orders.sql
-		023_order_lines.sql = 023_order_lines.sql
-		024_enrolments.sql = 024_enrolments.sql
-		025_order_events.sql = 025_order_events.sql
-		999_drop_all.sql = 999_drop_all.sql
+		db\migrations\001_schema.sql = db\migrations\001_schema.sql
+		db\migrations\010_raw_orders.sql = db\migrations\010_raw_orders.sql
+		db\migrations\020_students.sql = db\migrations\020_students.sql
+		db\migrations\021_courses.sql = db\migrations\021_courses.sql
+		db\migrations\022_orders.sql = db\migrations\022_orders.sql
+		db\migrations\023_order_lines.sql = db\migrations\023_order_lines.sql
+		db\migrations\024_enrolments.sql = db\migrations\024_enrolments.sql
+		db\migrations\025_order_events.sql = db\migrations\025_order_events.sql
+		db\migrations\999_drop_all.sql = db\migrations\999_drop_all.sql
 	EndProjectSection
 EndProject
 Global
@@ -75,7 +75,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{544F8E37-C5A1-41E5-8C9A-F9D1399D8A1B} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{E0177055-74A2-4FDF-A279-7A1552E22D8B} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
-		{FF855BD7-EAF9-46F0-A250-5F084B853379} = {52F1561B-9C6D-4184-8D98-CF85E42AF673}
+		{6386DA17-2EA1-4415-A7D2-976B084871CC} = {9657352C-467B-43D0-988E-673241ECB436}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {4B834565-C004-4D9D-ACBB-71FD12E98EFB}
