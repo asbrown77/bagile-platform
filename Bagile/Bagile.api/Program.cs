@@ -1,8 +1,6 @@
 using Bagile.Infrastructure;
 using Microsoft.Extensions.Logging;
-using System.Text;
 using System.Text.Json;
-using System.Security.Cryptography;
 using Bagile.Api;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -38,24 +36,5 @@ app.MapGet("/debug/raw_orders", async (IRawOrderRepository repo) =>
 app.MapHealthChecks("/health");
 
 app.Run();
-
-static bool ValidateSignature(byte[] bodyBytes, string secret, string providedSig)
-{
-    try
-    {
-        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
-        var computed = hmac.ComputeHash(bodyBytes);
-        var computedBase64 = Convert.ToBase64String(computed);
-
-        var prov = Convert.FromBase64String(providedSig);
-        var comp = Convert.FromBase64String(computedBase64);
-
-        return prov.Length == comp.Length && CryptographicOperations.FixedTimeEquals(prov, comp);
-    }
-    catch
-    {
-        return false;
-    }
-}
 
 public partial class Program { }
