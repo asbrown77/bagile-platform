@@ -31,7 +31,7 @@ Write-Host "Creating database $DbName..."
 docker exec -e PGPASSWORD=$Password $ContainerName psql -U $User -d postgres -c "CREATE DATABASE $DbName;"
 
 Write-Host "Applying migrations..."
-Get-ChildItem -Path "db/migrations" -Filter *.sql |
+Get-ChildItem -Path "migrations" -Filter *.sql |
     Where-Object { $_.Name -ne "999_drop_all.sql" -and $_.Attributes -notmatch "Hidden" } |
     Sort-Object Name | ForEach-Object {
         Write-Host "Running $($_.Name)..."
