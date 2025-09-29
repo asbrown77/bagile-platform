@@ -15,19 +15,16 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bagile.EtlService", "Bagile
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "db", "db", "{9657352C-467B-43D0-988E-673241ECB436}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "migrations", "migrations", "{6386DA17-2EA1-4415-A7D2-976B084871CC}"
 	ProjectSection(SolutionItems) = preProject
-		..\db\migrations\001_schema.sql = ..\db\migrations\001_schema.sql
-		..\db\migrations\010_raw_orders.sql = ..\db\migrations\010_raw_orders.sql
-		..\db\migrations\020_students.sql = ..\db\migrations\020_students.sql
-		..\db\migrations\021_courses.sql = ..\db\migrations\021_courses.sql
-		..\db\migrations\022_orders.sql = ..\db\migrations\022_orders.sql
-		..\db\migrations\023_order_lines.sql = ..\db\migrations\023_order_lines.sql
-		..\db\migrations\024_enrolments.sql = ..\db\migrations\024_enrolments.sql
-		..\db\migrations\025_order_events.sql = ..\db\migrations\025_order_events.sql
-		..\db\migrations\999_drop_all.sql = ..\db\migrations\999_drop_all.sql
+		..\migrations\001_schema.sql = ..\migrations\001_schema.sql
+		..\migrations\010_raw_orders.sql = ..\migrations\010_raw_orders.sql
+		..\migrations\020_students.sql = ..\migrations\020_students.sql
+		..\migrations\021_courses.sql = ..\migrations\021_courses.sql
+		..\migrations\022_orders.sql = ..\migrations\022_orders.sql
+		..\migrations\023_order_lines.sql = ..\migrations\023_order_lines.sql
+		..\migrations\024_enrolments.sql = ..\migrations\024_enrolments.sql
+		..\migrations\025_order_events.sql = ..\migrations\025_order_events.sql
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bagile.UnitTests", "Tests\Bagile.UnitTests\Bagile.UnitTests.csproj", "{F4ABEAC4-6F69-AC7B-201A-CB73C58AA415}"
@@ -78,7 +75,6 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{6386DA17-2EA1-4415-A7D2-976B084871CC} = {9657352C-467B-43D0-988E-673241ECB436}
 		{F4ABEAC4-6F69-AC7B-201A-CB73C58AA415} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{0BE98FC5-922F-8AE3-612C-B6068378087E} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection

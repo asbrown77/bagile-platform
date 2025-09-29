@@ -17,14 +17,11 @@ namespace Bagile.Infrastructure
         public async Task<int> UpsertAsync(string source, string externalId, string payload)
         {
             const string sql = @"
-        INSERT INTO bagile.raw_orders (source, external_id, payload)
-        VALUES (@Source, @ExternalId, CAST(@Payload AS jsonb))
-        ON CONFLICT (source, external_id)
-        DO UPDATE SET 
-            payload = EXCLUDED.payload,
-            imported_at = NOW()
-        RETURNING id;
-    ";
+                INSERT INTO bagile.raw_orders (source, external_id, payload)
+                VALUES (@Source, @ExternalId, CAST(@Payload AS jsonb))
+                ON CONFLICT (source, external_id, payload) DO NOTHING
+                RETURNING id;
+                    ";
 
             await using var conn = new NpgsqlConnection(_connectionString);
             return await conn.ExecuteScalarAsync<int>(sql, new { Source = source, ExternalId = externalId, Payload = payload });
