@@ -36,7 +36,7 @@ public class WooWebhookHandler
 
         try
         {
-            var id = await _repo.UpsertAsync("woo", externalId, body);
+            var id = await _repo.InsertAsync("woo", externalId, body);
             _logger.LogInformation("Stored raw order externalId={ExternalId}, id={Id}", externalId, id);
             return Results.Ok(new { id });
         }
