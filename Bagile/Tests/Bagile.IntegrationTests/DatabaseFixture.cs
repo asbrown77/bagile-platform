@@ -31,8 +31,10 @@ public class DatabaseFixture
         await using var conn = new NpgsqlConnection(ConnectionString);
         await conn.OpenAsync();
 
-        // Path to your SQL files (relative to solution root or test project)
-        var scriptsPath = Path.Combine(TestContext.CurrentContext.TestDirectory, "../../../../Database");
+        var repoRoot = Path.GetFullPath(
+            Path.Combine(TestContext.CurrentContext.TestDirectory, "../../../../../..")
+        );
+        var scriptsPath = Path.Combine(repoRoot, "migrations");
 
         foreach (var file in Directory.GetFiles(scriptsPath, "*.sql").OrderBy(f => f))
         {
