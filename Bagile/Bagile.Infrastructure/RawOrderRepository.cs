@@ -14,7 +14,7 @@ namespace Bagile.Infrastructure
             _connectionString = connectionString;
         }
 
-        public async Task<int> UpsertAsync(string source, string externalId, string payload)
+        public async Task<int> InsertAsync(string source, string externalId, string payload)
         {
             const string sql = @"
                 INSERT INTO bagile.raw_orders (source, external_id, payload)

@@ -21,12 +21,13 @@ namespace Bagile.IntegrationTests
         {
             var repo = new RawOrderRepository(DatabaseFixture.ConnectionString);
 
-            var id1 = await repo.UpsertAsync("woo", "123", "{ \"id\": 123 }");
-            var id2 = await repo.UpsertAsync("woo", "123", "{ \"id\": 123, \"changed\": true }");
+            var id1 = await repo.InsertAsync("woo", "123", "{ \"id\": 123 }");
+            var id2 = await repo.InsertAsync("woo", "123", "{ \"id\": 123, \"changed\": true }");
 
-            Assert.That(id1, Is.EqualTo(id2)); // same row updated
+            Assert.That(id2, Is.GreaterThan(id1));
 
             var all = await repo.GetAllAsync();
+            Assert.That(all.Count(), Is.EqualTo(2));
             Assert.That(all, Has.Some.Matches<RawOrder>(r =>
                 r.ExternalId == "123" && r.Payload.Contains("changed")));
         }
