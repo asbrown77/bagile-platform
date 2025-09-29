@@ -4,9 +4,9 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <PreserveCompilationContext>true</PreserveCompilationContext>
   </PropertyGroup>
 
   <ItemGroup>
@@ -25,6 +25,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Bagile.Infrastructure\Bagile.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Bagile.Api\Bagile.Api.csproj" />
   </ItemGroup>
 
   <ItemGroup>

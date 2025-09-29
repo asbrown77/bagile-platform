@@ -2,17 +2,12 @@ using Bagile.Infrastructure;
 using Dapper;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.VisualStudio.TestPlatform.TestHost;
 using Npgsql;
-using NUnit.Framework;
 using System.Net;
-using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Text;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
+using System.Text.Json;
 
 namespace Bagile.IntegrationTests
 {
@@ -84,7 +79,8 @@ namespace Bagile.IntegrationTests
                 "SELECT * FROM bagile.raw_orders WHERE external_id = @id", new { id = "123" })).ToList();
 
             rows.Should().ContainSingle();
-            rows[0].Payload.Should().Contain("\"foo\":\"bar\"");
+            using var doc = JsonDocument.Parse(rows[0].Payload);
+            doc.RootElement.GetProperty("foo").GetString().Should().Be("bar");
         }
 
         [Test]

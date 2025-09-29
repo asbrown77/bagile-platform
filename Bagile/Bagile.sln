@@ -9,7 +9,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bagile.Application", "Bagil
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bagile.Infrastructure", "Bagile.Infrastructure\Bagile.Infrastructure.csproj", "{2734EBF5-9A3C-4E09-B85D-69340CD5C96F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bagile.api", "Bagile.api\Bagile.api.csproj", "{A20C2EEE-0B3C-4580-B298-A2D208B05E2C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bagile.Api", "Bagile.api\Bagile.Api.csproj", "{A20C2EEE-0B3C-4580-B298-A2D208B05E2C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bagile.EtlService", "Bagile.EtlService\Bagile.EtlService.csproj", "{0E5B8B74-CAB7-45FE-BCE8-35D3D0962A88}"
 EndProject
