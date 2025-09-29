@@ -16,16 +16,19 @@ namespace Bagile.IntegrationTests
             _repo = new RawOrderRepository(connStr);
         }
 
-        [Test]
-        public async Task Insert_And_GetAll_Should_Work()
+        [Test, Category("Integration")]
+        public async Task UpsertAsync_ShouldInsertAndUpdate()
         {
-            var id = await _repo.InsertAsync("woo", "123", "{ \"orderId\": 123 }");
+            var repo = new RawOrderRepository(DatabaseFixture.ConnectionString);
 
-            id.Should().BeGreaterThan(0);
+            var id1 = await repo.UpsertAsync("woo", "123", "{ \"id\": 123 }");
+            var id2 = await repo.UpsertAsync("woo", "123", "{ \"id\": 123, \"changed\": true }");
 
-            var orders = await _repo.GetAllAsync();
-            orders.Should().NotBeEmpty();
-            orders.Should().ContainSingle(o => o.ExternalId == "123" && o.Source == "woo");
+            Assert.That(id1, Is.EqualTo(id2)); // same row updated
+
+            var all = await repo.GetAllAsync();
+            Assert.That(all, Has.Some.Matches<RawOrder>(r =>
+                r.ExternalId == "123" && r.Payload.Contains("changed")));
         }
     }
 }
