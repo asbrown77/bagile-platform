@@ -4,17 +4,22 @@ on:
   workflow_dispatch:
   push:
     tags:
-      - 'etl-v*'   # Deploy only on tags like etl-v1.0.0
+      - 'v*'
 
 jobs:
   deploy-etl:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download ETL artifact
-        uses: actions/download-artifact@v4
+      - name: Download ETL Release Asset
+        uses: robinraju/release-downloader@v1
         with:
-          name: bagile-etl
+          repository: ${{ github.repository }}
+          tag: ${{ github.ref_name }}
+          fileName: "bagile-etl.zip"
+
+      - name: Unzip package
+        run: unzip bagile-etl.zip -d bagile-etl
 
       - name: Azure login
         uses: azure/login@v2

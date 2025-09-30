@@ -4,17 +4,22 @@ on:
   workflow_dispatch:
   push:
     tags:
-      - 'api-v*'   # Only deploy on tags like api-v1.0.0
+      - 'v*'
 
 jobs:
   deploy-api:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download API artifact
-        uses: actions/download-artifact@v4
+      - name: Download API Release Asset
+        uses: robinraju/release-downloader@v1
         with:
-          name: bagile-api
+          repository: ${{ github.repository }}
+          tag: ${{ github.ref_name }}
+          fileName: "bagile-api.zip"
+
+      - name: Unzip package
+        run: unzip bagile-api.zip -d bagile-api
 
       - name: Azure login
         uses: azure/login@v2
