@@ -1,0 +1,63 @@
+name: CI/CD - API
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*'
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore Bagile/Bagile.sln
+
+      - name: Build
+        run: dotnet build Bagile/Bagile.sln --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test Bagile/Bagile.sln --configuration Release --no-build
+
+      - name: Publish API
+        run: dotnet publish Bagile/Bagile.Api/Bagile.Api.csproj -c Release -o output-api
+
+      - name: Upload API artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bagile-api
+          path: output-api
+
+  deploy-api:
+    needs: build-test
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Download API artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: bagile-api
+          path: bagile-api
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy API to Azure
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: bagile-api
+          package: bagile-api
