@@ -1,12 +1,18 @@
 using Bagile.EtlService;
 using Bagile.Infrastructure;
+using Microsoft.Extensions.Logging;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-// register worker
+// Configure logging (so Azure shows your messages)
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.SetMinimumLevel(LogLevel.Information);
+
+// Register worker
 builder.Services.AddHostedService<Worker>();
 
-// register repo
+// Register repository
 builder.Services.AddSingleton<IRawOrderRepository>(sp =>
 {
     var config = sp.GetRequiredService<IConfiguration>();
@@ -17,4 +23,9 @@ builder.Services.AddSingleton<IRawOrderRepository>(sp =>
 });
 
 var host = builder.Build();
+
+// Startup log
+var logger = host.Services.GetRequiredService<ILogger<Program>>();
+logger.LogInformation("ETL Service starting up...");
+
 host.Run();
