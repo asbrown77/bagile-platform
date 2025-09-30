@@ -1,4 +1,4 @@
-name: Build & Test
+name: CI - Build & Test
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   pull_request:
 
 jobs:
-  build-and-test:
+  build-test:
     runs-on: ubuntu-latest
 
     steps: 
@@ -27,11 +27,22 @@ jobs:
       - name: Test
         run: dotnet test Bagile/Bagile.sln --configuration Release --no-build
 
-      - name: Publish output
-        run: dotnet publish Bagile/Bagile.Api/Bagile.Api.csproj -c Release -o output
+      # Publish API project
+      - name: Publish API
+        run: dotnet publish Bagile/Bagile.Api/Bagile.Api.csproj -c Release -o output-api
 
-      - name: Upload artifact
+      - name: Upload API artifact
         uses: actions/upload-artifact@v4
         with:
           name: bagile-api
-          path: output
+          path: output-api
+
+      # Publish ETL project
+      - name: Publish ETL
+        run: dotnet publish Bagile/Bagile.EtlService/Bagile.EtlService.csproj -c Release -o output-etl
+
+      - name: Upload ETL artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bagile-etl
+          path: output-etl
