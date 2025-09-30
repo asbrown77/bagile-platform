@@ -16,8 +16,13 @@ builder.Services.AddSingleton<IRawOrderRepository>(sp =>
 
 builder.Services.AddHealthChecks();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+// Enable Swagger in all environments
+app.UseSwagger();
+app.UseSwaggerUI();
 
 // Add Kestrel binding for Azure
 app.Urls.Clear();
