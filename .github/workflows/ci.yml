@@ -9,7 +9,7 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
-    steps:
+    steps: 
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -26,3 +26,12 @@ jobs:
 
       - name: Test
         run: dotnet test Bagile/Bagile.sln --configuration Release --no-build
+
+      - name: Publish output
+        run: dotnet publish Bagile/Bagile.Api/Bagile.Api.csproj -c Release -o output
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bagile-api
+          path: output
