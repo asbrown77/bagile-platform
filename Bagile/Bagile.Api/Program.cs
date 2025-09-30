@@ -53,6 +53,6 @@ app.MapGet("/debug/raw_orders", async (IRawOrderRepository repo) =>
 
 app.MapHealthChecks("/health");
 
-app.Run();fix 
+app.Run();
 
 public partial class Program { }
