@@ -2,7 +2,7 @@ param(
     [string]$ContainerName = "bagile-db",
     [string]$User = "postgres",
     [string]$Password = "postgres",
-    [string]$DbName = "bagile"
+    [string]$DbName = "bagile_dev"
 )
 
 # Ensure container is running
