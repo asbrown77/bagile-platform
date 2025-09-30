@@ -2,6 +2,8 @@ using Bagile.EtlService;
 using Bagile.Infrastructure;
 using Microsoft.Extensions.Logging;
 
+Console.WriteLine("=== ETL Program started ===");
+
 var builder = Host.CreateApplicationBuilder(args);
 
 // Configure logging (so Azure shows your messages)
