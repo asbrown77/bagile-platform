@@ -17,7 +17,8 @@ jobs:
           repository: ${{ github.repository }}
           tag: ${{ github.ref_name }}
           fileName: "bagile-etl.zip"
-
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
       - name: Unzip package
         run: unzip bagile-etl.zip -d bagile-etl
 
