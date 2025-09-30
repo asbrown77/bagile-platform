@@ -31,18 +31,21 @@ jobs:
       - name: Publish API
         run: dotnet publish Bagile/Bagile.Api/Bagile.Api.csproj -c Release -o output-api
 
-      - name: Upload API artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: bagile-api
-          path: output-api
+      - name: Zip API
+        run: zip -r bagile-api.zip output-api
 
       # Publish ETL project
       - name: Publish ETL
         run: dotnet publish Bagile/Bagile.EtlService/Bagile.EtlService.csproj -c Release -o output-etl
 
-      - name: Upload ETL artifact
-        uses: actions/upload-artifact@v4
+      - name: Zip ETL
+        run: zip -r bagile-etl.zip output-etl
+
+      # Upload both to GitHub Release (only on tag push)
+      - name: Upload to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
         with:
-          name: bagile-etl
-          path: output-etl
+          files: |
+            bagile-api.zip
+            bagile-etl.zip
