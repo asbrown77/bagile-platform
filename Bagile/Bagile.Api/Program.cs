@@ -19,6 +19,17 @@ builder.Services.AddEndpointsApiExplorer();
 
 var app = builder.Build();
 
+// Add Kestrel binding for Azure
+app.Urls.Clear();
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+app.Urls.Add($"http://0.0.0.0:{port}");
+
+// Log what we’re listening on
+var logger = app.Logger;
+logger.LogInformation("Starting API. Environment URLs: {Urls}", string.Join(", ", app.Urls));
+logger.LogInformation("ASPNETCORE_URLS = {AspUrls}", Environment.GetEnvironmentVariable("ASPNETCORE_URLS"));
+logger.LogInformation("PORT = {Port}", port);
+
 // WooCommerce webhook endpoint
 app.MapPost("/webhooks/woo", async (HttpContext http, IConfiguration config, IRawOrderRepository repo, ILogger<Program> logger) =>
 {
