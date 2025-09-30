@@ -1,28 +1,28 @@
-name: Deploy API
+name: Deploy ETL
 
 on:
   workflow_dispatch:
   push:
     tags:
-      - 'api-v*'   # Only deploy on tags like api-v1.0.0
+      - 'etl-v*'   # Deploy only on tags like etl-v1.0.0
 
 jobs:
-  deploy-api:
+  deploy-etl:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download API artifact
+      - name: Download ETL artifact
         uses: actions/download-artifact@v4
         with:
-          name: bagile-api
+          name: bagile-etl
 
       - name: Azure login
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy API to Azure
+      - name: Deploy ETL to Azure
         uses: azure/webapps-deploy@v3
         with:
-          app-name: bagile-api
-          package: bagile-api
+          app-name: bagile-etl
+          package: bagile-etl
