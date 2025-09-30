@@ -19,10 +19,10 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore bagile/bagile.sln
+        run: dotnet restore Bagile/Bagile.sln
 
       - name: Build
-        run: dotnet build bagile/bagile.sln --configuration Release --no-restore
+        run: dotnet build Bagile/Bagile.sln --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test bagile/bagile.sln --configuration Release --no-build
+        run: dotnet test Bagile/Bagile.sln --configuration Release --no-build
