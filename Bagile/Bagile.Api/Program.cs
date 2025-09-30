@@ -51,6 +51,8 @@ app.MapGet("/debug/raw_orders", async (IRawOrderRepository repo) =>
 
 app.MapHealthChecks("/health");
 
+app.MapGet("/", () => Results.Redirect("/swagger"));
+
 app.Run();
 
 public partial class Program { }
