@@ -35,6 +35,8 @@ logger.LogInformation("Starting API. Environment URLs: {Urls}", string.Join(", "
 logger.LogInformation("ASPNETCORE_URLS = {AspUrls}", Environment.GetEnvironmentVariable("ASPNETCORE_URLS"));
 logger.LogInformation("PORT = {Port}", port);
 
+app.MapGet("/", () => Results.Redirect("/swagger"));
+
 // WooCommerce webhook endpoint
 app.MapPost("/webhooks/woo", async (HttpContext http, IConfiguration config, IRawOrderRepository repo, ILogger<Program> logger) =>
 {
@@ -51,8 +53,6 @@ app.MapGet("/debug/raw_orders", async (IRawOrderRepository repo) =>
 
 app.MapHealthChecks("/health");
 
-app.MapGet("/", () => Results.Redirect("/swagger"));
-
-app.Run();
+app.Run();fix 
 
 public partial class Program { }
