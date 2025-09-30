@@ -12,12 +12,10 @@ jobs:
 
     steps:
       - name: Download API Release Asset
-        uses: robinraju/release-downloader@v1
-        with:
-          repository: ${{ github.repository }}
-          tag: ${{ github.ref_name }}
-          fileName: "bagile-api.zip"
-          token: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download ${{ github.ref_name }} \
+            --repo ${{ github.repository }} \
+            --pattern "bagile-api.zip"
 
       - name: Unzip package
         run: unzip bagile-api.zip -d bagile-api
