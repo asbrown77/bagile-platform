@@ -38,24 +38,36 @@ logger.LogInformation("PORT = {Port}", port);
 
 app.MapGet("/", () => Results.Redirect("/swagger"));
 
-// DB test endpoint
+// DB test endpoint with host logging
 app.MapGet("/dbtest", async (IConfiguration config) =>
 {
     var connStr = config.GetConnectionString("DefaultConnection")
                   ?? config.GetValue<string>("ConnectionStrings:DefaultConnection")
                   ?? config.GetValue<string>("DbConnectionString");
 
+    if (string.IsNullOrWhiteSpace(connStr))
+        return Results.Problem("❌ No connection string found in configuration.");
+
     try
     {
+        // Parse connection string to extract host
+        var builder = new NpgsqlConnectionStringBuilder(connStr);
+        var host = builder.Host;
+
         using var conn = new NpgsqlConnection(connStr);
         await conn.OpenAsync();
-        return Results.Ok("✅ API can connect to Postgres!");
+
+        return Results.Ok($"✅ Connected successfully to {host}");
     }
     catch (Exception ex)
     {
-        return Results.Problem($"❌ Failed: {ex.Message}");
+        var builder = new NpgsqlConnectionStringBuilder(connStr);
+        var host = builder.Host;
+
+        return Results.Problem($"❌ Failed. Host: {host} | Error: {ex.Message}");
     }
 });
+
 
 // WooCommerce webhook endpoint
 app.MapPost("/webhooks/woo", async (HttpContext http, IConfiguration config, IRawOrderRepository repo, ILogger<Program> logger) =>
