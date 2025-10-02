@@ -1,7 +1,8 @@
-using Bagile.Infrastructure;
+﻿using Bagile.Infrastructure;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using Bagile.Api;
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,13 +30,32 @@ app.Urls.Clear();
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 app.Urls.Add($"http://0.0.0.0:{port}");
 
-// Log what we�re listening on
+// Log what we’re listening on
 var logger = app.Logger;
 logger.LogInformation("Starting API. Environment URLs: {Urls}", string.Join(", ", app.Urls));
 logger.LogInformation("ASPNETCORE_URLS = {AspUrls}", Environment.GetEnvironmentVariable("ASPNETCORE_URLS"));
 logger.LogInformation("PORT = {Port}", port);
 
 app.MapGet("/", () => Results.Redirect("/swagger"));
+
+// DB test endpoint
+app.MapGet("/dbtest", async (IConfiguration config) =>
+{
+    var connStr = config.GetConnectionString("DefaultConnection")
+                  ?? config.GetValue<string>("ConnectionStrings:DefaultConnection")
+                  ?? config.GetValue<string>("DbConnectionString");
+
+    try
+    {
+        using var conn = new NpgsqlConnection(connStr);
+        await conn.OpenAsync();
+        return Results.Ok("✅ API can connect to Postgres!");
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"❌ Failed: {ex.Message}");
+    }
+});
 
 // WooCommerce webhook endpoint
 app.MapPost("/webhooks/woo", async (HttpContext http, IConfiguration config, IRawOrderRepository repo, ILogger<Program> logger) =>

@@ -12,7 +12,7 @@ namespace Bagile.IntegrationTests
         [SetUp]
         public void Setup()
         {
-            var connStr = "Host=localhost;Port=5432;Database=bagile;Username=postgres;Password=postgres;SearchPath=bagile";
+            var connStr = "Server=localhost;Port=5432;Database=bagile;Username=postgres;Password=postgres;SearchPath=bagile";
             _repo = new RawOrderRepository(connStr);
         }
 
