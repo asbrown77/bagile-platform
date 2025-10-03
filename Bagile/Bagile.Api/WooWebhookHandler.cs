@@ -1,10 +1,9 @@
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
 namespace Bagile.Api;
 
-public class WooWebhookSourceHandler : IWebhookSourceHandler
+public class WooWebhookHandler : IWebhookHandler
 {
     public string Source => "woo";
 
@@ -12,50 +11,33 @@ public class WooWebhookSourceHandler : IWebhookSourceHandler
     {
         var secret = config.GetValue<string>("WooCommerce:WebhookSecret");
         if (string.IsNullOrEmpty(secret))
-            return true; // no secret configured, skip check
-
-        if (!http.Request.Headers.TryGetValue("X-WC-Webhook-Signature", out var sigHeaders) || string.IsNullOrEmpty(sigHeaders))
-        {
-            logger.LogWarning("Missing WooCommerce webhook signature header");
             return false;
-        }
 
-        var providedSig = sigHeaders.ToString();
-        try
-        {
-            using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
-            var computed = hmac.ComputeHash(bodyBytes);
-            var computedBase64 = Convert.ToBase64String(computed);
-
-            var prov = Convert.FromBase64String(providedSig);
-            var comp = Convert.FromBase64String(computedBase64);
-
-            return prov.Length == comp.Length && CryptographicOperations.FixedTimeEquals(prov, comp);
-        }
-        catch
-        {
+        if (!http.Request.Headers.TryGetValue("X-WC-Webhook-Signature", out var header))
             return false;
-        }
+
+        using var hmac = new System.Security.Cryptography.HMACSHA256(Encoding.UTF8.GetBytes(secret));
+        var computed = Convert.ToBase64String(hmac.ComputeHash(bodyBytes));
+
+        return string.Equals(header, computed, StringComparison.Ordinal);
     }
 
-    public bool TryExtractExternalId(string body, out string externalId, ILogger logger)
+    public bool TryPreparePayload(string body, HttpContext http, IConfiguration config, ILogger logger,
+        out string externalId, out string payloadJson)
     {
         try
         {
             using var doc = JsonDocument.Parse(body);
-            externalId = doc.RootElement.GetProperty("id").GetRawText().Trim('"');
+            externalId = doc.RootElement.GetProperty("id").GetInt32().ToString();
+            payloadJson = body;
             return true;
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Invalid WooCommerce payload: missing or malformed 'id'");
-            externalId = "";
+            logger.LogWarning(ex, "Invalid Woo payload");
+            externalId = string.Empty;
+            payloadJson = string.Empty;
             return false;
         }
-    }
-
-    public string? ExtractEventType(HttpContext http, string body)
-    {
-        return http.Request.Headers["X-WC-Webhook-Topic"].FirstOrDefault();
     }
 }
