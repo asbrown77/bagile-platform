@@ -25,6 +25,15 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "migrations", "migrations", 
 		..\migrations\023_order_lines.sql = ..\migrations\023_order_lines.sql
 		..\migrations\024_enrolments.sql = ..\migrations\024_enrolments.sql
 		..\migrations\025_order_events.sql = ..\migrations\025_order_events.sql
+		..\migrations\V1__init_schema.sql = ..\migrations\V1__init_schema.sql
+		..\migrations\V2__raw_orders.sql = ..\migrations\V2__raw_orders.sql
+		..\migrations\V3__students.sql = ..\migrations\V3__students.sql
+		..\migrations\V4__courses.sql = ..\migrations\V4__courses.sql
+		..\migrations\V5__orders.sql = ..\migrations\V5__orders.sql
+		..\migrations\V6__order_lines.sql = ..\migrations\V6__order_lines.sql
+		..\migrations\V7__enrolments.sql = ..\migrations\V7__enrolments.sql
+		..\migrations\V8__order_events.sql = ..\migrations\V8__order_events.sql
+		..\migrations\V9__Fix_raw_orders.sql = ..\migrations\V9__Fix_raw_orders.sql
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bagile.UnitTests", "Tests\Bagile.UnitTests\Bagile.UnitTests.csproj", "{F4ABEAC4-6F69-AC7B-201A-CB73C58AA415}"
