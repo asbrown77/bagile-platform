@@ -30,7 +30,7 @@ public class WebhookHandler
             if (source.Equals("xero", StringComparison.OrdinalIgnoreCase))
             {
                 _logger.LogInformation("Received Xero webhook handshake");
-                return Results.Ok();
+                return Results.Text("[]", "application/json"); 
             }
 
             return Results.BadRequest("Empty payload");
