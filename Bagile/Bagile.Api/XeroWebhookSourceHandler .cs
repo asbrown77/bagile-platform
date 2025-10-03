@@ -27,6 +27,10 @@ public class XeroWebhookSourceHandler : IWebhookSourceHandler
         var computed = hmac.ComputeHash(bodyBytes);
         var computedBase64 = Convert.ToBase64String(computed);
 
+        logger.LogInformation("Xero Signature Debug: Provided={Provided}, Computed={Computed}, Body={Body}",
+            http.Request.Headers["x-xero-signature"], computedBase64, Encoding.UTF8.GetString(bodyBytes));
+
+
         var providedSig = header.ToString();
         return CryptographicOperations.FixedTimeEquals(
             Convert.FromBase64String(providedSig),
