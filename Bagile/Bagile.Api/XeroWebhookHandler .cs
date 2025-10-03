@@ -4,29 +4,42 @@ using System.Text.Json;
 
 namespace Bagile.Api;
 
-public class XeroWebhookandler : IWebhookHandler
+public class XeroWebhookHandler : IWebhookHandler
 {
     public string Source => "xero";
 
     public bool IsValidSignature(HttpContext http, byte[] bodyBytes, IConfiguration config, ILogger logger)
     {
         var secret = config.GetValue<string>("Xero:WebhookSecret");
-        if (string.IsNullOrEmpty(secret)) return false;
+        if (string.IsNullOrEmpty(secret))
+        {
+            logger.LogWarning("No Xero webhook secret configured");
+            return false;
+        }
 
-        if (!http.Request.Headers.TryGetValue("x-xero-signature", out var header)) return false;
+        if (!http.Request.Headers.TryGetValue("x-xero-signature", out var header))
+        {
+            logger.LogWarning("Missing x-xero-signature header");
+            return false;
+        }
 
         using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
         var computedBase64 = Convert.ToBase64String(hmac.ComputeHash(bodyBytes));
 
-        return CryptographicOperations.FixedTimeEquals(
+        var valid = CryptographicOperations.FixedTimeEquals(
             Convert.FromBase64String(header!),
             Convert.FromBase64String(computedBase64)
         );
+
+        logger.LogInformation("Xero webhook signature validation result: {Valid}", valid);
+        return valid;
     }
 
     public bool TryPreparePayload(string body, HttpContext http, IConfiguration config, ILogger logger,
         out string externalId, out string payloadJson, out string eventType)
     {
+        logger.LogInformation("Received Xero webhook payload: {Payload}", body);
+
         externalId = string.Empty;
         payloadJson = string.Empty;
         eventType = string.Empty;
