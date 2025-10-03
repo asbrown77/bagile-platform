@@ -59,17 +59,26 @@ public class XeroWebhookHandler : IWebhookHandler
             using var doc = JsonDocument.Parse(body);
             var events = doc.RootElement.GetProperty("events");
 
-            if (events.ValueKind != JsonValueKind.Array || events.GetArrayLength() == 0)
+            // Handshake payload → no events, but still valid
+            if (events.ValueKind == JsonValueKind.Array && events.GetArrayLength() == 0)
             {
-                logger.LogInformation("Xero webhook contained no events, skipping.");
-                return false;
+                logger.LogInformation("Xero webhook handshake received (no events). Acknowledging.");
+                // Important: return true so caller replies 200 OK
+                return true;
             }
 
+            if (events.GetArrayLength() == 0)
+            {
+                logger.LogInformation("Xero webhook events array empty, ignoring.");
+                return true; // also treat as acknowledged
+            }
+
+            // Normal event
             var evt = events[0];
             externalId = evt.GetProperty("resourceId").GetString() ?? "";
             var category = evt.GetProperty("eventCategory").GetString() ?? "UNKNOWN";
             var type = evt.GetProperty("eventType").GetString() ?? "UNKNOWN";
-            eventType = $"{category}.{type}".ToLower(); // e.g. "invoice.update"
+            eventType = $"{category}.{type}".ToLower();
 
             logger.LogInformation("Parsed Xero webhook: ExternalId={ExternalId}, EventType={EventType}",
                 externalId, eventType);
@@ -80,10 +89,11 @@ public class XeroWebhookHandler : IWebhookHandler
             return false;
         }
 
-        // Only fetch invoice if we have an externalId
+        // If it was just a handshake, externalId will be empty → no DB insert
         if (string.IsNullOrEmpty(externalId))
-            return false;
+            return true;
 
+        // Fetch invoice for real events
         var invoice = _xeroClient.GetInvoiceByIdAsync(externalId).GetAwaiter().GetResult();
 
         if (invoice != null && XeroInvoiceFilter.ShouldCapture(invoice))
@@ -97,7 +107,9 @@ public class XeroWebhookHandler : IWebhookHandler
             "Ignored Xero invoice {Id} (Type={Type}, Status={Status}, Ref={Ref})",
             invoice?.InvoiceID, invoice?.Type, invoice?.Status, invoice?.Reference);
 
-        return false;
+        return true; // still return true so API answers 200 OK
     }
+
+
 
 }
