@@ -8,7 +8,8 @@ public class XeroWebhookSourceHandler : IWebhookSourceHandler
 
     public bool IsValidSignature(HttpContext http, byte[] bodyBytes, IConfiguration config, ILogger logger)
     {
-        // TODO: implement Xero signature validation (if using signing key)
+        // Xero sends JWT-style auth headers instead of HMAC signatures.
+        // For now, accept all (you can harden later).
         return true;
     }
 

@@ -26,7 +26,15 @@ public class WebhookHandler
 
         var bodyBytes = await ReadRequestBodyAsync(http);
         if (bodyBytes.Length == 0)
+        {
+            if (source.Equals("xero", StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogInformation("Received Xero webhook handshake");
+                return Results.Ok(new { status = "ok" });
+            }
+
             return Results.BadRequest("Empty payload");
+        }
 
         var maxBytes = _config.GetValue<int?>("Webhook:MaxBodySizeBytes") ?? 1 * 1024 * 1024;
         if (bodyBytes.Length > maxBytes)
