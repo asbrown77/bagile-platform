@@ -1,5 +1,6 @@
 ﻿using Bagile.Infrastructure;
 using System.Text;
+using System.Text.Json;
 
 namespace Bagile.Api;
 
@@ -36,10 +37,23 @@ public class WebhookHandler
         var body = Encoding.UTF8.GetString(bodyBytes);
 
         // Special case: Xero handshake has events: []
-        if (source.Equals("xero", StringComparison.OrdinalIgnoreCase) && body.Contains("\"events\": []"))
+        if (source.Equals("xero", StringComparison.OrdinalIgnoreCase))
         {
-            _logger.LogInformation("Xero handshake validated successfully");
-            return Results.Ok(); // 200 empty body
+            try
+            {
+                using var doc = JsonDocument.Parse(body);
+                if (doc.RootElement.TryGetProperty("events", out var events) && events.GetArrayLength() == 0)
+                {
+                    _logger.LogInformation("Xero handshake validated successfully");
+                    // Must return 200 with an empty JSON array for handshake
+                    return Results.Text("[]", "application/json");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to parse Xero handshake body");
+                return Results.BadRequest("Invalid handshake payload");
+            }
         }
 
         // Normal event flow
