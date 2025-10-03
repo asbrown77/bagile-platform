@@ -15,6 +15,12 @@ builder.Services.AddSingleton<IRawOrderRepository>(sp =>
     return new RawOrderRepository(connStr!);
 });
 
+// Register source-specific webhook handlers
+builder.Services.AddSingleton<IWebhookSourceHandler, WooWebhookSourceHandler>();
+builder.Services.AddSingleton<IWebhookSourceHandler, XeroWebhookSourceHandler>();
+builder.Services.AddSingleton<WebhookHandler>();
+
+
 builder.Services.AddHealthChecks();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -68,12 +74,10 @@ app.MapGet("/dbtest", async (IConfiguration config) =>
     }
 });
 
-
-// WooCommerce webhook endpoint
-app.MapPost("/webhooks/woo", async (HttpContext http, IConfiguration config, IRawOrderRepository repo, ILogger<Program> logger) =>
+// Generic webhook endpoint
+app.MapPost("/webhooks/{source}", async (HttpContext http, string source, WebhookHandler handler) =>
 {
-    var handler = new WooWebhookHandler(config, repo, logger);
-    return await handler.HandleAsync(http);
+    return await handler.HandleAsync(http, source);
 });
 
 // Debug endpoint
