@@ -36,7 +36,7 @@ public class WebhookHandler
         if (handler.TryPreparePayload(body, http, _config, _logger,
                 out var externalId, out var payloadJson, out var eventType))
         {
-            await _repo.InsertAsync(eventType, externalId, payloadJson);
+            await _repo.InsertAsync(source, externalId, payloadJson, eventType);
             return Results.Ok();
         }
 
