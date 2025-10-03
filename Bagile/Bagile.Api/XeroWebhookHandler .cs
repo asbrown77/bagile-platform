@@ -25,10 +25,11 @@ public class XeroWebhookandler : IWebhookHandler
     }
 
     public bool TryPreparePayload(string body, HttpContext http, IConfiguration config, ILogger logger,
-        out string externalId, out string payloadJson)
+        out string externalId, out string payloadJson, out string eventType)
     {
         externalId = string.Empty;
         payloadJson = string.Empty;
+        eventType = "INVOICE";
 
         try
         {

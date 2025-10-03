@@ -23,13 +23,14 @@ public class WooWebhookHandler : IWebhookHandler
     }
 
     public bool TryPreparePayload(string body, HttpContext http, IConfiguration config, ILogger logger,
-        out string externalId, out string payloadJson)
+        out string externalId, out string payloadJson, out string eventType)
     {
         try
         {
             using var doc = JsonDocument.Parse(body);
             externalId = doc.RootElement.GetProperty("id").GetInt32().ToString();
             payloadJson = body;
+            eventType = "ORDER";  // Woo webhooks are always orders
             return true;
         }
         catch (Exception ex)
@@ -37,7 +38,9 @@ public class WooWebhookHandler : IWebhookHandler
             logger.LogWarning(ex, "Invalid Woo payload");
             externalId = string.Empty;
             payloadJson = string.Empty;
+            eventType = string.Empty;
             return false;
         }
     }
+
 }
