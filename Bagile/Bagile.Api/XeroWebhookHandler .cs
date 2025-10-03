@@ -40,13 +40,13 @@ public class XeroWebhookHandler : IWebhookHandler
     }
 
     public bool TryPreparePayload(
-        string body,
-        HttpContext http,
-        IConfiguration config,
-        ILogger logger,
-        out string externalId,
-        out string payloadJson,
-        out string eventType)
+     string body,
+     HttpContext http,
+     IConfiguration config,
+     ILogger logger,
+     out string externalId,
+     out string payloadJson,
+     out string eventType)
     {
         logger.LogInformation("Received Xero webhook payload: {Payload}", body);
 
@@ -57,8 +57,15 @@ public class XeroWebhookHandler : IWebhookHandler
         try
         {
             using var doc = JsonDocument.Parse(body);
-            var evt = doc.RootElement.GetProperty("events")[0];
+            var events = doc.RootElement.GetProperty("events");
 
+            if (events.ValueKind != JsonValueKind.Array || events.GetArrayLength() == 0)
+            {
+                logger.LogInformation("Xero webhook contained no events, skipping.");
+                return false;
+            }
+
+            var evt = events[0];
             externalId = evt.GetProperty("resourceId").GetString() ?? "";
             var category = evt.GetProperty("eventCategory").GetString() ?? "UNKNOWN";
             var type = evt.GetProperty("eventType").GetString() ?? "UNKNOWN";
@@ -73,7 +80,10 @@ public class XeroWebhookHandler : IWebhookHandler
             return false;
         }
 
-        // Call Xero API through injected client
+        // Only fetch invoice if we have an externalId
+        if (string.IsNullOrEmpty(externalId))
+            return false;
+
         var invoice = _xeroClient.GetInvoiceByIdAsync(externalId).GetAwaiter().GetResult();
 
         if (invoice != null && XeroInvoiceFilter.ShouldCapture(invoice))
@@ -89,4 +99,5 @@ public class XeroWebhookHandler : IWebhookHandler
 
         return false;
     }
+
 }
