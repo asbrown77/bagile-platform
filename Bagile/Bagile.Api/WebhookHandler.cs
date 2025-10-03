@@ -29,8 +29,16 @@ public class WebhookHandler
         {
             if (source.Equals("xero", StringComparison.OrdinalIgnoreCase))
             {
-                _logger.LogInformation("Received Xero webhook handshake");
-                return Results.Text("[]", "application/json"); 
+                // Handshake phase
+                var signatureValid = handler.IsValidSignature(http, bodyBytes, _config, _logger);
+                if (!signatureValid)
+                {
+                    _logger.LogWarning("Xero handshake signature validation failed");
+                    return Results.Unauthorized();
+                }
+
+                _logger.LogInformation("Responding to Xero webhook handshake");
+                return Results.Text("[]", "application/json");
             }
 
             return Results.BadRequest("Empty payload");
