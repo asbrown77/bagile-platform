@@ -11,20 +11,35 @@ public class WooWebhookHandler : IWebhookHandler
     {
         var secret = config.GetValue<string>("WooCommerce:WebhookSecret");
         if (string.IsNullOrEmpty(secret))
+        {
+            logger.LogWarning("Woo secret not configured");
             return false;
+        }
 
         if (!http.Request.Headers.TryGetValue("X-WC-Webhook-Signature", out var header))
+        {
+            logger.LogWarning("Missing X-WC-Webhook-Signature header");
             return false;
+        }
 
         using var hmac = new System.Security.Cryptography.HMACSHA256(Encoding.UTF8.GetBytes(secret));
         var computed = Convert.ToBase64String(hmac.ComputeHash(bodyBytes));
 
-        return string.Equals(header, computed, StringComparison.Ordinal);
+        var valid = string.Equals(header, computed, StringComparison.Ordinal);
+        logger.LogInformation("Woo webhook signature validation result: {Valid}", valid);
+
+        return valid;
     }
 
     public bool TryPreparePayload(string body, HttpContext http, IConfiguration config, ILogger logger,
         out string externalId, out string payloadJson, out string eventType)
     {
+        logger.LogInformation("Received Woo webhook payload: {Payload}", body);
+
+        externalId = string.Empty;
+        payloadJson = string.Empty;
+        eventType = string.Empty;
+
         try
         {
             using var doc = JsonDocument.Parse(body);
@@ -35,16 +50,15 @@ public class WooWebhookHandler : IWebhookHandler
                 ? evt.ToString()
                 : "order.unknown";
 
+            logger.LogInformation("Woo webhook parsed: ExternalId={ExternalId}, EventType={EventType}",
+                externalId, eventType);
+
             return true;
         }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Invalid Woo payload");
-            externalId = string.Empty;
-            payloadJson = string.Empty;
-            eventType = string.Empty;
             return false;
         }
     }
-
 }
