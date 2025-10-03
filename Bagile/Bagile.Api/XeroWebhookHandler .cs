@@ -6,6 +6,13 @@ namespace Bagile.Api;
 
 public class XeroWebhookHandler : IWebhookHandler
 {
+    private readonly IXeroApiClient _xeroClient;
+
+    public XeroWebhookHandler(IXeroApiClient xeroClient)
+    {
+        _xeroClient = xeroClient;
+    }
+
     public string Source => "xero";
 
     public bool IsValidSignature(HttpContext http, byte[] bodyBytes, IConfiguration config, ILogger logger)
@@ -26,17 +33,20 @@ public class XeroWebhookHandler : IWebhookHandler
         using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
         var computedBase64 = Convert.ToBase64String(hmac.ComputeHash(bodyBytes));
 
-        var valid = CryptographicOperations.FixedTimeEquals(
-            Convert.FromBase64String(header!),
-            Convert.FromBase64String(computedBase64)
-        );
-
+        var valid = string.Equals(header, computedBase64, StringComparison.Ordinal);
         logger.LogInformation("Xero webhook signature validation result: {Valid}", valid);
+
         return valid;
     }
 
-    public bool TryPreparePayload(string body, HttpContext http, IConfiguration config, ILogger logger,
-        out string externalId, out string payloadJson, out string eventType)
+    public bool TryPreparePayload(
+        string body,
+        HttpContext http,
+        IConfiguration config,
+        ILogger logger,
+        out string externalId,
+        out string payloadJson,
+        out string eventType)
     {
         logger.LogInformation("Received Xero webhook payload: {Payload}", body);
 
@@ -53,6 +63,9 @@ public class XeroWebhookHandler : IWebhookHandler
             var category = evt.GetProperty("eventCategory").GetString() ?? "UNKNOWN";
             var type = evt.GetProperty("eventType").GetString() ?? "UNKNOWN";
             eventType = $"{category}.{type}".ToLower(); // e.g. "invoice.update"
+
+            logger.LogInformation("Parsed Xero webhook: ExternalId={ExternalId}, EventType={EventType}",
+                externalId, eventType);
         }
         catch (Exception ex)
         {
@@ -60,16 +73,18 @@ public class XeroWebhookHandler : IWebhookHandler
             return false;
         }
 
-        var xeroClient = new XeroApiClient(config, logger);
-        var invoice = xeroClient.GetInvoiceByIdAsync(externalId).GetAwaiter().GetResult();
+        // Call Xero API through injected client
+        var invoice = _xeroClient.GetInvoiceByIdAsync(externalId).GetAwaiter().GetResult();
 
-        if (XeroInvoiceFilter.ShouldCapture(invoice))
+        if (invoice != null && XeroInvoiceFilter.ShouldCapture(invoice))
         {
             payloadJson = JsonSerializer.Serialize(invoice);
+            logger.LogInformation("Captured Xero invoice {Id}", invoice.InvoiceID);
             return true;
         }
 
-        logger.LogInformation("Ignored Xero invoice {Id} (Type={Type}, Status={Status}, Ref={Ref})",
+        logger.LogInformation(
+            "Ignored Xero invoice {Id} (Type={Type}, Status={Status}, Ref={Ref})",
             invoice?.InvoiceID, invoice?.Type, invoice?.Status, invoice?.Reference);
 
         return false;

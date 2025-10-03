@@ -1,12 +1,17 @@
 ﻿using System.Text.Json;
 
-public class XeroApiClient
+public interface IXeroApiClient
+{
+    Task<XeroInvoice?> GetInvoiceByIdAsync(string invoiceId);
+}
+
+public class XeroApiClient : IXeroApiClient
 {
     private readonly IConfiguration _config;
-    private readonly ILogger _logger;
+    private readonly ILogger<XeroApiClient> _logger;
     private readonly HttpClient _httpClient;
 
-    public XeroApiClient(IConfiguration config, ILogger logger)
+    public XeroApiClient(IConfiguration config, ILogger<XeroApiClient> logger)
     {
         _config = config;
         _logger = logger;

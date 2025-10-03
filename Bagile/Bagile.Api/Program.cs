@@ -20,6 +20,7 @@ builder.Services.AddSingleton<IWebhookHandler, WooWebhookHandler>();
 builder.Services.AddSingleton<IWebhookHandler, XeroWebhookHandler>();
 builder.Services.AddSingleton<WebhookHandler>();
 
+builder.Services.AddScoped<IXeroApiClient, XeroApiClient>();
 
 builder.Services.AddHealthChecks();
 builder.Services.AddEndpointsApiExplorer();
