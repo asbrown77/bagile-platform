@@ -33,9 +33,10 @@ public class WebhookHandler
 
         var body = Encoding.UTF8.GetString(bodyBytes);
 
-        if (handler.TryPreparePayload(body, http, _config, _logger, out var externalId, out var payloadJson))
+        if (handler.TryPreparePayload(body, http, _config, _logger,
+                out var externalId, out var payloadJson, out var eventType))
         {
-            await _repo.InsertAsync(source, externalId, payloadJson);
+            await _repo.InsertAsync(eventType, externalId, payloadJson);
             return Results.Ok();
         }
 
