@@ -14,17 +14,22 @@ namespace Bagile.Infrastructure
             _connectionString = connectionString;
         }
 
-        public async Task<int> InsertAsync(string source, string externalId, string payload)
+        public async Task<int> InsertAsync(string source, string externalId, string payload, string? eventType = null)
         {
             const string sql = @"
-                INSERT INTO bagile.raw_orders (source, external_id, payload)
-                VALUES (@Source, @ExternalId, CAST(@Payload AS jsonb))
-                ON CONFLICT (source, external_id, payload) DO NOTHING
+                INSERT INTO bagile.raw_orders (source, external_id, payload, event_type, received_at)
+                VALUES (@Source, @ExternalId, CAST(@Payload AS jsonb), @EventType, NOW())
                 RETURNING id;
-                    ";
+            ";
 
             await using var conn = new NpgsqlConnection(_connectionString);
-            return await conn.ExecuteScalarAsync<int>(sql, new { Source = source, ExternalId = externalId, Payload = payload });
+            return await conn.ExecuteScalarAsync<int>(sql, new
+            {
+                Source = source,
+                ExternalId = externalId,
+                Payload = payload,
+                EventType = eventType
+            });
         }
 
         public async Task<IEnumerable<RawOrder>> GetAllAsync()
@@ -34,9 +39,10 @@ namespace Bagile.Infrastructure
                        source,
                        external_id AS ExternalId,
                        payload::text AS Payload,
-                       imported_at AS ImportedAt
+                       received_at AS ReceivedAt,
+                       event_type AS EventType
                 FROM bagile.raw_orders
-                ORDER BY imported_at DESC;
+                ORDER BY received_at DESC;
             ";
 
             await using var conn = new NpgsqlConnection(_connectionString);

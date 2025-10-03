@@ -34,18 +34,25 @@ public class WooWebhookHandler
         if (!TryExtractExternalId(body, out var externalId, out var badRequestResult))
             return badRequestResult;
 
+        // Get Woo event type from headers (e.g. "order.created")
+        var eventType = http.Request.Headers["X-WC-Webhook-Topic"].FirstOrDefault();
+
         try
         {
-            var id = await _repo.InsertAsync("woo", externalId, body);
-            _logger.LogInformation("Stored raw order externalId={ExternalId}, id={Id}", externalId, id);
+            var id = await _repo.InsertAsync("woo", externalId, body, eventType);
+            _logger.LogInformation("Stored raw order externalId={ExternalId}, eventType={EventType}, id={Id}",
+                externalId, eventType, id);
+
             return Results.Ok(new { id });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to upsert raw order externalId={ExternalId}", externalId);
+            _logger.LogError(ex, "Failed to insert raw order externalId={ExternalId}, eventType={EventType}",
+                externalId, eventType);
             return Results.Problem("Failed to persist payload", statusCode: StatusCodes.Status500InternalServerError);
         }
     }
+
 
     private async Task<byte[]> ReadRequestBodyAsync(HttpContext http)
     {
