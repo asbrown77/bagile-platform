@@ -16,8 +16,8 @@ builder.Services.AddSingleton<IRawOrderRepository>(sp =>
 });
 
 // Register source-specific webhook handlers
-builder.Services.AddSingleton<IWebhookSourceHandler, WooWebhookSourceHandler>();
-builder.Services.AddSingleton<IWebhookSourceHandler, XeroWebhookSourceHandler>();
+builder.Services.AddSingleton<IWebhookHandler, WooWebhookHandler>();
+builder.Services.AddSingleton<IWebhookHandler, XeroWebhookandler>();
 builder.Services.AddSingleton<WebhookHandler>();
 
 
