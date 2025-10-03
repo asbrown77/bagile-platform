@@ -1,4 +1,6 @@
-﻿using System.Text.Json;
+﻿using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 
 namespace Bagile.Api;
 
@@ -8,9 +10,23 @@ public class XeroWebhookSourceHandler : IWebhookSourceHandler
 
     public bool IsValidSignature(HttpContext http, byte[] bodyBytes, IConfiguration config, ILogger logger)
     {
-        // Xero sends JWT-style auth headers instead of HMAC signatures.
-        // For now, accept all (you can harden later).
         return true;
+
+        var secret = config.GetValue<string>("Xero:WebhookSecret");
+        if (string.IsNullOrEmpty(secret))
+            return true; // skip if no secret configured
+
+        if (!http.Request.Headers.TryGetValue("x-xero-signature", out var header))
+            return false;
+
+        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
+        var computed = hmac.ComputeHash(bodyBytes);
+        var computedBase64 = Convert.ToBase64String(computed);
+
+        return CryptographicOperations.FixedTimeEquals(
+            Convert.FromBase64String(header),
+            Convert.FromBase64String(computedBase64)
+        );
     }
 
     public bool TryExtractExternalId(string body, out string externalId, ILogger logger)
