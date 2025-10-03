@@ -30,7 +30,11 @@ public class WooWebhookHandler : IWebhookHandler
             using var doc = JsonDocument.Parse(body);
             externalId = doc.RootElement.GetProperty("id").GetInt32().ToString();
             payloadJson = body;
-            eventType = "ORDER";  // Woo webhooks are always orders
+
+            eventType = http.Request.Headers.TryGetValue("X-WC-Webhook-Event", out var evt)
+                ? evt.ToString()
+                : "order.unknown";
+
             return true;
         }
         catch (Exception ex)

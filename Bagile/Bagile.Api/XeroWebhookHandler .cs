@@ -29,12 +29,17 @@ public class XeroWebhookandler : IWebhookHandler
     {
         externalId = string.Empty;
         payloadJson = string.Empty;
-        eventType = "INVOICE";
+        eventType = string.Empty;
 
         try
         {
             using var doc = JsonDocument.Parse(body);
-            externalId = doc.RootElement.GetProperty("events")[0].GetProperty("resourceId").GetString() ?? "";
+            var evt = doc.RootElement.GetProperty("events")[0];
+
+            externalId = evt.GetProperty("resourceId").GetString() ?? "";
+            var category = evt.GetProperty("eventCategory").GetString() ?? "UNKNOWN";
+            var type = evt.GetProperty("eventType").GetString() ?? "UNKNOWN";
+            eventType = $"{category}.{type}".ToLower(); // e.g. "invoice.update"
         }
         catch (Exception ex)
         {
