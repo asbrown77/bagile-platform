@@ -10,8 +10,6 @@ public class XeroWebhookSourceHandler : IWebhookSourceHandler
 
     public bool IsValidSignature(HttpContext http, byte[] bodyBytes, IConfiguration config, ILogger logger)
     {
-        return true;
-
         var secret = config.GetValue<string>("Xero:WebhookSecret");
         if (string.IsNullOrEmpty(secret))
             return true; // skip if no secret configured
