@@ -25,24 +25,6 @@ public class WebhookHandler
             return Results.BadRequest($"Unsupported webhook source: {source}");
 
         var bodyBytes = await ReadRequestBodyAsync(http);
-        if (bodyBytes.Length == 0)
-        {
-            if (source.Equals("xero", StringComparison.OrdinalIgnoreCase))
-            {
-                // Handshake phase
-                var signatureValid = handler.IsValidSignature(http, bodyBytes, _config, _logger);
-                if (!signatureValid)
-                {
-                    _logger.LogWarning("Xero handshake signature validation failed");
-                    return Results.Unauthorized();
-                }
-
-                _logger.LogInformation("Responding to Xero webhook handshake");
-                return Results.Text("[]", "application/json");
-            }
-
-            return Results.BadRequest("Empty payload");
-        }
 
         var maxBytes = _config.GetValue<int?>("Webhook:MaxBodySizeBytes") ?? 1 * 1024 * 1024;
         if (bodyBytes.Length > maxBytes)
@@ -52,6 +34,15 @@ public class WebhookHandler
             return Results.Unauthorized();
 
         var body = Encoding.UTF8.GetString(bodyBytes);
+
+        // Special case: Xero handshake has events: []
+        if (source.Equals("xero", StringComparison.OrdinalIgnoreCase) && body.Contains("\"events\": []"))
+        {
+            _logger.LogInformation("Xero handshake validated successfully");
+            return Results.Ok(); // 200 empty body
+        }
+
+        // Normal event flow
         if (!handler.TryExtractExternalId(body, out var externalId, _logger))
             return Results.BadRequest("Invalid payload");
 
@@ -71,7 +62,6 @@ public class WebhookHandler
             return Results.Problem("Failed to persist payload", statusCode: StatusCodes.Status500InternalServerError);
         }
     }
-
     private async Task<byte[]> ReadRequestBodyAsync(HttpContext http)
     {
         using var ms = new MemoryStream();

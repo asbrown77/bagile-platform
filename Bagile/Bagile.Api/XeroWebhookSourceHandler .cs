@@ -12,17 +12,24 @@ public class XeroWebhookSourceHandler : IWebhookSourceHandler
     {
         var secret = config.GetValue<string>("Xero:WebhookSecret");
         if (string.IsNullOrEmpty(secret))
-            return true; // skip if no secret configured
+        {
+            logger.LogWarning("No Xero WebhookSecret configured");
+            return false;
+        }
 
         if (!http.Request.Headers.TryGetValue("x-xero-signature", out var header))
+        {
+            logger.LogWarning("Missing x-xero-signature header");
             return false;
+        }
 
         using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
         var computed = hmac.ComputeHash(bodyBytes);
         var computedBase64 = Convert.ToBase64String(computed);
 
+        var providedSig = header.ToString();
         return CryptographicOperations.FixedTimeEquals(
-            Convert.FromBase64String(header),
+            Convert.FromBase64String(providedSig),
             Convert.FromBase64String(computedBase64)
         );
     }
