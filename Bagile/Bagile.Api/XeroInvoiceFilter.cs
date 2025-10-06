@@ -1,4 +1,6 @@
-﻿namespace Bagile.Api;
+﻿using Bagile.Infrastructure.Models;
+
+namespace Bagile.Api;
 
 public static class XeroInvoiceFilter
 {
