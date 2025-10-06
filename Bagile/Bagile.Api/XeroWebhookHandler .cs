@@ -1,6 +1,7 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Bagile.Infrastructure.Clients;
 
 namespace Bagile.Api;
 

@@ -1,4 +1,4 @@
-﻿using Bagile.Infrastructure;
+﻿using Bagile.Infrastructure.Repositories;
 using System.Text;
 
 namespace Bagile.Api;

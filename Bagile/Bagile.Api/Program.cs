@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using Bagile.Api;
 using Npgsql;
+using Bagile.Infrastructure.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,8 +20,6 @@ builder.Services.AddSingleton<IRawOrderRepository>(sp =>
 builder.Services.AddSingleton<IWebhookHandler, WooWebhookHandler>();
 builder.Services.AddSingleton<IWebhookHandler, XeroWebhookHandler>();
 builder.Services.AddSingleton<WebhookHandler>();
-
-builder.Services.AddScoped<IXeroApiClient, XeroApiClient>();
 
 builder.Services.AddHealthChecks();
 builder.Services.AddEndpointsApiExplorer();
