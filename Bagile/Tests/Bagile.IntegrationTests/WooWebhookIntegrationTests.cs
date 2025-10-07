@@ -1,6 +1,8 @@
+using Bagile.Infrastructure.Clients;
 using Bagile.Infrastructure.Models;
 using Dapper;
 using FluentAssertions;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -9,7 +11,6 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Bagile.Infrastructure.Clients;
 
 [TestFixture]
 [Category("Integration")]
@@ -27,15 +28,16 @@ public class WooWebhookIntegrationTests
         _db = new NpgsqlConnection(connStr);
         await _db.OpenAsync();
 
+        // The schema is already applied by DatabaseFixture.ApplySchemaAsync()
         await _db.ExecuteAsync("DELETE FROM bagile.raw_orders;");
 
         _factory = new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder =>
             {
+                builder.UseEnvironment("Testing");
 
                 builder.ConfigureAppConfiguration((ctx, config) =>
                 {
-                    // Inject test connection string into IConfiguration
                     var dict = new Dictionary<string, string>
                     {
                         ["ConnectionStrings:DefaultConnection"] = connStr,
@@ -58,6 +60,8 @@ public class WooWebhookIntegrationTests
         _client = _factory.CreateClient();
     }
 
+
+
     [OneTimeTearDown]
     public void OneTimeTearDown()
     {
@@ -67,23 +71,38 @@ public class WooWebhookIntegrationTests
     }
 
     [Test]
+    public async Task Minimal_Post_Works()
+    {
+        var client = _factory.CreateClient();
+        var response = await client.PostAsync("/health", new StringContent("{}", Encoding.UTF8, "application/json"));
+        Console.WriteLine(response.StatusCode);
+    }
+
+
+    [Test]
     public async Task Webhook_Post_ValidPayload_UpsertsRawOrder()
     {
         // Arrange
         var payload = "{\"id\":123,\"foo\":\"bar\"}";
         var signature = ComputeHmacSha256Base64(payload, _webhookSecret);
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/webhooks/woo")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/webhooks/woo")
         {
             Content = new StringContent(payload, Encoding.UTF8, "application/json")
         };
         request.Headers.Add("X-WC-Webhook-Signature", signature);
 
+        Console.WriteLine($"Request content: {await request.Content.ReadAsStringAsync()}");
+
         // Act
         var response = await _client.SendAsync(request);
 
+        var body = await response.Content.ReadAsStringAsync();
+        Console.WriteLine($"Response: {response.StatusCode}\n{body}");
+
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+
 
         var rows = (await _db.QueryAsync<RawOrder>(
             "SELECT * FROM bagile.raw_orders WHERE external_id = @id", new { id = "123" }))

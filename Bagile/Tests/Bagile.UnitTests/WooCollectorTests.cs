@@ -17,7 +17,7 @@ public class WooCollectorTests
             .ReturnsAsync(new List<string> { """{"id":1}""" });
 
         var collector = new WooCollector(mockApi.Object, NullLogger<WooCollector>.Instance);
-        var result = await collector.CollectAsync();
+        var result = await collector.CollectAsync(null);
 
         result.Should().HaveCount(1);
         mockApi.Verify(x => x.FetchOrdersAsync(It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()), Times.Once);

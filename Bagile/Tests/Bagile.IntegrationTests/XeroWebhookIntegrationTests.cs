@@ -151,7 +151,7 @@ public class FakeXeroApiClient : IXeroApiClient
         });
     }
 
-    public Task<IReadOnlyList<string>> FetchInvoicesAsync(CancellationToken ct = default)
+    public Task<IEnumerable<string>> FetchInvoicesAsync(DateTime? modifiedSince = null, CancellationToken ct = default)
     {
         throw new NotImplementedException();
     }

@@ -15,12 +15,12 @@ public class EtlRunnerTests
     {
         var woo = new Mock<ISourceCollector>();
         woo.Setup(c => c.SourceName).Returns("woo");
-        woo.Setup(c => c.CollectAsync(It.IsAny<CancellationToken>()))
+        woo.Setup(c => c.CollectAsync(It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { """{"id":1}""" });
 
         var xero = new Mock<ISourceCollector>();
         xero.Setup(c => c.SourceName).Returns("xero");
-        xero.Setup(c => c.CollectAsync(It.IsAny<CancellationToken>()))
+        xero.Setup(c => c.CollectAsync(It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { """{"id":99}""" });
 
         var repo = new Mock<IRawOrderRepository>();
@@ -32,8 +32,8 @@ public class EtlRunnerTests
 
         await runner.RunAsync();
 
-        repo.Verify(r => r.InsertAsync("woo", "1", It.IsAny<string>(), "etl.import"), Times.Once);
-        repo.Verify(r => r.InsertAsync("xero", "99", It.IsAny<string>(), "etl.import"), Times.Once);
+        repo.Verify(r => r.InsertIfChangedAsync("woo", "1", It.IsAny<string>(), "etl.import"), Times.Once);
+        repo.Verify(r => r.InsertIfChangedAsync("xero", "99", It.IsAny<string>(), "etl.import"), Times.Once);
     }
 
 }

@@ -4,18 +4,21 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Net.Http.Headers;
 using System.Text.Json;
+using Bagile.Infrastructure.Filters;
 
 public class XeroApiClient : IXeroApiClient
 {
     private readonly IConfiguration _config;
     private readonly ILogger<XeroApiClient> _logger;
     private readonly HttpClient _http;
+    private readonly XeroAuthService _auth;
 
-    public XeroApiClient(HttpClient http, IConfiguration config, ILogger<XeroApiClient> logger)
+    public XeroApiClient(HttpClient http, IConfiguration config, ILogger<XeroApiClient> logger, XeroAuthService auth)
     {
         _http = http;
         _config = config;
         _logger = logger;
+        _auth = auth;
     }
 
     // 1️⃣ For webhooks
@@ -29,36 +32,35 @@ public class XeroApiClient : IXeroApiClient
         return JsonSerializer.Deserialize<XeroInvoice>(invoice.GetRawText());
     }
 
-    public Task<IReadOnlyList<string>> FetchInvoicesAsync(CancellationToken ct = default)
+public async Task<IEnumerable<string>> FetchInvoicesAsync(
+    DateTime? modifiedSince = null, CancellationToken ct = default)
+{
+    var url = "https://api.xero.com/api.xro/2.0/Invoices";
+    var where = XeroInvoiceFilter.ToXeroWhereClause(modifiedSince);
+    url += $"?where={Uri.EscapeDataString(where)}";
+
+    _logger.LogInformation("Xero API query: {Url}", url);
+
+    var response = await SendAsync(url, ct);
+    var json = await response.Content.ReadAsStringAsync(ct);
+
+    var doc = JsonDocument.Parse(json);
+    return doc.RootElement.GetProperty("Invoices")
+             .EnumerateArray()
+             .Select(x => x.GetRawText())
+             .ToList();
+}
+
+    private async Task<HttpResponseMessage> SendAsync(string url, CancellationToken ct = default)
     {
-        throw new NotImplementedException();
-    }
+        var token = await _auth.EnsureAccessTokenAsync();
+        var tenantId = _config["Xero:TenantId"];
 
-    // 2️⃣ For ETL
-    public async Task<IEnumerable<string>> FetchInvoicesAsync(DateTime? modifiedSince = null, CancellationToken ct = default)
-    {
-        var url = "https://api.xero.com/api.xro/2.0/Invoices";
-        if (modifiedSince != null)
-            url += $"?where=Date>={modifiedSince:yyyy-MM-dd}";
-
-        var response = await SendAsync(url);
-        var json = await response.Content.ReadAsStringAsync(ct);
-
-        var doc = JsonDocument.Parse(json);
-        return doc.RootElement.GetProperty("Invoices")
-                 .EnumerateArray()
-                 .Select(x => x.GetRawText())
-                 .ToList();
-    }
-
-    private async Task<HttpResponseMessage> SendAsync(string url)
-    {
-        var token = _config["Xero:AccessToken"];
-        var tenant = _config["Xero:TenantId"];
         var req = new HttpRequestMessage(HttpMethod.Get, url);
         req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        req.Headers.Add("xero-tenant-id", tenant);
-        var res = await _http.SendAsync(req);
+        req.Headers.Add("xero-tenant-id", tenantId);
+
+        var res = await _http.SendAsync(req, ct);
         res.EnsureSuccessStatusCode();
         return res;
     }

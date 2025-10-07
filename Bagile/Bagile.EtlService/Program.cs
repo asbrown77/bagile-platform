@@ -1,15 +1,9 @@
-using System;
 using Bagile.EtlService.Collectors;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-
-using Bagile.Infrastructure;
-using Bagile.Infrastructure.Repositories;
-using Bagile.Infrastructure.Clients;
 using Bagile.EtlService.Services;
-using ISourceCollector = Bagile.EtlService.Collectors.ISourceCollector; // where EtlWorker and EtlRunner live
+using Bagile.Infrastructure.Clients;
+using Bagile.Infrastructure.Repositories;
+using Npgsql;
+// using ISourceCollector = Bagile.EtlService.Collectors.ISourceCollector; 
 
 Console.WriteLine("=== ETL Program started ===");
 
@@ -27,7 +21,15 @@ builder.Services.AddSingleton<IRawOrderRepository>(sp =>
     var connStr = config.GetConnectionString("DefaultConnection")
                   ?? config.GetValue<string>("ConnectionStrings:DefaultConnection")
                   ?? config.GetValue<string>("DbConnectionString");
-    logger.LogInformation("ETL using connection string: {ConnStr}", connStr);
+
+    if (builder.Environment.IsDevelopment())
+        logger.LogInformation("Dev connection string: {ConnStr}", connStr);
+    else
+    {
+        var safe = new NpgsqlConnectionStringBuilder(connStr) { Password = "******" };
+        logger.LogInformation("ETL using connection string: {ConnStr}", safe);
+    }
+
     return new RawOrderRepository(connStr!);
 });
 
@@ -37,6 +39,7 @@ builder.Services.AddHttpClient<IWooApiClient, WooApiClient>(client =>
     client.Timeout = TimeSpan.FromSeconds(100);
 });
 
+builder.Services.AddHttpClient<XeroAuthService>();
 builder.Services.AddHttpClient<IXeroApiClient, XeroApiClient>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(100);

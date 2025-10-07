@@ -28,15 +28,16 @@ namespace Bagile.EtlService.Services
         {
             foreach (var collector in _collectors)
             {
-                var sourceName = collector.SourceName; // ✅ this line changed
+                var sourceName = collector.SourceName;
                 _logger.LogInformation("Collecting from {Source}", sourceName);
 
-                var payloads = await collector.CollectAsync(ct);
+                var modifiedSince = await _repo.GetLastTimestampAsync(sourceName);
+                var payloads = await collector.CollectAsync(modifiedSince, ct);
 
                 foreach (var raw in payloads)
                 {
                     var id = JsonHelpers.ExtractId(raw);
-                    await _repo.InsertAsync(sourceName, id, raw, "etl.import");
+                    await _repo.InsertIfChangedAsync(sourceName, id, raw, "etl.import");
                 }
             }
         }

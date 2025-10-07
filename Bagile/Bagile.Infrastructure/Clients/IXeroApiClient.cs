@@ -10,6 +10,6 @@ namespace Bagile.Infrastructure.Clients;
 public interface IXeroApiClient
 {
     Task<XeroInvoice?> GetInvoiceByIdAsync(string invoiceId);
-    Task<IReadOnlyList<string>> FetchInvoicesAsync(CancellationToken ct = default);
-
+    Task<IEnumerable<string>> FetchInvoicesAsync(DateTime? modifiedSince = null,
+        CancellationToken ct = default);
 }
