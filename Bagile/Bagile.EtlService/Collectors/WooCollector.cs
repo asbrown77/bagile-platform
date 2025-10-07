@@ -25,9 +25,36 @@ public class WooCollector : ISourceCollector
     {
         _logger.LogInformation("Collecting WooCommerce orders...");
 
-        var orders = await _woo.FetchOrdersAsync(modifiedSince, ct);
-        _logger.LogInformation("WooCollector got {Count} orders", orders.Count);
+        var allOrders = new List<string>();
+        var page = 1;
+        const int pageSize = 100; // WooCommerce max per_page = 100
 
-        return orders;
+        while (true)
+        {
+            _logger.LogInformation("Fetching page {Page}", page);
+
+            // assuming your IWooApiClient has a paged overload
+            var orders = await _woo.FetchOrdersAsync(page, pageSize, modifiedSince, ct);
+
+            if (orders == null || orders.Count == 0)
+            {
+                _logger.LogInformation("No more orders after page {Page}", page);
+                break;
+            }
+
+            allOrders.AddRange(orders);
+            _logger.LogInformation("Collected {Count} orders so far", allOrders.Count);
+
+            if (orders.Count < pageSize)
+            {
+                _logger.LogInformation("Reached last page ({Page}), stopping", page);
+                break;
+            }
+
+            page++;
+        }
+
+        _logger.LogInformation("WooCollector total orders collected: {Total}", allOrders.Count);
+        return allOrders;
     }
 }

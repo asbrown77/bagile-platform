@@ -1,7 +1,6 @@
 ﻿using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
-using Bagile.Infrastructure.Clients;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -27,20 +26,40 @@ public class WooApiClient : IWooApiClient
             new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", creds);
     }
 
-    public async Task<IReadOnlyList<string>> FetchOrdersAsync(DateTime? since = null, CancellationToken ct = default)
+    // ✅ existing overload kept for compatibility
+    public Task<IReadOnlyList<string>> FetchOrdersAsync(DateTime? since = null, CancellationToken ct = default)
+        => FetchOrdersAsync(page: 1, perPage: 100, since, ct);
+
+    // ✅ new paged version
+    public async Task<IReadOnlyList<string>> FetchOrdersAsync(
+        int page,
+        int perPage,
+        DateTime? since = null,
+        CancellationToken ct = default)
     {
-        var url = "/wp-json/wc/v3/orders";
+        // Build base query
+        var query = new StringBuilder($"/wp-json/wc/v3/orders?page={page}&per_page={perPage}");
+
         if (since != null)
-            url += $"?after={since.Value:yyyy-MM-ddTHH:mm:ss}Z";
+            query.Append($"&after={since.Value:yyyy-MM-ddTHH:mm:ss}Z");
+
+        var url = query.ToString();
+        _logger.LogInformation("Fetching Woo orders: {Url}", url);
 
         var response = await _http.GetFromJsonAsync<JsonDocument>(url, ct);
         var results = new List<string>();
 
         if (response?.RootElement.ValueKind == JsonValueKind.Array)
+        {
             foreach (var item in response.RootElement.EnumerateArray())
                 results.Add(item.GetRawText());
+        }
+        else
+        {
+            _logger.LogWarning("Unexpected response from WooCommerce: {Json}", response);
+        }
 
-        _logger.LogInformation("Fetched {Count} Woo orders", results.Count);
+        _logger.LogInformation("Fetched {Count} Woo orders (page {Page})", results.Count, page);
         return results;
     }
 }
