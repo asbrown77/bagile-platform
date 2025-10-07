@@ -8,26 +8,36 @@ namespace Bagile.EtlService.Services
 {
     public class EtlWorker : BackgroundService
     {
-        private readonly EtlRunner _runner;
+        private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<EtlWorker> _logger;
 
-        public EtlWorker(EtlRunner runner, ILogger<EtlWorker> logger)
+        public EtlWorker(IServiceScopeFactory scopeFactory, ILogger<EtlWorker> logger)
         {
-            _runner = runner;
+            _scopeFactory = scopeFactory;
             _logger = logger;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _logger.LogInformation("ETL Worker started");
-
             while (!stoppingToken.IsCancellationRequested)
             {
-                await _runner.RunAsync(stoppingToken);
-                _logger.LogInformation("ETL cycle complete");
+                _logger.LogInformation("Starting ETL cycle at {Time}", DateTimeOffset.Now);
+
+                try
+                {
+                    using var scope = _scopeFactory.CreateScope();
+                    var runner = scope.ServiceProvider.GetRequiredService<EtlRunner>();
+                    await runner.RunAsync(stoppingToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "ETL cycle failed");
+                }
+
+                _logger.LogInformation("ETL cycle complete, sleeping...");
                 await Task.Delay(TimeSpan.FromHours(6), stoppingToken);
             }
         }
     }
-
 }
+

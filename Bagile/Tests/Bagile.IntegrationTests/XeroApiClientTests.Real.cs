@@ -1,6 +1,8 @@
-﻿using FluentAssertions;
+﻿using Bagile.Infrastructure.Clients;
+using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
+using static System.Net.WebRequestMethods;
 
 [TestFixture]
 [Category("Integration")]
@@ -14,7 +16,10 @@ public class XeroApiClientTests
             .AddJsonFile("appsettings.Development.json")
             .Build();
 
-        var client = new XeroApiClient(new HttpClient(), config, NullLogger<XeroApiClient>.Instance);
+        var http = new HttpClient();
+        var auth = new XeroAuthService(http, config, NullLogger<XeroAuthService>.Instance);
+
+        var client = new XeroApiClient(new HttpClient(), config, NullLogger<XeroApiClient>.Instance, auth);
         var result = await client.FetchInvoicesAsync(null, CancellationToken.None);
 
         result.Should().NotBeEmpty();

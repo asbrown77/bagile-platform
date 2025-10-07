@@ -1,15 +1,10 @@
-using System.Collections.Generic;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using Bagile.EtlService.Collectors;
 using Bagile.EtlService.Services;
-using Bagile.Infrastructure;
 using Bagile.Infrastructure.Repositories;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using NUnit.Framework;
 
 namespace Bagile.IntegrationTests;
 
@@ -23,12 +18,12 @@ public class EtlRunnerIntegrationTests
         // Arrange: two mock collectors
         var wooCollector = new Mock<ISourceCollector>();
         wooCollector.Setup(c => c.SourceName).Returns("woo");
-        wooCollector.Setup(c => c.CollectAsync(It.IsAny<CancellationToken>()))
+        wooCollector.Setup(c => c.CollectAsync(It.IsAny<DateTime?>(),It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { """{"id": 1001}""" });
 
         var xeroCollector = new Mock<ISourceCollector>();
         xeroCollector.Setup(c => c.SourceName).Returns("xero");
-        xeroCollector.Setup(c => c.CollectAsync(It.IsAny<CancellationToken>()))
+        xeroCollector.Setup(c => c.CollectAsync(It.IsAny<DateTime?>(),It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { """{"id": 2002}""" });
 
         var repo = new RawOrderRepository($"{DatabaseFixture.ConnectionString};SearchPath=bagile");

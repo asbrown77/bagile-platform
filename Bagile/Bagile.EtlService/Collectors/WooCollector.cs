@@ -18,12 +18,14 @@ public class WooCollector : ISourceCollector
         _logger = logger;
     }
 
-    public async Task<IEnumerable<string>> CollectAsync(CancellationToken ct = default)
+    public Task<IEnumerable<string>> CollectAsync(CancellationToken ct = default)
+        => CollectAsync(null, ct);
+
+    public async Task<IEnumerable<string>> CollectAsync(DateTime? modifiedSince = null, CancellationToken ct = default)
     {
         _logger.LogInformation("Collecting WooCommerce orders...");
-        var since = DateTime.UtcNow.AddDays(-2);
 
-        var orders = await _woo.FetchOrdersAsync(since, ct);
+        var orders = await _woo.FetchOrdersAsync(modifiedSince, ct);
         _logger.LogInformation("WooCollector got {Count} orders", orders.Count);
 
         return orders;
