@@ -26,7 +26,7 @@ public class WooApiClientTests
     public async Task FetchOrdersAsync_Returns_At_Least_One_Order()
     {
         var since = DateTime.UtcNow.AddDays(-7);
-        var orders = await _client.FetchOrdersAsync(since);
+        var orders = await _client.FetchOrdersAsync(since, CancellationToken.None);
 
         orders.Should().NotBeNull();
         orders.Should().NotBeEmpty("because Woo should return at least one order in the last 7 days");

@@ -8,7 +8,9 @@ namespace Bagile.Infrastructure.Clients
 {
     public interface IWooApiClient
     {
-        Task<IReadOnlyList<string>> FetchOrdersAsync(DateTime? since = null, CancellationToken ct = default);
+        Task<IReadOnlyList<string>> FetchOrdersAsync(DateTime? modifiedSince, CancellationToken ct);
+        Task<IReadOnlyList<string>> FetchOrdersAsync(int page, int perPage, DateTime? modifiedSince, CancellationToken ct);
+
     }
 
 
