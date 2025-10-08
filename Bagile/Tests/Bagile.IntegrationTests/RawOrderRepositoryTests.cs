@@ -23,7 +23,7 @@ public class RawOrderRepositoryTests
         await using var conn = new NpgsqlConnection(_connStr);
         await conn.OpenAsync();
         await using var cmd = new NpgsqlCommand(
-            "DELETE FROM raw_orders WHERE source='woo' AND external_id='123';", conn);
+            "DELETE FROM bagile.raw_orders WHERE source='woo' AND external_id='123';", conn);
         await cmd.ExecuteNonQueryAsync();
     }
 

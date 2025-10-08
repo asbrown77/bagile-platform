@@ -30,7 +30,7 @@ namespace Bagile.Infrastructure.Repositories
 
             const string sql = @"
             SELECT 1
-            FROM raw_orders
+            FROM bagile.raw_orders
             WHERE source = @source
               AND external_id = @externalId
               AND payload_hash = @hash
@@ -47,13 +47,13 @@ namespace Bagile.Infrastructure.Repositories
             {
                 "xero" => @"
             SELECT MAX( (payload->>'UpdatedDateUTC')::timestamp )
-            FROM raw_orders
+            FROM bagile.raw_orders
             WHERE source = @source
               AND payload ? 'UpdatedDateUTC';",
 
                 _ => @"
             SELECT MAX(imported_at)
-            FROM raw_orders
+            FROM bagile.raw_orders
             WHERE source = @source;"
             };
 
@@ -97,7 +97,7 @@ namespace Bagile.Infrastructure.Repositories
                        imported_at AS ImportedAt,
                        event_type AS EventType,
                        payload_hash AS PayloadHash
-                FROM raw_orders
+                FROM bagile.raw_orders
                 ORDER BY imported_at DESC;";
 
             await using var conn = new NpgsqlConnection(_connectionString);
