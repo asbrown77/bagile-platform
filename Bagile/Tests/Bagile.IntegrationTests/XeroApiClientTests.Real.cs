@@ -17,7 +17,7 @@ public class XeroApiClientTests
             .Build();
 
         var http = new HttpClient();
-        var auth = new XeroAuthService(http, config, NullLogger<XeroAuthService>.Instance);
+        var auth = new XeroTokenRefreshService(http, config, NullLogger<XeroTokenRefreshService>.Instance);
 
         var client = new XeroApiClient(new HttpClient(), config, NullLogger<XeroApiClient>.Instance, auth);
         var result = await client.FetchInvoicesAsync(null, CancellationToken.None);

@@ -1,25 +1,74 @@
 ﻿using Bagile.EtlService.Collectors;
-using Bagile.Infrastructure;
 using Bagile.Infrastructure.Clients;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using NUnit.Framework;
+
+namespace Bagile.UnitTests.Collectors;
 
 [TestFixture]
 public class WooCollectorTests
 {
-    [Test]
-    public async Task CollectAsync_Returns_Orders_From_ApiClient()
-    {
-        var mockApi = new Mock<IWooApiClient>();
-        mockApi.Setup(x => x.FetchOrdersAsync(It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<string> { """{"id":1}""" });
+    private Mock<IWooApiClient> _mockApi;
+    private WooCollector _collector;
 
-        var collector = new WooCollector(mockApi.Object, NullLogger<WooCollector>.Instance);
-        var result = await collector.CollectAsync(null);
+    [SetUp]
+    public void Setup()
+    {
+        _mockApi = new Mock<IWooApiClient>();
+        _collector = new WooCollector(_mockApi.Object, NullLogger<WooCollector>.Instance);
+    }
+
+    [Test]
+    public async Task CollectAsync_Should_Return_Single_Page()
+    {
+        _mockApi.Setup(x => x.FetchOrdersAsync(1, 100, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<string> { """{"id":1}""" });
+        _mockApi.Setup(x => x.FetchOrdersAsync(2, 100, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<string>());
+
+        var result = await _collector.CollectAsync();
 
         result.Should().HaveCount(1);
-        mockApi.Verify(x => x.FetchOrdersAsync(It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()), Times.Once);
+        _mockApi.Verify(x => x.FetchOrdersAsync(1, 100, null, It.IsAny<CancellationToken>()), Times.Once);
+        _mockApi.Verify(x => x.FetchOrdersAsync(2, 100, null, It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Test]
+    public async Task CollectAsync_Should_Continue_When_Page_Is_Full()
+    {
+        _mockApi.Setup(x => x.FetchOrdersAsync(1, 100, null, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Enumerable.Range(1, 100).Select(i => $@"{{""id"":{i}}}").ToList());
+        _mockApi.Setup(x => x.FetchOrdersAsync(2, 100, null, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new List<string> { """{"id":101}""" });
+
+        var result = await _collector.CollectAsync();
+
+        result.Should().HaveCount(101);
+        _mockApi.Verify(x => x.FetchOrdersAsync(1, 100, null, It.IsAny<CancellationToken>()), Times.Once);
+        _mockApi.Verify(x => x.FetchOrdersAsync(2, 100, null, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Test]
+    public async Task CollectAsync_Should_Stop_When_No_Orders()
+    {
+        _mockApi.Setup(x => x.FetchOrdersAsync(1, 100, null, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new List<string>());
+
+        var result = await _collector.CollectAsync();
+
+        result.Should().BeEmpty();
+        _mockApi.Verify(x => x.FetchOrdersAsync(1, 100, null, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Test]
+    public async Task CollectAsync_Should_Support_Cancellation()
+    {
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        Func<Task> act = async () => await _collector.CollectAsync(null, cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
     }
 }
