@@ -62,31 +62,30 @@ namespace Bagile.Infrastructure.Repositories
         }
 
 
-        public async Task InsertIfChangedAsync(string source, string externalId, string payloadJson, string eventType)
+        public async Task<int> InsertAsync(string source, string externalId, string payloadJson, string eventType)
         {
-            if (await ExistsAsync(source, externalId, payloadJson))
-                return; // skip identical payload
-
             var hash = ComputeSha256(payloadJson);
 
             const string sql = @"
             INSERT INTO bagile.raw_orders (source, external_id, payload, event_type, payload_hash)
-            VALUES (@source, @externalId, @payloadJson::jsonb, @eventType, @hash);";
+            VALUES (@source, @externalId, CAST(@payloadJson AS jsonb), @eventType, @hash)
+            RETURNING id;";
 
             await using var conn = new NpgsqlConnection(_connectionString);
-            await conn.ExecuteAsync(sql, new { source, externalId, payloadJson, eventType, hash });
+            return await conn.ExecuteScalarAsync<int>(sql, new { source, externalId, payloadJson, eventType, hash });
         }
 
-        public async Task<int> InsertAsync(string source, string externalId, string payloadJson, string eventType)
+        // Only insert if payload changed
+        public async Task<int> InsertIfChangedAsync(string source, string externalId, string payloadJson, string eventType)
         {
-            const string sql = @"
-                INSERT INTO bagile.raw_orders (source, external_id, payload, event_type)
-                VALUES (@source, @externalId, @payloadJson::jsonb, @eventType)
-                RETURNING id;";
+            var hash = ComputeSha256(payloadJson);
 
-            await using var conn = new NpgsqlConnection(_connectionString);
-            return await conn.ExecuteScalarAsync<int>(sql, new { source, externalId, payloadJson, eventType });
+            if (await ExistsAsync(source, externalId, hash))
+                return 0; // nothing inserted
+
+            return await InsertAsync(source, externalId, payloadJson, eventType);
         }
+
 
         public async Task<IEnumerable<RawOrder>> GetAllAsync()
         {
