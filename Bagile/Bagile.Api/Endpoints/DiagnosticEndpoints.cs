@@ -38,10 +38,18 @@ public static class DiagnosticEndpoints
         });
 
 
-        app.MapGet("/debug/raw_orders", async (IRawOrderRepository repo) =>
+        app.MapGet("/debug/raw_orders", async (IRawOrderRepository repo, int? limit) =>
         {
             var all = await repo.GetAllAsync();
-            return Results.Json(all.Take(10));
+
+            // default 10, allow up to 100 max
+            var safeLimit = Math.Clamp(limit ?? 10, 1, 100);
+
+            var result = all
+                .OrderByDescending(r => r.ReceivedAt)
+                .Take(safeLimit);
+
+            return Results.Json(result);
         });
 
         app.MapHealthChecks("/health");
