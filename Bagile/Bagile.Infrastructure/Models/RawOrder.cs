@@ -8,7 +8,7 @@ namespace Bagile.Infrastructure.Models
         public string Source { get; set; } = string.Empty;
         public string ExternalId { get; set; } = string.Empty;
         public string Payload { get; set; } = string.Empty;
-
+        public string PayloadHash { get; set; } = string.Empty;
         public DateTime ReceivedAt { get; set; }   
         public string? EventType { get; set; }     
     }

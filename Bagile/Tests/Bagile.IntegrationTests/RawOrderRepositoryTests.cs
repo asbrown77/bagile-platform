@@ -49,7 +49,7 @@ public class RawOrderRepositoryTests
 
         var latest = forId.First();
         latest.Payload.Should().Contain("changed", "because the second insert had an updated payload");
-
+        latest.PayloadHash.Should().NotBeNullOrEmpty();
 
     }
 }
