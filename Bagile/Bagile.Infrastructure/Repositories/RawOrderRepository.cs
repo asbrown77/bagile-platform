@@ -95,7 +95,8 @@ namespace Bagile.Infrastructure.Repositories
                        external_id AS ExternalId,
                        payload::text AS Payload,
                        imported_at AS ImportedAt,
-                       event_type AS EventType
+                       event_type AS EventType,
+                       payload_hash AS PayloadHash
                 FROM raw_orders
                 ORDER BY imported_at DESC;";
 
