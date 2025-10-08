@@ -55,9 +55,13 @@ jobs:
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
+          
+      - name: Zip artifact
+        run: cd bagile-etl && zip -r ../etl.zip .
 
       - name: Deploy ETL to Azure
         uses: azure/webapps-deploy@v3
         with:
           app-name: bagile-etl
-          package: bagile-etl
+          package: etl.zip
+
