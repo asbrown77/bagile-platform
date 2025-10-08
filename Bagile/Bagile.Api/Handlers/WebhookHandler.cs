@@ -44,6 +44,8 @@ public class WebhookHandler
         var body = Encoding.UTF8.GetString(bodyBytes);
 
         var payload = handler.PreparePayload(body, http, _config, _logger);
+        _logger.LogDebug("Payload body length: {Length}", payload.PayloadJson?.Length ?? 0);
+
         if (payload == null)
         {
             _logger.LogInformation("Ignored or invalid payload for source: {Source}", source);
@@ -52,6 +54,14 @@ public class WebhookHandler
 
         if (!string.IsNullOrEmpty(payload.ExternalId))
         {
+            if (string.IsNullOrWhiteSpace(payload.PayloadJson))
+            {
+                _logger.LogWarning(
+                    "Webhook {Source}/{ExternalId} had empty or null payload body, skipping insert",
+                    payload.Source, payload.ExternalId);
+                return Results.Ok();
+            }
+
             _logger.LogInformation(
                 "Inserting webhook event: Source={Source}, ExternalId={ExternalId}, EventType={EventType}",
                 payload.Source, payload.ExternalId, payload.EventType);
