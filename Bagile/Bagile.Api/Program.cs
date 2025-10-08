@@ -1,5 +1,7 @@
 ﻿using Bagile.Api.Endpoints;
 using Bagile.Api.Handlers;
+using Bagile.Api.Services;
+using Bagile.Infrastructure.Clients;   
 using Bagile.Infrastructure.Repositories;
 using Npgsql;
 
@@ -14,6 +16,12 @@ builder.Services.AddSingleton<IRawOrderRepository>(sp =>
                   ?? config.GetValue<string>("DbConnectionString");
     return new RawOrderRepository(connStr!);
 });
+
+// Register external API clients
+builder.Services.AddHttpClient<XeroAuthSetupService>();
+builder.Services.AddHttpClient<XeroTokenRefreshService>();
+builder.Services.AddHttpClient<IXeroApiClient, XeroApiClient>();
+builder.Services.AddHttpClient<IWooApiClient, WooApiClient>();
 
 // Handlers
 builder.Services.AddSingleton<IWebhookHandler, WooWebhookHandler>();
@@ -61,15 +69,23 @@ app.Use(async (context, next) =>
 });
 
 // Azure port binding
-app.Urls.Clear();
-var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
-app.Urls.Add($"http://0.0.0.0:{port}");
-app.Logger.LogInformation("Starting API on port {Port}", port);
+if (app.Environment.IsProduction())
+{
+    app.Urls.Clear();
+    var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+    app.Urls.Add($"http://0.0.0.0:{port}");
+    app.Logger.LogInformation("Starting API on port {Port}", port);
+}
+else
+{
+    app.Logger.LogInformation("Running locally on default Kestrel ports (5000/5001).");
+}
 
 // Endpoints
 app.MapGet("/", () => Results.Redirect("/swagger"));
 app.MapWebhookEndpoints();
 app.MapDiagnosticEndpoints();
+app.MapXeroOAuthEndpoints();
 
 app.Run();
 

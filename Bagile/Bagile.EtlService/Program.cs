@@ -39,7 +39,7 @@ builder.Services.AddHttpClient<IWooApiClient, WooApiClient>(client =>
     client.Timeout = TimeSpan.FromSeconds(100);
 });
 
-builder.Services.AddHttpClient<XeroAuthService>();
+builder.Services.AddHttpClient<XeroTokenRefreshService>();
 builder.Services.AddHttpClient<IXeroApiClient, XeroApiClient>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(100);

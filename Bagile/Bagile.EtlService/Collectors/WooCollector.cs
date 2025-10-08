@@ -18,22 +18,22 @@ public class WooCollector : ISourceCollector
         _logger = logger;
     }
 
-    public Task<IEnumerable<string>> CollectAsync(CancellationToken ct = default)
-        => CollectAsync(null, ct);
-
-    public async Task<IEnumerable<string>> CollectAsync(DateTime? modifiedSince = null, CancellationToken ct = default)
+    // ✅ Public single entry point
+    public async Task<IEnumerable<string>> CollectAsync(
+        DateTime? modifiedSince = null,
+        CancellationToken ct = default)
     {
         _logger.LogInformation("Collecting WooCommerce orders...");
 
         var allOrders = new List<string>();
         var page = 1;
-        const int pageSize = 100; // WooCommerce max per_page = 100
+        const int pageSize = 100;
 
         while (true)
         {
-            _logger.LogInformation("Fetching page {Page}", page);
+            ct.ThrowIfCancellationRequested(); 
 
-            // assuming your IWooApiClient has a paged overload
+            _logger.LogInformation("Fetching page {Page}", page);
             var orders = await _woo.FetchOrdersAsync(page, pageSize, modifiedSince, ct);
 
             if (orders == null || orders.Count == 0)
@@ -43,7 +43,6 @@ public class WooCollector : ISourceCollector
             }
 
             allOrders.AddRange(orders);
-            _logger.LogInformation("Collected {Count} orders so far", allOrders.Count);
 
             if (orders.Count < pageSize)
             {
@@ -53,6 +52,7 @@ public class WooCollector : ISourceCollector
 
             page++;
         }
+
 
         _logger.LogInformation("WooCollector total orders collected: {Total}", allOrders.Count);
         return allOrders;
