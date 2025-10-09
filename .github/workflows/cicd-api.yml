@@ -48,6 +48,10 @@ jobs:
       - name: Publish API
         run: dotnet publish Bagile/Bagile.Api/Bagile.Api.csproj -c Release -o output-api
 
+      - name: Build Docker image
+        run: |
+          docker tag ghcr.io/${{ github.repository_owner }}/bagile-api:latest ghcr.io/${{ github.repository_owner }}/bagile-api:${{ github.sha }}
+    
       - name: Upload API artifact
         uses: actions/upload-artifact@v4
         with:

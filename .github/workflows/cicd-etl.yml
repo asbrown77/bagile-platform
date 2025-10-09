@@ -48,6 +48,10 @@ jobs:
       - name: Publish ETL Service
         run: dotnet publish Bagile/Bagile.EtlService/Bagile.EtlService.csproj -c Release -o output-etl
 
+      - name: Build Docker image
+        run: |
+          docker tag ghcr.io/${{ github.repository_owner }}/bagile-etl :latest ghcr.io/${{ github.repository_owner }}/bagile-etl:${{ github.sha }}
+    
       - name: Upload ETL artifact
         uses: actions/upload-artifact@v4
         with:
