@@ -47,14 +47,14 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/bagile-api:latest
             ghcr.io/${{ github.repository_owner }}/bagile-api:${{ github.sha }}
         
-      # - name: Publish API
-      #   run: dotnet publish Bagile/Bagile.Api/Bagile.Api.csproj -c Release -o output-api
+      - name: Publish API
+        run: dotnet publish Bagile/Bagile.Api/Bagile.Api.csproj -c Release -o output-api
 
-      # - name: Upload API artifact
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: bagile-api
-      #     path: output-api
+      - name: Upload API artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bagile-api
+          path: output-api
 
   deploy-api:
     needs: build-test

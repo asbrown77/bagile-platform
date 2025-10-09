@@ -40,21 +40,21 @@ jobs:
       - name: Build and push Docker image (ETL)
         uses: docker/build-push-action@v6
         with:
-          context: .
-          file: Bagile/Bagile.Etl/Dockerfile
+          context: Bagile/Bagile.EtlService
+          file: Bagile/Bagile.EtlService/Dockerfile
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/bagile-etl:latest
             ghcr.io/${{ github.repository_owner }}/bagile-etl:${{ github.sha }}   
 
-      # - name: Publish ETL Service
-      #   run: dotnet publish Bagile/Bagile.EtlService/Bagile.EtlService.csproj -c Release -o output-etl
+      - name: Publish ETL Service
+        run: dotnet publish Bagile/Bagile.EtlService/Bagile.EtlService.csproj -c Release -o output-etl
 
-      # - name: Upload ETL artifact
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: bagile-etl
-      #     path: output-etl
+      - name: Upload ETL artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bagile-etl
+          path: output-etl
 
   deploy-etl:
     needs: build-test
