@@ -8,12 +8,12 @@ on:
     paths:
       - 'Bagile/Bagile.EtlService/**'
       - 'Bagile/Bagile.Infrastructure/**'
-      - '.github/workflows/etl.yml'
+      - '.github/workflows/cicd-etl.yml'
   pull_request:
     paths:
       - 'Bagile/Bagile.EtlService/**'
       - 'Bagile/Bagile.Infrastructure/**'
-      - '.github/workflows/etl.yml'
+      - '.github/workflows/cicd-etl.yml'
   workflow_dispatch:
 
 jobs:
