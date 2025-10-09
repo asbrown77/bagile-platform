@@ -54,7 +54,8 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository_owner }}/bagile-api:latest
             ghcr.io/${{ github.repository_owner }}/bagile-api:${{ github.sha }}
-        
+
+      # Remove below publish to Azure when ready to swith away from Azure 
       - name: Publish API
         run: dotnet publish Bagile/Bagile.Api/Bagile.Api.csproj -c Release -o output-api
 
