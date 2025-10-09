@@ -8,12 +8,12 @@ on:
     paths:
       - 'Bagile/Bagile.Api/**'
       - 'Bagile/Bagile.Infrastructure/**'
-      - '.github/workflows/api.yml'
+      - '.github/workflows/cicd-api.yml'
   pull_request:
     paths:
       - 'Bagile/Bagile.Api/**'
       - 'Bagile/Bagile.Infrastructure/**'
-      - '.github/workflows/api.yml'
+      - '.github/workflows/cicd-api.yml'
   workflow_dispatch:
 
 jobs:
