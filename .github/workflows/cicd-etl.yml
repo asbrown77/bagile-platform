@@ -30,6 +30,21 @@ jobs:
       - name: Test
         run: dotnet test Bagile/Bagile.sln --configuration Release --no-build
 
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_PAT }}
+
+      - name: Build and push Docker image (ETL)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Bagile/Bagile.Etl/Dockerfile
+          push: true
+          tags: ghcr.io/bagileuk/bagile-etl:latest        
+
       - name: Publish ETL Service
         run: dotnet publish Bagile/Bagile.EtlService/Bagile.EtlService.csproj -c Release -o output-etl
 
