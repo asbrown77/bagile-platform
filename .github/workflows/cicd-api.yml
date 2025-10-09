@@ -5,7 +5,15 @@ on:
     branches: [ main ]
     tags:
       - 'api-v*'
+    paths:
+      - 'Bagile/Bagile.Api/**'
+      - 'Bagile/Bagile.Infrastructure/**'
+      - '.github/workflows/api.yml'
   pull_request:
+    paths:
+      - 'Bagile/Bagile.Api/**'
+      - 'Bagile/Bagile.Infrastructure/**'
+      - '.github/workflows/api.yml'
   workflow_dispatch:
 
 jobs:
