@@ -59,7 +59,7 @@ jobs:
       - name: Deploy via SSH to Hetzner
         uses: appleboy/ssh-action@v1.2.0
         with:
-          host: ${{ secrets.HETZNER_HOST }}
+          host: ${{ vars.HETZNER_HOST }}
           username: root
           key: ${{ secrets.HETZNER_SSH_KEY }}
           script: |
