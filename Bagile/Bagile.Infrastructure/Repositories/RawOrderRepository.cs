@@ -46,7 +46,13 @@ namespace Bagile.Infrastructure.Repositories
             string sql = source switch
             {
                 "xero" => @"
-            SELECT MAX( (payload->>'UpdatedDateUTC')::timestamp )
+            SELECT MAX(
+                CASE
+                    WHEN (payload->>'UpdatedDateUTC') ~ '^[0-9]{4}-'
+                    THEN (payload->>'UpdatedDateUTC')::timestamp
+                    ELSE NULL
+                END
+            )
             FROM bagile.raw_orders
             WHERE source = @source
               AND payload ? 'UpdatedDateUTC';",
