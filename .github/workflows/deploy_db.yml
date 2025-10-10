@@ -3,7 +3,7 @@ name: Deploy Database Migrations
 on:
   push:
     paths:
-      - 'Bagile/migrations/**'
+      - 'migrations/**'        
     branches:
       - main
       - develop
@@ -17,9 +17,16 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Debug repo contents
+        run: |
+          echo "Listing repo contents..."
+          pwd
+          ls -R
 
       - name: Copy migrations to Hetzner
         uses: appleboy/scp-action@v0.1.7
@@ -27,7 +34,7 @@ jobs:
           host: ${{ vars.HETZNER_HOST }}
           username: root
           key: ${{ secrets.HETZNER_SSH_KEY }}
-          source: "Bagile/migrations/*"
+          source: "migrations/*"
           target: "/opt/bagile/migrations"
 
       - name: Run migrations remotely
@@ -39,4 +46,3 @@ jobs:
           script: |
             cd /opt/bagile
             bash deploy_db.sh ${{ github.event.inputs.environment || 'prod' }}
-
