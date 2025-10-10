@@ -1,0 +1,35 @@
+name: Deploy Database Migrations
+
+on:
+  push:
+    paths:
+      - 'Bagile/migrations/**'
+    branches:
+      - main
+      - develop
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Copy migrations to Hetzner
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.HETZNER_HOST }}
+          username: root
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          source: "Bagile/migrations/*"
+          target: "/opt/bagile/migrations"
+
+      - name: Run migrations remotely
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.HETZNER_HOST }}
+          username: root
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          script: |
+            cd /opt/bagile
+            bash deploy_db.sh prod
