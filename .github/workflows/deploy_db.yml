@@ -7,6 +7,12 @@ on:
     branches:
       - main
       - develop
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment (dev or prod)'
+        required: true
+        default: 'prod'
 
 jobs:
   deploy:
@@ -32,4 +38,5 @@ jobs:
           key: ${{ secrets.HETZNER_SSH_KEY }}
           script: |
             cd /opt/bagile
-            bash deploy_db.sh prod
+            bash deploy_db.sh ${{ github.event.inputs.environment || 'prod' }}
+
