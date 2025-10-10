@@ -33,7 +33,7 @@ jobs:
       - name: Run migrations remotely
         uses: appleboy/ssh-action@v0.1.7
         with:
-          host: ${{ secrets.HETZNER_HOST }}
+          host: ${{ vars.HETZNER_HOST }}
           username: root
           key: ${{ secrets.HETZNER_SSH_KEY }}
           script: |
