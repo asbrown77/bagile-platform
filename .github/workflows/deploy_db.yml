@@ -24,7 +24,7 @@ jobs:
       - name: Copy migrations to Hetzner
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ secrets.HETZNER_HOST }}
+          host: ${{ vars.HETZNER_HOST }}
           username: root
           key: ${{ secrets.HETZNER_SSH_KEY }}
           source: "Bagile/migrations/*"
