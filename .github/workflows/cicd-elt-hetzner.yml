@@ -64,6 +64,16 @@ jobs:
           key: ${{ secrets.HETZNER_SSH_KEY }}
           script: |
             cd /opt/bagile
+
+            echo "Pulling latest ETL image..."
             docker compose pull bagile-etl
+
+            echo "Recreating ETL container..."
             docker compose up -d bagile-etl
+
+            echo "Cleaning unused images..."
             docker system prune -f
+
+            echo "Ensuring ETL cron job exists..."
+            (crontab -l 2>/dev/null | grep -q "docker restart bagile-etl" || \
+            (crontab -l 2>/dev/null; echo "*/30 * * * * docker restart bagile-etl >/dev/null 2>&1") | crontab -)
