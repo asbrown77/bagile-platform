@@ -15,18 +15,20 @@ public class EtlRunnerTests
     {
         var woo = new Mock<ISourceCollector>();
         woo.Setup(c => c.SourceName).Returns("woo");
-        woo.Setup(c => c.CollectAsync(It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
+        woo.Setup(c => c.CollectOrdersAsync(It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { """{"id":1}""" });
 
         var xero = new Mock<ISourceCollector>();
         xero.Setup(c => c.SourceName).Returns("xero");
-        xero.Setup(c => c.CollectAsync(It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
+        xero.Setup(c => c.CollectOrdersAsync(It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { """{"id":99}""" });
 
         var repo = new Mock<IRawOrderRepository>();
 
+        // new constructor: orders, products, repo, logger
         var runner = new EtlRunner(
             new[] { woo.Object, xero.Object },
+            Enumerable.Empty<IProductCollector>(),
             repo.Object,
             NullLogger<EtlRunner>.Instance);
 

@@ -18,19 +18,22 @@ public class EtlRunnerIntegrationTests
         // Arrange: two mock collectors
         var wooCollector = new Mock<ISourceCollector>();
         wooCollector.Setup(c => c.SourceName).Returns("woo");
-        wooCollector.Setup(c => c.CollectAsync(It.IsAny<DateTime?>(),It.IsAny<CancellationToken>()))
+        wooCollector.Setup(c => c.CollectOrdersAsync(It.IsAny<DateTime?>(),It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { """{"id": 1001}""" });
 
         var xeroCollector = new Mock<ISourceCollector>();
         xeroCollector.Setup(c => c.SourceName).Returns("xero");
-        xeroCollector.Setup(c => c.CollectAsync(It.IsAny<DateTime?>(),It.IsAny<CancellationToken>()))
+        xeroCollector.Setup(c => c.CollectOrdersAsync(It.IsAny<DateTime?>(),It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { """{"id": 2002}""" });
 
         var repo = new RawOrderRepository($"{DatabaseFixture.ConnectionString};SearchPath=bagile");
+
         var runner = new EtlRunner(
-            new[] { wooCollector.Object, xeroCollector.Object },
+            new[] { wooCollector.Object, xeroCollector.Object },          // order collectors
+            Enumerable.Empty<IProductCollector>(),                         // no product collectors
             repo,
             NullLogger<EtlRunner>.Instance);
+
 
         // Act
         await runner.RunAsync();

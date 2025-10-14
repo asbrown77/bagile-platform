@@ -1,5 +1,7 @@
 ﻿using Bagile.EtlService.Collectors;
+using Bagile.EtlService.Projectors;
 using Bagile.Infrastructure.Clients;
+using Bagile.Infrastructure.Models;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -10,13 +12,15 @@ namespace Bagile.UnitTests.Collectors;
 public class WooCollectorTests
 {
     private Mock<IWooApiClient> _mockApi;
-    private WooCollector _collector;
+    private WooOrderCollector _collector;
+    private Mock<IImporter<WooProduct>> _mockProjector;
 
     [SetUp]
     public void Setup()
     {
         _mockApi = new Mock<IWooApiClient>();
-        _collector = new WooCollector(_mockApi.Object, NullLogger<WooCollector>.Instance);
+        _mockProjector = new Mock<IImporter<WooProduct>>();
+        _collector = new WooOrderCollector(_mockApi.Object,_mockProjector.Object, NullLogger<WooOrderCollector>.Instance);
     }
 
     [Test]
@@ -27,7 +31,7 @@ public class WooCollectorTests
         _mockApi.Setup(x => x.FetchOrdersAsync(2, 100, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<string>());
 
-        var result = await _collector.CollectAsync();
+        var result = await _collector.CollectOrdersAsync();
 
         result.Should().HaveCount(1);
         _mockApi.Verify(x => x.FetchOrdersAsync(1, 100, null, It.IsAny<CancellationToken>()), Times.Once);
@@ -42,7 +46,7 @@ public class WooCollectorTests
         _mockApi.Setup(x => x.FetchOrdersAsync(2, 100, null, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new List<string> { """{"id":101}""" });
 
-        var result = await _collector.CollectAsync();
+        var result = await _collector.CollectOrdersAsync();
 
         result.Should().HaveCount(101);
         _mockApi.Verify(x => x.FetchOrdersAsync(1, 100, null, It.IsAny<CancellationToken>()), Times.Once);
@@ -55,7 +59,7 @@ public class WooCollectorTests
         _mockApi.Setup(x => x.FetchOrdersAsync(1, 100, null, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new List<string>());
 
-        var result = await _collector.CollectAsync();
+        var result = await _collector.CollectOrdersAsync();
 
         result.Should().BeEmpty();
         _mockApi.Verify(x => x.FetchOrdersAsync(1, 100, null, It.IsAny<CancellationToken>()), Times.Once);
@@ -67,7 +71,7 @@ public class WooCollectorTests
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        Func<Task> act = async () => await _collector.CollectAsync(null, cts.Token);
+        Func<Task> act = async () => await _collector.CollectOrdersAsync(null, cts.Token);
 
         await act.Should().ThrowAsync<OperationCanceledException>();
     }

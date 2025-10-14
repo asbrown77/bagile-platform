@@ -28,7 +28,7 @@ namespace Bagile.UnitTests
 
             var collector = new XeroCollector(mockApi.Object, NullLogger<XeroCollector>.Instance);
 
-            var result = await collector.CollectAsync(null);
+            var result = await collector.CollectOrdersAsync(null);
 
             result.Should().HaveCount(2);
             result.Should().Contain(r => r.Contains("1001"));
@@ -58,7 +58,7 @@ namespace Bagile.UnitTests
 
             var collector = new XeroCollector(mockApi.Object, NullLogger<XeroCollector>.Instance);
 
-            var result = await collector.CollectAsync(null);
+            var result = await collector.CollectOrdersAsync(null);
 
             result.Should().BeEmpty("none of the invoices have valid type or status");
         }
@@ -76,7 +76,7 @@ namespace Bagile.UnitTests
 
             var collector = new XeroCollector(mockApi.Object, NullLogger<XeroCollector>.Instance);
 
-            var result = await collector.CollectAsync(null);
+            var result = await collector.CollectOrdersAsync(null);
 
             result.Should().HaveCount(1, "public invoices starting with '#' should be ignored");
             result.First().Should().Contain("PRIVATE-2025");
@@ -95,7 +95,7 @@ namespace Bagile.UnitTests
 
             var collector = new XeroCollector(mockApi.Object, NullLogger<XeroCollector>.Instance);
 
-            var result = await collector.CollectAsync(null);
+            var result = await collector.CollectOrdersAsync(null);
 
             result.Should().HaveCount(1, "one valid invoice and one malformed JSON string");
         }

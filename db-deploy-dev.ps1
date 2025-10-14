@@ -6,7 +6,7 @@ param(
 docker compose up -d
 
 # Use service name 'postgres' from docker-compose.yml (recommended)
-$DbUrl = "jdbc:postgresql://postgres:5432/bagile"
+$DbUrl = "jdbc:postgresql://bagile-db:5432/bagile"
 $DbUser = "bagile"
 
 docker run --rm `
@@ -16,4 +16,6 @@ docker run --rm `
   -url="$DbUrl" `
   -user="$DbUser" `
   -password="$DbPassword" `
+  -schemas=bagile `
+  -baselineOnMigrate=true `
   migrate

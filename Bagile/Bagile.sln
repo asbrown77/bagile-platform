@@ -15,32 +15,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bagile.EtlService", "Bagile
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "migrations", "migrations", "{6386DA17-2EA1-4415-A7D2-976B084871CC}"
-	ProjectSection(SolutionItems) = preProject
-		..\migrations\001_schema.sql = ..\migrations\001_schema.sql
-		..\migrations\010_raw_orders.sql = ..\migrations\010_raw_orders.sql
-		..\migrations\020_students.sql = ..\migrations\020_students.sql
-		..\migrations\021_courses.sql = ..\migrations\021_courses.sql
-		..\migrations\022_orders.sql = ..\migrations\022_orders.sql
-		..\migrations\023_order_lines.sql = ..\migrations\023_order_lines.sql
-		..\migrations\024_enrolments.sql = ..\migrations\024_enrolments.sql
-		..\migrations\025_order_events.sql = ..\migrations\025_order_events.sql
-		..\migrations\V1__init_schema.sql = ..\migrations\V1__init_schema.sql
-		..\migrations\V2__raw_orders.sql = ..\migrations\V2__raw_orders.sql
-		..\migrations\V3__students.sql = ..\migrations\V3__students.sql
-		..\migrations\V4__courses.sql = ..\migrations\V4__courses.sql
-		..\migrations\V5__orders.sql = ..\migrations\V5__orders.sql
-		..\migrations\V6__order_lines.sql = ..\migrations\V6__order_lines.sql
-		..\migrations\V7__enrolments.sql = ..\migrations\V7__enrolments.sql
-		..\migrations\V8__order_events.sql = ..\migrations\V8__order_events.sql
-		..\migrations\V9__Fix_raw_orders.sql = ..\migrations\V9__Fix_raw_orders.sql
-	EndProjectSection
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bagile.UnitTests", "Tests\Bagile.UnitTests\Bagile.UnitTests.csproj", "{F4ABEAC4-6F69-AC7B-201A-CB73C58AA415}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bagile.IntegrationTests", "Tests\Bagile.IntegrationTests\Bagile.IntegrationTests.csproj", "{0BE98FC5-922F-8AE3-612C-B6068378087E}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
