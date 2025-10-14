@@ -22,9 +22,9 @@ namespace Bagile.EtlService.Collectors
 
         // ✅ Convenience overload (no recursion)
         public Task<IEnumerable<string>> CollectAsync(CancellationToken ct = default)
-            => CollectAsync(null, ct);
+            => CollectOrdersAsync(null, ct);
 
-        public async Task<IEnumerable<string>> CollectAsync(DateTime? modifiedSince = null, CancellationToken ct = default)
+        public async Task<IEnumerable<string>> CollectOrdersAsync(DateTime? modifiedSince = null, CancellationToken ct = default)
         {
             _logger.LogInformation("Collecting Xero invoices...");
 

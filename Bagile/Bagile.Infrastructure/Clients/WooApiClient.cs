@@ -1,6 +1,7 @@
 ﻿using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using Bagile.Infrastructure.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -25,6 +26,7 @@ public class WooApiClient : IWooApiClient
         _http.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", creds);
     }
+
 
     // ✅ existing overload kept for compatibility
     public Task<IReadOnlyList<string>> FetchOrdersAsync(DateTime? since = null, CancellationToken ct = default)
@@ -62,4 +64,22 @@ public class WooApiClient : IWooApiClient
         _logger.LogInformation("Fetched {Count} Woo orders (page {Page})", results.Count, page);
         return results;
     }
+
+    public async Task<IReadOnlyList<WooProduct>> FetchProductsAsync(CancellationToken ct = default)
+    {
+        const string url = "/wp-json/wc/v3/products?per_page=100";
+        _logger.LogInformation("Fetching Woo products: {Url}", url);
+
+        var response = await _http.GetFromJsonAsync<List<WooProduct>>(url, ct);
+
+        if (response == null || response.Count == 0)
+        {
+            _logger.LogWarning("No Woo products returned");
+            return Array.Empty<WooProduct>();
+        }
+
+        _logger.LogInformation("Fetched {Count} Woo products", response.Count);
+        return response;
+    }
+
 }

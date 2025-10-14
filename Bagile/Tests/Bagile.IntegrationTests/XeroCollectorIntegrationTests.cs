@@ -31,7 +31,7 @@ public class XeroCollectorIntegrationTests
     [Test]
     public async Task XeroCollector_ShouldFetchAndFilterInvoices()
     {
-        var invoices = await _collector.CollectAsync(null);
+        var invoices = await _collector.CollectOrdersAsync(null);
         invoices.Should().NotBeNull();
 
         // Optional: if you know at least one should be AUTHORISED or PAID

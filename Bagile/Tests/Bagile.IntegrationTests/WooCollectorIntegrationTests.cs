@@ -1,8 +1,10 @@
 ﻿using Bagile.EtlService.Collectors;
+using Bagile.EtlService.Projectors;
 using Bagile.Infrastructure.Clients;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using NUnit.Framework;
 
 namespace Bagile.IntegrationTests;
@@ -12,7 +14,7 @@ namespace Bagile.IntegrationTests;
 [Explicit("Requires valid WooCommerce credentials in appsettings.Development.json")]
 public class WooCollectorIntegrationTests
 {
-    private WooCollector _collector = null!;
+    private WooOrderCollector _collector = null!;
 
     [SetUp]
     public void Setup()
@@ -21,14 +23,16 @@ public class WooCollectorIntegrationTests
             .AddJsonFile("appsettings.Development.json")
             .Build();
 
+        var mockProjector = new Mock<WooCourseImporter>(null!, null!, null!, NullLogger<WooCourseImporter>.Instance);
+
         var client = new WooApiClient(new HttpClient(), config, NullLogger<WooApiClient>.Instance);
-        _collector = new WooCollector(client, NullLogger<WooCollector>.Instance);
+        _collector = new WooOrderCollector(client, mockProjector.Object, NullLogger<WooOrderCollector>.Instance);
     }
 
     [Test]
     public async Task WooCollector_ShouldFetchRecentOrders()
     {
-        var orders = await _collector.CollectAsync(null);
+        var orders = await _collector.CollectOrdersAsync(null);
         orders.Should().NotBeNull();
         orders.Should().NotBeEmpty("because there should be recent orders in WooCommerce");
     }
