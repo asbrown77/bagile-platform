@@ -1,7 +1,7 @@
 ﻿using Bagile.Domain.Entities;
 using Bagile.Domain.Repositories;
 using Bagile.Infrastructure.Clients;
-using Bagile.Infrastructure.Models;
+using Bagile.Infrastructure.Mappers;
 using Microsoft.Extensions.Logging;
 
 namespace Bagile.EtlService.Collectors;
@@ -32,8 +32,7 @@ public class WooProductCollector : IProductCollector
         _logger.LogInformation("Collecting products (course schedules) from WooCommerce...");
 
         var products = await _wooApiClient.FetchProductsAsync(ct);
-
-        if (products == null || products.Count == 0)
+        if (products is null || products.Count == 0)
         {
             _logger.LogWarning("No products returned from WooCommerce.");
             return;
@@ -45,24 +44,13 @@ public class WooProductCollector : IProductCollector
         {
             try
             {
-                var matchedDef = MatchDefinition(product, definitions);
+                var def = definitions.FirstOrDefault(d =>
+                    product.Name.Contains(d.Code, StringComparison.OrdinalIgnoreCase) ||
+                    product.Name.Contains(d.Name, StringComparison.OrdinalIgnoreCase));
 
-                var schedule = new CourseSchedule
-                {
-                    Name = product.Name,
-                    Status = product.Status,
-                    StartDate = product.Meta?.StartDate,
-                    EndDate = product.Meta?.EndDate,
-                    Capacity = product.StockQuantity,
-                    Price = product.Price,
-                    Sku = product.Sku,
-                    TrainerName = product.Meta?.TrainerName,
-                    FormatType = product.Meta?.FormatType,
-                    CourseDefinitionId = matchedDef?.Id,
-                    SourceSystem = "WooCommerce",
-                    SourceProductId = product.Id,
-                    LastSynced = DateTime.UtcNow
-                };
+                var schedule = product.ToCourseSchedule();
+                schedule.CourseDefinitionId = def?.Id;
+                schedule.LastSynced = DateTime.UtcNow;
 
                 await _scheduleRepo.UpsertAsync(schedule);
             }
@@ -73,14 +61,5 @@ public class WooProductCollector : IProductCollector
         }
 
         _logger.LogInformation("Processed {Count} WooCommerce products.", products.Count);
-    }
-
-    private static CourseDefinition? MatchDefinition(WooProduct product, List<CourseDefinition> definitions)
-    {
-        // Simple matching by category or product name
-        // Adjust this logic once you know how Woo categories map
-        return definitions.FirstOrDefault(d =>
-            product.Name.Contains(d.Code, StringComparison.OrdinalIgnoreCase) ||
-            product.Name.Contains(d.Name, StringComparison.OrdinalIgnoreCase));
     }
 }

@@ -10,7 +10,7 @@ namespace Bagile.EtlService.Collectors;
 public class WooOrderCollector : ISourceCollector
 {
     private readonly IWooApiClient _woo;
-    private readonly IImporter<WooProduct> _wooCourseProjector;
+    private readonly IImporter<WooProductDto> _wooCourseProjector;
     private readonly ILogger<WooOrderCollector> _logger;
 
     public string SourceName => "woo";
@@ -18,7 +18,7 @@ public class WooOrderCollector : ISourceCollector
 
     public WooOrderCollector(
         IWooApiClient woo,
-        IImporter<WooProduct> wooCourseProjector,
+        IImporter<WooProductDto> wooCourseProjector,
         ILogger<WooOrderCollector> logger)
     {
         _woo = woo;

@@ -113,7 +113,7 @@ static void ConfigureEtl(HostApplicationBuilder builder)
     builder.Services.AddScoped<ISourceCollector, XeroCollector>();
 
     // Importers
-    builder.Services.AddScoped<IImporter<WooProduct>, WooCourseImporter>();
+    builder.Services.AddScoped<IImporter<WooProductDto>, WooCourseImporter>();
 
     // Core orchestration
     builder.Services.AddScoped<EtlRunner>();

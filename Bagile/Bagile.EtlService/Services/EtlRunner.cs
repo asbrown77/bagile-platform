@@ -30,7 +30,7 @@ public class EtlRunner
         _logger.LogInformation("Starting ETL run");
 
         await CollectProductsAsync(ct);
-       // await CollectOrdersAsync(ct);
+        await CollectOrdersAsync(ct);
 
         _logger.LogInformation("ETL run completed successfully");
     }

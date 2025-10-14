@@ -65,17 +65,17 @@ public class WooApiClient : IWooApiClient
         return results;
     }
 
-    public async Task<IReadOnlyList<WooProduct>> FetchProductsAsync(CancellationToken ct = default)
+    public async Task<IReadOnlyList<WooProductDto>> FetchProductsAsync(CancellationToken ct = default)
     {
         const string url = "/wp-json/wc/v3/products?per_page=100";
         _logger.LogInformation("Fetching Woo products: {Url}", url);
 
-        var response = await _http.GetFromJsonAsync<List<WooProduct>>(url, ct);
+        var response = await _http.GetFromJsonAsync<List<WooProductDto>>(url, ct);
 
         if (response == null || response.Count == 0)
         {
             _logger.LogWarning("No Woo products returned");
-            return Array.Empty<WooProduct>();
+            return Array.Empty<WooProductDto>();
         }
 
         _logger.LogInformation("Fetched {Count} Woo products", response.Count);

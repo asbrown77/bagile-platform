@@ -1,0 +1,1287 @@
+{
+  "id": 10460,
+  "name": "Professional Scrum with User Experience - 6-7 Feb 25 (Template)",
+  "status": "draft",
+  "sku": "PSU-060225-AB-1",
+  "price": 1050,
+  "stock_quantity": null,
+  "meta_data": [
+    {
+      "key": "rank_math_internal_links_processed",
+      "value": "1"
+    },
+    {
+      "key": "rank_math_internal_links_processed",
+      "value": "1"
+    },
+    {
+      "key": "rank_math_internal_links_processed",
+      "value": "1"
+    },
+    {
+      "key": "rank_math_internal_links_processed",
+      "value": "1"
+    },
+    {
+      "key": "rank_math_internal_links_processed",
+      "value": "1"
+    },
+    {
+      "key": "rank_math_internal_links_processed",
+      "value": "1"
+    },
+    {
+      "key": "rank_math_internal_links_processed",
+      "value": "1"
+    },
+    {
+      "key": "rank_math_internal_links_processed",
+      "value": "1"
+    },
+    {
+      "key": "rank_math_internal_links_processed",
+      "value": "1"
+    },
+    {
+      "key": "rank_math_internal_links_processed",
+      "value": "1"
+    },
+    {
+      "key": "rank_math_internal_links_processed",
+      "value": "1"
+    },
+    {
+      "key": "rank_math_internal_links_processed",
+      "value": "1"
+    },
+    {
+      "key": "rank_math_internal_links_processed",
+      "value": "1"
+    },
+    {
+      "key": "rank_math_internal_links_processed",
+      "value": "1"
+    },
+    {
+      "key": "rank_math_internal_links_processed",
+      "value": "1"
+    },
+    {
+      "key": "rank_math_internal_links_processed",
+      "value": "1"
+    },
+    {
+      "key": "rank_math_internal_links_processed",
+      "value": "1"
+    },
+    {
+      "key": "rank_math_internal_links_processed",
+      "value": "1"
+    },
+    {
+      "key": "rank_math_internal_links_processed",
+      "value": "1"
+    },
+    {
+      "key": "rank_math_internal_links_processed",
+      "value": "1"
+    },
+    {
+      "key": "rank_math_internal_links_processed",
+      "value": "1"
+    },
+    {
+      "key": "rank_math_internal_links_processed",
+      "value": "1"
+    },
+    {
+      "key": "rank_math_internal_links_processed",
+      "value": "1"
+    },
+    {
+      "key": "rank_math_internal_links_processed",
+      "value": "1"
+    },
+    {
+      "key": "rank_math_internal_links_processed",
+      "value": "1"
+    },
+    {
+      "key": "rank_math_internal_links_processed",
+      "value": "1"
+    },
+    {
+      "key": "rank_math_internal_links_processed",
+      "value": "1"
+    },
+    {
+      "key": "rank_math_internal_links_processed",
+      "value": "1"
+    },
+    {
+      "key": "rank_math_internal_links_processed",
+      "value": "1"
+    },
+    {
+      "key": "rank_math_internal_links_processed",
+      "value": "1"
+    },
+    {
+      "key": "rank_math_internal_links_processed",
+      "value": "1"
+    },
+    {
+      "key": "rank_math_internal_links_processed",
+      "value": "1"
+    },
+    {
+      "key": "event_date",
+      "value": "20250206"
+    },
+    {
+      "key": "_event_date",
+      "value": "field_607ea876a74e3"
+    },
+    {
+      "key": "event_type",
+      "value": "Live virtual training"
+    },
+    {
+      "key": "_event_type",
+      "value": "field_607ea899a74e4"
+    },
+    {
+      "key": "accordion_repeater_0_accordion_header",
+      "value": "Is this course online?"
+    },
+    {
+      "key": "_accordion_repeater_0_accordion_header",
+      "value": "field_607eac0a129cd"
+    },
+    {
+      "key": "accordion_repeater_0_accordion_content",
+      "value": "Yes, this course has been converted from a face to face training course to a \u0022virtual\u0022 training experience. You can take this training from the comfort of your own home, but means you need to have internet."
+    },
+    {
+      "key": "_accordion_repeater_0_accordion_content",
+      "value": "field_607eac21129ce"
+    },
+    {
+      "key": "accordion_repeater_1_accordion_header",
+      "value": "How does the online experience differ from the face to face training?"
+    },
+    {
+      "key": "_accordion_repeater_1_accordion_header",
+      "value": "field_607eac0a129cd"
+    },
+    {
+      "key": "accordion_repeater_1_accordion_content",
+      "value": "We all adjusting to this new reality and need to social distance. We\u0027ve been surprised how similar the online experience is to the face to face one and how engaged the students have been throughout the day. The feedback has been excellent from students who\u0027ve taken the online training, along with the assessment results."
+    },
+    {
+      "key": "_accordion_repeater_1_accordion_content",
+      "value": "field_607eac21129ce"
+    },
+    {
+      "key": "accordion_repeater_2_accordion_header",
+      "value": "What is included in the price?"
+    },
+    {
+      "key": "_accordion_repeater_2_accordion_header",
+      "value": "field_607eac0a129cd"
+    },
+    {
+      "key": "accordion_repeater_2_accordion_content",
+      "value": "The price includes course materials, 2 attempts at the PSPO I assessment, a lifetime certification from Scrum.org and a 40% discount on the PSPO II assessment."
+    },
+    {
+      "key": "_accordion_repeater_2_accordion_content",
+      "value": "field_607eac21129ce"
+    },
+    {
+      "key": "accordion_repeater_3_accordion_header",
+      "value": "How do I achieve the Professional Scrum Product Owner I (PSPO I) certification?"
+    },
+    {
+      "key": "_accordion_repeater_3_accordion_header",
+      "value": "field_607eac0a129cd"
+    },
+    {
+      "key": "accordion_repeater_3_accordion_content",
+      "value": "The PSPO I certification is achieved by taking and passing an online assessment in your own time following the course. It can be taken from any internet connected computer."
+    },
+    {
+      "key": "_accordion_repeater_3_accordion_content",
+      "value": "field_607eac21129ce"
+    },
+    {
+      "key": "accordion_repeater_4_accordion_header",
+      "value": "What is required to achieve the Professional Product Owner I (PSPO I) certification?"
+    },
+    {
+      "key": "_accordion_repeater_4_accordion_header",
+      "value": "field_607eac0a129cd"
+    },
+    {
+      "key": "accordion_repeater_4_accordion_content",
+      "value": "The PSPO I assessment is comprised of 80 multiple choice questions that must be completed in 60 minutes. The pass mark is 85%. The course fee provides up to 2 attempts at the PSPO I assessment."
+    },
+    {
+      "key": "_accordion_repeater_4_accordion_content",
+      "value": "field_607eac21129ce"
+    },
+    {
+      "key": "accordion_repeater_5_accordion_header",
+      "value": "What are the course hours?"
+    },
+    {
+      "key": "_accordion_repeater_5_accordion_header",
+      "value": "field_607eac0a129cd"
+    },
+    {
+      "key": "accordion_repeater_5_accordion_content",
+      "value": "Courses start at 09:00 and finish at 17:00 each day."
+    },
+    {
+      "key": "_accordion_repeater_5_accordion_content",
+      "value": "field_607eac21129ce"
+    },
+    {
+      "key": "accordion_repeater_6_accordion_header",
+      "value": "How many people will attend?"
+    },
+    {
+      "key": "_accordion_repeater_6_accordion_header",
+      "value": "field_607eac0a129cd"
+    },
+    {
+      "key": "accordion_repeater_6_accordion_content",
+      "value": "Our courses are kept small to ensure a premium experience."
+    },
+    {
+      "key": "_accordion_repeater_6_accordion_content",
+      "value": "field_607eac21129ce"
+    },
+    {
+      "key": "accordion_repeater_7_accordion_header",
+      "value": "How should I prepare for the course?\u00A0"
+    },
+    {
+      "key": "_accordion_repeater_7_accordion_header",
+      "value": "field_607eac0a129cd"
+    },
+    {
+      "key": "accordion_repeater_7_accordion_content",
+      "value": "The only preparation required is to read the \u003Ca title=\u0022Scrum Guide\u0022 href=\u0022http://www.scrumguides.org/\u0022 target=\u0022_blank\u0022 rel=\u0022nofollow noopener\u0022\u003EScrum Guide\u003C/a\u003E."
+    },
+    {
+      "key": "_accordion_repeater_7_accordion_content",
+      "value": "field_607eac21129ce"
+    },
+    {
+      "key": "accordion_repeater_8_accordion_header",
+      "value": "I\u0027m not sure if I have enough experience to take the course. What should I do?\u00A0"
+    },
+    {
+      "key": "_accordion_repeater_8_accordion_header",
+      "value": "field_607eac0a129cd"
+    },
+    {
+      "key": "accordion_repeater_8_accordion_content",
+      "value": "Email us at \u003Ca href=\u0022mailto:mailto@:info@bagile.co.uk\u0022\u003Einfo@bagile.co.uk\u003C/a\u003E and we will advise you."
+    },
+    {
+      "key": "_accordion_repeater_8_accordion_content",
+      "value": "field_607eac21129ce"
+    },
+    {
+      "key": "accordion_repeater",
+      "value": "14"
+    },
+    {
+      "key": "_accordion_repeater",
+      "value": "field_607eabe8129cc"
+    },
+    {
+      "key": "accordion_repeater_9_accordion_header",
+      "value": "How can I pay for the course?"
+    },
+    {
+      "key": "_accordion_repeater_9_accordion_header",
+      "value": "field_607eac0a129cd"
+    },
+    {
+      "key": "accordion_repeater_9_accordion_content",
+      "value": "Upon registering you have a number of payment options: Credit/Debit Card or pay by invoice. Or contact us at \u003Ca href=\u0022mailto:mailto@:info@bagile.co.uk\u0022\u003Einfo@bagile.co.uk\u003C/a\u003E\u00A0for direct assistance."
+    },
+    {
+      "key": "_accordion_repeater_9_accordion_content",
+      "value": "field_607eac21129ce"
+    },
+    {
+      "key": "accordion_repeater_10_accordion_header",
+      "value": "Can I register without paying VAT?"
+    },
+    {
+      "key": "_accordion_repeater_10_accordion_header",
+      "value": "field_607eac0a129cd"
+    },
+    {
+      "key": "accordion_repeater_10_accordion_content",
+      "value": "Yes for \u003Cstrong\u003Evirtual format courses\u003C/strong\u003E and for those who\u003Cstrong\u003E live outside the UK\u003C/strong\u003E it will be automatically calculated at the checkout."
+    },
+    {
+      "key": "_accordion_repeater_10_accordion_content",
+      "value": "field_607eac21129ce"
+    },
+    {
+      "key": "accordion_repeater_11_accordion_header",
+      "value": "Can I claim PMI PDU credits for attending the course?"
+    },
+    {
+      "key": "_accordion_repeater_11_accordion_header",
+      "value": "field_607eac0a129cd"
+    },
+    {
+      "key": "accordion_repeater_11_accordion_content",
+      "value": "\u003Cstrong\u003E\u00A0\u003C/strong\u003EYes. You can claim 14 PDU\u0027s for attending a course."
+    },
+    {
+      "key": "_accordion_repeater_11_accordion_content",
+      "value": "field_607eac21129ce"
+    },
+    {
+      "key": "accordion_repeater_12_accordion_header",
+      "value": "Where can I find your course booking and cancellation policies?"
+    },
+    {
+      "key": "_accordion_repeater_12_accordion_header",
+      "value": "field_607eac0a129cd"
+    },
+    {
+      "key": "accordion_repeater_12_accordion_content",
+      "value": "Visit our public\u00A0\u003Ca href=\u0022https://bagile.co.uk/course-policy\u0022 rel=\u0022nofollow\u0022\u003Ecourse policy page\u003C/a\u003E."
+    },
+    {
+      "key": "_accordion_repeater_12_accordion_content",
+      "value": "field_607eac21129ce"
+    },
+    {
+      "key": "accordion_repeater_13_accordion_header",
+      "value": "Where can I contact the trainer with further questions?"
+    },
+    {
+      "key": "_accordion_repeater_13_accordion_header",
+      "value": "field_607eac0a129cd"
+    },
+    {
+      "key": "accordion_repeater_13_accordion_content",
+      "value": "You can email them at\u00A0\u003Ca href=\u0022mailto:mailto@:info@bagile.co.uk\u0022\u003Einfo@bagile.co.uk\u003C/a\u003E"
+    },
+    {
+      "key": "_accordion_repeater_13_accordion_content",
+      "value": "field_607eac21129ce"
+    },
+    {
+      "key": "event_time",
+      "value": "9:00am - 5:00pm"
+    },
+    {
+      "key": "_event_time",
+      "value": "field_607ff78354c47"
+    },
+    {
+      "key": "woopt_actions",
+      "value": [
+        "set_hidden|100%|date_time_after\u003E09/27/2021 12:00 am"
+      ]
+    },
+    {
+      "key": "training_link",
+      "value": "3647"
+    },
+    {
+      "key": "_training_link",
+      "value": "field_6092b95ed2f85"
+    },
+    {
+      "key": "location",
+      "value": ""
+    },
+    {
+      "key": "_location",
+      "value": "field_6093af200b00e"
+    },
+    {
+      "key": "select_a_trainer",
+      "value": [
+        "383"
+      ]
+    },
+    {
+      "key": "_select_a_trainer",
+      "value": "field_60952297b19f1"
+    },
+    {
+      "key": "_yoast_wpseo_content_score",
+      "value": "90"
+    },
+    {
+      "key": "_yoast_wpseo_estimated-reading-time-minutes",
+      "value": "1"
+    },
+    {
+      "key": "WooCommerceEventsEvent",
+      "value": "Event"
+    },
+    {
+      "key": "WooCommerceEventsDate",
+      "value": "2025-02-06"
+    },
+    {
+      "key": "WooCommerceEventsDateTimestamp",
+      "value": "1738800000"
+    },
+    {
+      "key": "WooCommerceEventsDateTimeTimestamp",
+      "value": "1738800000"
+    },
+    {
+      "key": "WooCommerceEventsEndDate",
+      "value": "2025-02-07"
+    },
+    {
+      "key": "WooCommerceEventsEndDateTimestamp",
+      "value": "1738886400"
+    },
+    {
+      "key": "WooCommerceEventsEndDateTimeTimestamp",
+      "value": "1738886400"
+    },
+    {
+      "key": "WooCommerceEventsType",
+      "value": "sequential"
+    },
+    {
+      "key": "WooCommerceEventsExpire",
+      "value": "2025-01-06 00:00"
+    },
+    {
+      "key": "WooCommerceEventsExpireTimestamp",
+      "value": "1736121600"
+    },
+    {
+      "key": "WooCommerceEventsExpireMessage",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceEventsBookingsExpirePassedDate",
+      "value": "off"
+    },
+    {
+      "key": "WooCommerceEventsTicketExpirationType",
+      "value": "select"
+    },
+    {
+      "key": "WooCommerceEventsTicketsExpireSelect",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceEventsTicketsExpireSelectTimestamp",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceEventsNumDays",
+      "value": "2"
+    },
+    {
+      "key": "WooCommerceEventsHour",
+      "value": "09"
+    },
+    {
+      "key": "WooCommerceEventsMinutes",
+      "value": "00"
+    },
+    {
+      "key": "WooCommerceEventsPeriod",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceEventsTimeZone",
+      "value": "Europe/London"
+    },
+    {
+      "key": "WooCommerceEventsLocation",
+      "value": "Live virtual training"
+    },
+    {
+      "key": "WooCommerceEventsTicketLogo",
+      "value": "https://bagile.co.uk/wp-content/uploads/2021/07/bagile-logo-email.jpg"
+    },
+    {
+      "key": "WooCommerceEventsPrintTicketLogo",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceEventsTicketHeaderImage",
+      "value": "https://bagile.co.uk/wp-content/uploads/2021/07/email-hero.jpg"
+    },
+    {
+      "key": "WooCommerceEventsTicketText",
+      "value": "Welcome to your \u003Cstrong\u003EScrum.org Professional Scrum with User Experience\u003C/strong\u003E\r\n\r\nYou\u2019ll need a computer or tablet with a camera and microphone. We\u2019ll be using Zoom for hosting,\u00A0\u003Ca href=\u0022http://mural.co/\u0022 target=\u0022_blank\u0022 rel=\u0022noopener\u0022 data-saferedirecturl=\u0022https://www.google.com/url?q=http://mural.co/\u0026amp;source=gmail\u0026amp;ust=1732704932621000\u0026amp;usg=AOvVaw2groaN-ZcuxQlAtTGWOn5K\u0022\u003EMural.co\u003C/a\u003E\u00A0for exercises and visual collaboration, and a combination of cameras for different views.\r\n\r\nThe zoom meeting below will open at \u003Cstrong\u003E0845\u003C/strong\u003E UK time for any technical testing required. Please join by \u003Cstrong\u003E0850\u003C/strong\u003E so we can start on time at \u003Cstrong\u003E0900\u003C/strong\u003E UK time. The course will run between \u003Cstrong\u003E0900\u003C/strong\u003E and \u003Cstrong\u003E1700\u003C/strong\u003E UK time each day. The trainer will be available after the course each day for additional questions.\r\n\r\nIf you have any questions in the meantime, we are here to help you.\r\n\r\n\u003Cstrong\u003ETechnology \u0026amp; Materials:\u003C/strong\u003E\r\nWe have prepared a great online experience for you, therefore we would like you to make sure you\u0027re set-up is OK for it. If you\u0027re having any difficulties, we are here to support you. Please email us for support at \u003Ca href=\u0022mailto:info@bagile.co.uk\u0022 target=\u0022_blank\u0022 rel=\u0022noopener\u0022\u003Einfo@bagile.co.uk\u003C/a\u003E\r\n\r\nWe will be using:\r\n\u003Cp style=\u0022padding-left: 40px\u0022\u003E\u2022\u00A0 \u00A0Mural as a presentation and exercise tool. Please check you can access the website \u003Ca href=\u0022https://mural.co\u0022 target=\u0022_blank\u0022 rel=\u0022noopener\u0022 data-saferedirecturl=\u0022https://www.google.com/url?q=https://mural.co\u0026amp;source=gmail\u0026amp;ust=1732704932621000\u0026amp;usg=AOvVaw1HZVw3SC22FxarC7EwqtPf\u0022\u003Ehttps://mural.co\u003C/a\u003E \u0026amp; check out the\u00A0\u003Ca href=\u0022https://support.mural.co/en/articles/2113688-technical-requirements-to-run-mural\u0022 target=\u0022_blank\u0022 rel=\u0022noopener\u0022 data-saferedirecturl=\u0022https://www.google.com/url?q=https://support.mural.co/en/articles/2113688-technical-requirements-to-run-mural\u0026amp;source=gmail\u0026amp;ust=1732704932622000\u0026amp;usg=AOvVaw0Oa_jPgshHMlWPhzNSvMGF\u0022\u003ETechnical requirements to run mural\u003C/a\u003E\r\n\u2022\u00A0 \u00A0We will be using Zoom as a video conferencing tool.\u00A0\u00A0Please make sure you have the latest version installed - \u003Ca href=\u0022https://support.zoom.us/hc/en-us/articles/201362233-Upgrade-update-to-the-latest-version\u0022 target=\u0022_blank\u0022 rel=\u0022noopener\u0022 data-saferedirecturl=\u0022https://www.google.com/url?q=https://support.zoom.us/hc/en-us/articles/201362233-Upgrade-update-to-the-latest-version\u0026amp;source=gmail\u0026amp;ust=1732704932622000\u0026amp;usg=AOvVaw1xHnT6uLq-fh-p-26mXf3L\u0022\u003EHow to update your Zoom client\u003C/a\u003E\u003C/p\u003E\r\n\u003Cstrong\u003EBefore Day 1 - [self-study]\u003C/strong\u003E\r\n\u2022\u00A0 \u00A0Read the \u003Ca href=\u0022https://scrumguides.org/\u0022\u003EScrum Guide.\u003C/a\u003E\r\n\u2022\u00A0 \u00A0Read the \u003Ca href=\u0022https://www.scrum.org/resources/evidence-based-management-guide\u0022 target=\u0022_blank\u0022 rel=\u0022noopener\u0022 data-saferedirecturl=\u0022https://www.google.com/url?q=https://www.scrum.org/resources/evidence-based-management-guide\u0026amp;source=gmail\u0026amp;ust=1732704932622000\u0026amp;usg=AOvVaw3wi2JgIGqB5t6hfdjTzsZM\u0022\u003EEBM guide\u003C/a\u003E."
+    },
+    {
+      "key": "WooCommerceEventsThankYouText",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceEventsEventDetailsText",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceEventsSupportContact",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceEventsHourEnd",
+      "value": "17"
+    },
+    {
+      "key": "WooCommerceEventsMinutesEnd",
+      "value": "00"
+    },
+    {
+      "key": "WooCommerceEventsEndPeriod",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceEventsAddEventbrite",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceEventsGPS",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceEventsDirections",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceEventsEmail",
+      "value": "info@bagile.co.uk"
+    },
+    {
+      "key": "WooCommerceEventsTicketBackgroundColor",
+      "value": "#f4f4f4"
+    },
+    {
+      "key": "WooCommerceEventsTicketButtonColor",
+      "value": "#f7741c"
+    },
+    {
+      "key": "WooCommerceEventsTicketTextColor",
+      "value": "#ffffff"
+    },
+    {
+      "key": "WooCommerceEventsBackgroundColor",
+      "value": "#16a75d"
+    },
+    {
+      "key": "WooCommerceEventsTextColor",
+      "value": "#ffffff"
+    },
+    {
+      "key": "WooCommerceEventsGoogleMaps",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceEventsTicketPurchaserDetails",
+      "value": "on"
+    },
+    {
+      "key": "WooCommerceEventsTicketAddCalendar",
+      "value": "on"
+    },
+    {
+      "key": "WooCommerceEventsTicketAddCalendarReminders",
+      "value": [
+        {
+          "amount": "1",
+          "unit": "weeks"
+        },
+        {
+          "amount": "1",
+          "unit": "days"
+        },
+        {
+          "amount": "1",
+          "unit": "hours"
+        },
+        {
+          "amount": "15",
+          "unit": "minutes"
+        }
+      ]
+    },
+    {
+      "key": "WooCommerceEventsTicketAttachICS",
+      "value": "on"
+    },
+    {
+      "key": "WooCommerceEventsTicketDisplayDateTime",
+      "value": "on"
+    },
+    {
+      "key": "WooCommerceEventsTicketDisplayBarcode",
+      "value": "on"
+    },
+    {
+      "key": "WooCommerceEventsTicketDisplayPrice",
+      "value": "off"
+    },
+    {
+      "key": "WooCommerceEventsTicketDisplayZoom",
+      "value": "on"
+    },
+    {
+      "key": "WooCommerceEventsTicketDisplayBookings",
+      "value": "on"
+    },
+    {
+      "key": "WooCommerceEventsIncludeCustomAttendeeDetails",
+      "value": "off"
+    },
+    {
+      "key": "WooCommerceEventsCaptureAttendeeDetails",
+      "value": "on"
+    },
+    {
+      "key": "WooCommerceEventsEmailAttendee",
+      "value": "on"
+    },
+    {
+      "key": "WooCommerceEventsCaptureAttendeeTelephone",
+      "value": "off"
+    },
+    {
+      "key": "WooCommerceEventsCaptureAttendeeCompany",
+      "value": "off"
+    },
+    {
+      "key": "WooCommerceEventsCaptureAttendeeDesignation",
+      "value": "off"
+    },
+    {
+      "key": "WooCommerceEventsUniqueEmail",
+      "value": "off"
+    },
+    {
+      "key": "WooCommerceEventsSendEmailTickets",
+      "value": "on"
+    },
+    {
+      "key": "WooCommerceEventsEmailSubjectSingle",
+      "value": "Professional Scrum with User Experience Course Ticket - {OrderNumber}"
+    },
+    {
+      "key": "WooCommerceEventsExportUnpaidTickets",
+      "value": "on"
+    },
+    {
+      "key": "WooCommerceEventsExportBillingDetails",
+      "value": "on"
+    },
+    {
+      "key": "WooCommerceEventsTicketTheme",
+      "value": "/home/customer/www/bagile.co.uk/public_html/wp-content/uploads/fooevents/themes/default_2020"
+    },
+    {
+      "key": "WooCommerceEventsAttendeeOverride",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceEventsAttendeeOverridePlural",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceEventsTicketOverride",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceEventsTicketOverridePlural",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceEventsDayOverride",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceEventsDayOverridePlural",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceEventsViewSeatingOptions",
+      "value": "off"
+    },
+    {
+      "key": "WooCommerceEventsViewSeatingChart",
+      "value": "off"
+    },
+    {
+      "key": "WooCommerceEventsViewBookingsOptions",
+      "value": "off"
+    },
+    {
+      "key": "WooCommerceEventsEventDetailsNewOrder",
+      "value": "off"
+    },
+    {
+      "key": "WooCommerceEventsDisplayAttendeeNewOrder",
+      "value": "on"
+    },
+    {
+      "key": "WooCommerceEventsDisplayBookingsNewOrder",
+      "value": "off"
+    },
+    {
+      "key": "WooCommerceEventsDisplaySeatingsNewOrder",
+      "value": "off"
+    },
+    {
+      "key": "WooCommerceEventsDisplayCustAttNewOrder",
+      "value": "off"
+    },
+    {
+      "key": "WooCommerceEventsHideBookingsDisplayTime",
+      "value": "off"
+    },
+    {
+      "key": "WooCommerceEventsHideBookingsStockAvailability",
+      "value": "off"
+    },
+    {
+      "key": "WooCommerceEventsViewBookingsStockDropdowns",
+      "value": "off"
+    },
+    {
+      "key": "WooCommerceEventsViewOutOfStockBookings",
+      "value": "off"
+    },
+    {
+      "key": "WooCommerceEventsBookingsHideDateSingleDropDown",
+      "value": "off"
+    },
+    {
+      "key": "WooCommerceBadgeFieldTopLeft",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeFieldTopMiddle",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeFieldTopRight",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeFieldMiddleLeft",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeFieldMiddleMiddle",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeFieldMiddleRight",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeFieldBottomLeft",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeFieldBottomMiddle",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeFieldBottomRight",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeFieldTopLeft_logo",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeFieldTopMiddle_logo",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeFieldTopRight_logo",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeFieldMiddleLeft_logo",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeFieldMiddleMiddle_logo",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeFieldMiddleRight_logo",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeFieldBottomLeft_logo",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeFieldBottomMiddle_logo",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeFieldBottomRight_logo",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeFieldTopLeft_custom",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeFieldTopMiddle_custom",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeFieldTopRight_custom",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeFieldMiddleLeft_custom",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeFieldMiddleMiddle_custom",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeFieldMiddleRight_custom",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeFieldBottomLeft_custom",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeFieldBottomMiddle_custom",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeFieldBottomRight_custom",
+      "value": ""
+    },
+    {
+      "key": "WooCommercePrintTicketSort",
+      "value": "most_recent"
+    },
+    {
+      "key": "WooCommercePrintTicketNumbers",
+      "value": ""
+    },
+    {
+      "key": "WooCommercePrintTicketOrders",
+      "value": ""
+    },
+    {
+      "key": "WooCommercePrintTicketSize",
+      "value": "tickets_avery_letter_10"
+    },
+    {
+      "key": "WooCommercePrintTicketNrColumns",
+      "value": "3"
+    },
+    {
+      "key": "WooCommercePrintTicketNrRows",
+      "value": "3"
+    },
+    {
+      "key": "WooCommerceEventsCutLinesPrintTicket",
+      "value": "on"
+    },
+    {
+      "key": "WooCommerceEventsTicketBackgroundImage",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceEventsZoomHost",
+      "value": "Tv1arteKSKeEOCqpYpdqvQ"
+    },
+    {
+      "key": "WooCommerceEventsZoomType",
+      "value": "meetings"
+    },
+    {
+      "key": "WooCommerceEventsZoomMultiOption",
+      "value": "single"
+    },
+    {
+      "key": "WooCommerceEventsZoomWebinar",
+      "value": "85237446422_meetings"
+    },
+    {
+      "key": "WooCommerceEventsZoomDurationHour",
+      "value": "1"
+    },
+    {
+      "key": "WooCommerceEventsZoomDurationMinute",
+      "value": "0"
+    },
+    {
+      "key": "event_end_date",
+      "value": "20250207"
+    },
+    {
+      "key": "_event_end_date",
+      "value": "field_60d446e1a82ed"
+    },
+    {
+      "key": "WooCommerceEventsSelectGlobalTime",
+      "value": "off"
+    },
+    {
+      "key": "WooCommerceEventsTicketDisplayMultiDay",
+      "value": "off"
+    },
+    {
+      "key": "wooCommerceEventsEmailTicketAdmin",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceEventsMailchimpList",
+      "value": "4d9a945ec7"
+    },
+    {
+      "key": "WooCommerceEventsMailchimpTags",
+      "value": "Public, Student, PSU, PSU-060225-AB"
+    },
+    {
+      "key": "_yoast_wpseo_wordproof_timestamp",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceEventsBookingsExpireValue",
+      "value": "off"
+    },
+    {
+      "key": "WooCommerceEventsBookingsExpireUnit",
+      "value": "off"
+    },
+    {
+      "key": "WooCommerceEventsCaptureAttendeeEmail",
+      "value": "on"
+    },
+    {
+      "key": "expiration_log",
+      "value": "{\u0022type\u0022:\u0022draft\u0022,\u0022scheduled_for\u0022:\u00222022-10-31 00:00:00\u0022,\u0022email_enabled\u0022:false,\u0022expired_on\u0022:\u00222022-10-31 00:00:03\u0022}"
+    },
+    {
+      "key": "_yoast_wpseo_primary_product_cat",
+      "value": "21"
+    },
+    {
+      "key": "rank_math_primary_product_cat",
+      "value": "109"
+    },
+    {
+      "key": "rank_math_news_sitemap_robots",
+      "value": "index"
+    },
+    {
+      "key": "rank_math_robots",
+      "value": [
+        "index",
+        "noarchive"
+      ]
+    },
+    {
+      "key": "rank_math_analytic_object_id",
+      "value": "460"
+    },
+    {
+      "key": "rank_math_seo_score",
+      "value": "85"
+    },
+    {
+      "key": "rank_math_canonical_url",
+      "value": "https://www.bagile.co.uk/our-courses/pspo/"
+    },
+    {
+      "key": "WooCommerceBadgeField_a_4",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeField_b_4",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeField_c_4",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeField_d_1",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeField_d_2",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeField_d_3",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeField_d_4",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeField_a_4_logo",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeField_b_4_logo",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeField_c_4_logo",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeField_d_1_logo",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeField_d_2_logo",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeField_d_3_logo",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeField_d_4_logo",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeField_a_4_custom",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeField_b_4_custom",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeField_c_4_custom",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeField_d_1_custom",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeField_d_2_custom",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeField_d_3_custom",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceBadgeField_d_4_custom",
+      "value": ""
+    },
+    {
+      "key": "_rank_math_gtin_code",
+      "value": ""
+    },
+    {
+      "key": "rank_math_internal_links_processed",
+      "value": "1"
+    },
+    {
+      "key": "rank_math_focus_keyword",
+      "value": "Professional Scrum with User Experience, user experience, Lean UX, Scrum, PSU I"
+    },
+    {
+      "key": "rank_math_description",
+      "value": "Struggling with UX work in your Scrum team? Learn to align UX with Scrum and boost your team\u2019s collaboration and impact. Join now!"
+    },
+    {
+      "key": "rank_math_title",
+      "value": " %title%: Register Now!"
+    },
+    {
+      "key": "rank_math_facebook_image",
+      "value": "https://www.bagile.co.uk/wp-content/uploads/2021/04/21268-PSPO.jpg"
+    },
+    {
+      "key": "rank_math_facebook_image_id",
+      "value": "1470"
+    },
+    {
+      "key": "WooCommerceEventsTicketIdentifierOutput",
+      "value": "ticketid"
+    },
+    {
+      "key": "WooCommerceEventsTicketNumberOutput",
+      "value": "1"
+    },
+    {
+      "key": "WooCommerceEventsTicketNumberPrefix",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceEventsTicketNumberSuffix",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceEventsEventDetailsOverride",
+      "value": ""
+    },
+    {
+      "key": "WooCommerceEventsHideBookingsSlotCalendar",
+      "value": "off"
+    },
+    {
+      "key": "_WooCommerceEventsCounter",
+      "value": "4"
+    },
+    {
+      "key": "faq_posts",
+      "value": "10458"
+    },
+    {
+      "key": "_faq_posts",
+      "value": "field_6542317536279"
+    },
+    {
+      "key": "rank_math_contentai_score",
+      "value": {
+        "keywords": "74.51",
+        "wordCount": "0",
+        "linkCount": "0",
+        "headingCount": "0",
+        "mediaCount": "0"
+      }
+    },
+    {
+      "key": "WooCommerceEventsDateMySQLFormat",
+      "value": "2025-02-06 00:00:00"
+    },
+    {
+      "key": "WooCommerceEventsEndDateMySQLFormat",
+      "value": "2025-02-07 00:00:00"
+    },
+    {
+      "key": "_secondary-market_price",
+      "value": "882"
+    },
+    {
+      "key": "_secondary-market_regular_price",
+      "value": "882"
+    },
+    {
+      "key": "_primary-market_price",
+      "value": "1050"
+    },
+    {
+      "key": "_primary-market_regular_price",
+      "value": "1050"
+    },
+    {
+      "key": "WooCommerceEventsViewSeatingOtherVariations",
+      "value": "off"
+    },
+    {
+      "key": "_primary-market_price_method",
+      "value": "exchange_rate"
+    },
+    {
+      "key": "_primary-market_sale_price",
+      "value": ""
+    },
+    {
+      "key": "_primary-market_sale_price_dates",
+      "value": "default"
+    },
+    {
+      "key": "_primary-market_sale_price_dates_from",
+      "value": ""
+    },
+    {
+      "key": "_primary-market_sale_price_dates_to",
+      "value": ""
+    },
+    {
+      "key": "_secondary-market_price_method",
+      "value": "exchange_rate"
+    },
+    {
+      "key": "_secondary-market_sale_price",
+      "value": ""
+    },
+    {
+      "key": "_secondary-market_sale_price_dates",
+      "value": "default"
+    },
+    {
+      "key": "_secondary-market_sale_price_dates_from",
+      "value": ""
+    },
+    {
+      "key": "_secondary-market_sale_price_dates_to",
+      "value": ""
+    },
+    {
+      "key": "_expiration-date",
+      "value": "1738803600"
+    },
+    {
+      "key": "_expiration-date-status",
+      "value": "saved"
+    },
+    {
+      "key": "_expiration-date-type",
+      "value": "change-status"
+    },
+    {
+      "key": "_expiration-date-post-status",
+      "value": "draft"
+    },
+    {
+      "key": "_expiration-date-taxonomy",
+      "value": "product_cat"
+    },
+    {
+      "key": "_expiration-date-categories",
+      "value": "0"
+    },
+    {
+      "key": "_expiration-date-options",
+      "value": {
+        "expireType": "change-status",
+        "newStatus": "draft",
+        "category": "0",
+        "categoryTaxonomy": "product_cat",
+        "date": 1738803600,
+        "actionLabel": "Change status",
+        "postTitle": "Professional Scrum with User Experience \u0026#8211; 6-7 Feb 25",
+        "postType": "product",
+        "postLink": "https://www.bagile.co.uk/course-schedule/psu-060225b/",
+        "postTypeLabel": "Product"
+      }
+    },
+    {
+      "key": "_pp_future_metadata_hash",
+      "value": "1107ee4c1eb7ce7b8feba8575a8db83b"
+    }
+  ]
+}

@@ -13,13 +13,13 @@ public class WooCollectorTests
 {
     private Mock<IWooApiClient> _mockApi;
     private WooOrderCollector _collector;
-    private Mock<IImporter<WooProduct>> _mockProjector;
+    private Mock<IImporter<WooProductDto>> _mockProjector;
 
     [SetUp]
     public void Setup()
     {
         _mockApi = new Mock<IWooApiClient>();
-        _mockProjector = new Mock<IImporter<WooProduct>>();
+        _mockProjector = new Mock<IImporter<WooProductDto>>();
         _collector = new WooOrderCollector(_mockApi.Object,_mockProjector.Object, NullLogger<WooOrderCollector>.Instance);
     }
 
