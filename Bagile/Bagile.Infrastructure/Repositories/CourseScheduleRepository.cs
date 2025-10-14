@@ -19,11 +19,11 @@ public class CourseScheduleRepository : ICourseScheduleRepository
         const string sql = @"
             INSERT INTO course_schedules
                 (name, status, start_date, end_date, capacity, price, sku,
-                 trainer_name, format_type, course_type, is_public,
+                 trainer_name, format_type, is_public,
                  source_system, source_product_id, last_synced)
             VALUES
                 (@Name, @Status, @StartDate, @EndDate, @Capacity, @Price, @Sku,
-                 @TrainerName, @FormatType, @CourseType, @IsPublic,
+                 @TrainerName, @FormatType, @IsPublic,
                  @SourceSystem, @SourceProductId, now())
             ON CONFLICT (source_system, source_product_id)
             DO UPDATE SET
@@ -36,7 +36,6 @@ public class CourseScheduleRepository : ICourseScheduleRepository
                 sku = EXCLUDED.sku,
                 trainer_name = EXCLUDED.trainer_name,
                 format_type = EXCLUDED.format_type,
-                course_type = EXCLUDED.course_type,
                 is_public = EXCLUDED.is_public,
                 last_synced = now();";
 

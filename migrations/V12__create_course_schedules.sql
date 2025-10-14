@@ -9,7 +9,6 @@ CREATE TABLE course_schedules (
                                   sku TEXT,
                                   trainer_name TEXT,                    -- e.g. 'Alex Brown'
                                   format_type TEXT,                     -- 'virtual' / 'in_person'
-                                  course_type TEXT DEFAULT 'public',
                                   is_public BOOLEAN DEFAULT TRUE,
                                   source_system TEXT,                   -- e.g. 'WooCommerce'
                                   source_product_id BIGINT,             -- store's product ID if applicable

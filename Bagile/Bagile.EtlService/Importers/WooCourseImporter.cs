@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Bagile.EtlService.Projectors;
 
-public class WooCourseImporter : IImporter<WooProduct>
+public class WooCourseImporter : IImporter<WooProductDto>
 {
     private readonly ICourseScheduleRepository _schedules;
     private readonly ICourseDefinitionRepository _definitions;
@@ -21,19 +21,27 @@ public class WooCourseImporter : IImporter<WooProduct>
         _logger = logger;
     }
 
-    public async Task ApplyAsync(WooProduct product, CancellationToken ct = default)
+    public async Task ApplyAsync(WooProductDto product, CancellationToken ct = default)
     {
+        var meta = product.MetaData?
+            .Where(m => m.Key != null)
+            .ToDictionary(
+                m => m.Key!.ToLowerInvariant(),
+                m => m.Value?.ToString() ?? string.Empty);
+
+        DateTime? Parse(string? s) => DateTime.TryParse(s, out var d) ? d : null;
+
         var course = new CourseSchedule
         {
             Name = product.Name,
             Status = product.Status,
-            StartDate = product.Meta?.StartDate,
-            EndDate = product.Meta?.EndDate,
+            StartDate = Parse(meta?.GetValueOrDefault("start_date")),
+            EndDate = Parse(meta?.GetValueOrDefault("end_date")),
             Capacity = product.StockQuantity,
             Price = product.Price,
             Sku = product.Sku,
-            TrainerName = product.Meta?.TrainerName,
-            FormatType = product.Meta?.FormatType,
+            TrainerName = meta?.GetValueOrDefault("trainer_name"),
+            FormatType = meta?.GetValueOrDefault("format_type"),
             SourceSystem = "WooCommerce",
             SourceProductId = product.Id
         };
