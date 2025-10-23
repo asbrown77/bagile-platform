@@ -24,6 +24,24 @@ namespace Bagile.Infrastructure.Repositories
             return Convert.ToHexString(bytes);
         }
 
+
+        public async Task<bool> ExistsAsync(string source, string externalId, string payloadJson)
+        {
+            var hash = ComputeSha256(payloadJson);
+
+            const string sql = @"
+            SELECT 1
+            FROM bagile.raw_orders
+            WHERE source = @source
+              AND external_id = @externalId
+              AND payload_hash = @hash
+            LIMIT 1;";
+
+            await using var conn = new NpgsqlConnection(_connectionString);
+            var result = await conn.ExecuteScalarAsync<int?>(sql, new { source, externalId, hash });
+            return result.HasValue;
+        }
+
         public async Task<int> InsertAsync(string source, string externalId, string payloadJson, string eventType)
         {
             var hash = ComputeSha256(payloadJson);
@@ -36,6 +54,18 @@ namespace Bagile.Infrastructure.Repositories
 
             await using var conn = new NpgsqlConnection(_connectionString);
             return await conn.ExecuteScalarAsync<int?>(sql, new { source, externalId, payloadJson, eventType, hash }) ?? 0;
+        }
+
+
+        // Only insert if payload changed
+        public async Task<int> InsertIfChangedAsync(string source, string externalId, string payloadJson, string eventType)
+        {
+            var hash = ComputeSha256(payloadJson);
+
+            if (await ExistsAsync(source, externalId, hash))
+                return 0; // nothing inserted
+
+            return await InsertAsync(source, externalId, payloadJson, eventType);
         }
 
         public async Task<DateTime?> GetLastTimestampAsync(string source)
