@@ -14,4 +14,4 @@ CREATE TABLE bagile.course_definitions (
 
 -- Add link from course_schedules to course_definitions
 ALTER TABLE bagile.course_schedules
-ADD COLUMN course_definition_id INT REFERENCES course_definitions(id);
+ADD COLUMN course_definition_id INT REFERENCES bagile.course_definitions(id);
