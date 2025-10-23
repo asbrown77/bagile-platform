@@ -31,7 +31,7 @@ namespace Bagile.Infrastructure.Repositories
             const string sql = @"
                 INSERT INTO bagile.raw_orders (source, external_id, payload, event_type, payload_hash)
                 VALUES (@source, @externalId, CAST(@payloadJson AS jsonb), @eventType, @hash)
-                ON CONFLICT (source, external_id, payload_hash) DO NOTHING
+                ON CONFLICT (source, payload_hash) DO NOTHING
                 RETURNING id;";
 
             await using var conn = new NpgsqlConnection(_connectionString);
