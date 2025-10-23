@@ -18,13 +18,13 @@ public class CourseDefinitionRepository : ICourseDefinitionRepository
     {
         await using var conn = new NpgsqlConnection(_connStr);
         return await conn.QueryAsync<CourseDefinition>(
-            "SELECT * FROM course_definitions ORDER BY code;");
+            "SELECT * FROM bagile.course_definitions ORDER BY code;");
     }
 
     public async Task<CourseDefinition?> GetByCodeAsync(string code)
     {
         await using var conn = new NpgsqlConnection(_connStr);
         return await conn.QueryFirstOrDefaultAsync<CourseDefinition>(
-            "SELECT * FROM course_definitions WHERE code = @code;", new { code });
+            "SELECT * FROM bagile.course_definitions WHERE code = @code;", new { code });
     }
 }

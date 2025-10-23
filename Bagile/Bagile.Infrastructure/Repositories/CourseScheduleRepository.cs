@@ -17,7 +17,7 @@ public class CourseScheduleRepository : ICourseScheduleRepository
     public async Task UpsertAsync(CourseSchedule course)
     {
         const string sql = @"
-            INSERT INTO course_schedules
+            INSERT INTO bagile.course_schedules
                 (name, status, start_date, end_date, capacity, price, sku,
                  trainer_name, format_type, is_public,
                  source_system, source_product_id, last_synced)
@@ -47,6 +47,6 @@ public class CourseScheduleRepository : ICourseScheduleRepository
     {
         await using var conn = new NpgsqlConnection(_connStr);
         return await conn.QueryAsync<CourseSchedule>(
-            "SELECT * FROM course_schedules ORDER BY start_date DESC;");
+            "SELECT * FROM bagile.course_schedules ORDER BY start_date DESC;");
     }
 }
