@@ -2,7 +2,7 @@
 DROP TABLE IF EXISTS courses CASCADE;
 
 -- Create new course_definitions table
-CREATE TABLE course_definitions (
+CREATE TABLE bagile.course_definitions (
     id SERIAL PRIMARY KEY,
     code TEXT UNIQUE NOT NULL,
     name TEXT NOT NULL,
@@ -13,5 +13,5 @@ CREATE TABLE course_definitions (
 );
 
 -- Add link from course_schedules to course_definitions
-ALTER TABLE course_schedules
+ALTER TABLE bagile.course_schedules
 ADD COLUMN course_definition_id INT REFERENCES course_definitions(id);
