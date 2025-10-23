@@ -24,10 +24,14 @@ jobs:
         run: |
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             TAG="${GITHUB_REF#refs/tags/}"
+            # remove the etl-v prefix for semantic versioning
+            CLEAN_TAG="${TAG#etl-v}"
           else
             TAG="etl-vdev-${GITHUB_SHA::7}"
+            CLEAN_TAG="0.0.0"
           fi
           echo "version=${TAG}" >> $GITHUB_OUTPUT
+          echo "semver=${CLEAN_TAG}" >> $GITHUB_OUTPUT
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
