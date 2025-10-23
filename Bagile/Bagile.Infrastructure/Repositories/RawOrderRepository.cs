@@ -24,21 +24,18 @@ namespace Bagile.Infrastructure.Repositories
             return Convert.ToHexString(bytes);
         }
 
-        public async Task<bool> ExistsAsync(string source, string externalId, string payloadJson)
+        public async Task<int> InsertAsync(string source, string externalId, string payloadJson, string eventType)
         {
             var hash = ComputeSha256(payloadJson);
 
             const string sql = @"
-            SELECT 1
-            FROM bagile.raw_orders
-            WHERE source = @source
-              AND external_id = @externalId
-              AND payload_hash = @hash
-            LIMIT 1;";
+                INSERT INTO bagile.raw_orders (source, external_id, payload, event_type, payload_hash)
+                VALUES (@source, @externalId, CAST(@payloadJson AS jsonb), @eventType, @hash)
+                ON CONFLICT (source, external_id, payload_hash) DO NOTHING
+                RETURNING id;";
 
             await using var conn = new NpgsqlConnection(_connectionString);
-            var result = await conn.ExecuteScalarAsync<int?>(sql, new { source, externalId, hash });
-            return result.HasValue;
+            return await conn.ExecuteScalarAsync<int?>(sql, new { source, externalId, payloadJson, eventType, hash }) ?? 0;
         }
 
         public async Task<DateTime?> GetLastTimestampAsync(string source)
@@ -46,52 +43,26 @@ namespace Bagile.Infrastructure.Repositories
             string sql = source switch
             {
                 "xero" => @"
-            SELECT MAX(
-                CASE
-                    WHEN (payload->>'UpdatedDateUTC') ~ '^[0-9]{4}-'
-                    THEN (payload->>'UpdatedDateUTC')::timestamp
-                    ELSE NULL
-                END
-            )
-            FROM bagile.raw_orders
-            WHERE source = @source
-              AND payload ? 'UpdatedDateUTC';",
+                    SELECT MAX(
+                        CASE
+                            WHEN (payload->>'UpdatedDateUTC') ~ '^[0-9]{4}-'
+                            THEN (payload->>'UpdatedDateUTC')::timestamp
+                            ELSE NULL
+                        END
+                    )
+                    FROM bagile.raw_orders
+                    WHERE source = @source
+                      AND payload ? 'UpdatedDateUTC';",
 
                 _ => @"
-            SELECT MAX(imported_at)
-            FROM bagile.raw_orders
-            WHERE source = @source;"
+                    SELECT MAX(imported_at)
+                    FROM bagile.raw_orders
+                    WHERE source = @source;"
             };
 
             await using var conn = new NpgsqlConnection(_connectionString);
             return await conn.ExecuteScalarAsync<DateTime?>(sql, new { source });
         }
-
-
-        public async Task<int> InsertAsync(string source, string externalId, string payloadJson, string eventType)
-        {
-            var hash = ComputeSha256(payloadJson);
-
-            const string sql = @"
-            INSERT INTO bagile.raw_orders (source, external_id, payload, event_type, payload_hash)
-            VALUES (@source, @externalId, CAST(@payloadJson AS jsonb), @eventType, @hash)
-            RETURNING id;";
-
-            await using var conn = new NpgsqlConnection(_connectionString);
-            return await conn.ExecuteScalarAsync<int>(sql, new { source, externalId, payloadJson, eventType, hash });
-        }
-
-        // Only insert if payload changed
-        public async Task<int> InsertIfChangedAsync(string source, string externalId, string payloadJson, string eventType)
-        {
-            var hash = ComputeSha256(payloadJson);
-
-            if (await ExistsAsync(source, externalId, hash))
-                return 0; // nothing inserted
-
-            return await InsertAsync(source, externalId, payloadJson, eventType);
-        }
-
 
         public async Task<IEnumerable<RawOrder>> GetAllAsync()
         {
