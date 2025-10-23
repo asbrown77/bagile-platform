@@ -24,8 +24,8 @@ jobs:
         run: |
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             TAG="${GITHUB_REF#refs/tags/}"
-            # remove the etl-v prefix for semantic versioning
-            CLEAN_TAG="${TAG#etl-v}"
+            # strip prefix to get semver-only (e.g. 1.2.6)
+            CLEAN_TAG=$(echo "$TAG" | sed 's/^etl-v//')
           else
             TAG="etl-vdev-${GITHUB_SHA::7}"
             CLEAN_TAG="0.0.0"
@@ -60,8 +60,9 @@ jobs:
           context: .
           file: Bagile/Bagile.EtlService/Dockerfile
           push: true
+          # .NET gets semver (1.2.6), Docker tags keep prefix (etl-v1.2.6)
           build-args: |
-            APP_VERSION=${{ steps.vars.outputs.version }}
+            APP_VERSION=${{ steps.vars.outputs.semver }}
           tags: |
             ghcr.io/${{ github.repository_owner }}/bagile-etl:latest
             ghcr.io/${{ github.repository_owner }}/bagile-etl:${{ steps.vars.outputs.version }}
@@ -80,16 +81,9 @@ jobs:
           key: ${{ secrets.HETZNER_SSH_KEY }}
           script: |
             cd /opt/bagile
-
             echo "Pulling latest ETL image..."
             docker compose pull bagile-etl
-
             echo "Recreating ETL container..."
             docker compose up -d bagile-etl
-
             echo "Cleaning unused images..."
             docker system prune -f
-
-            echo "Ensuring ETL cron job exists..."
-            (crontab -l 2>/dev/null | grep -q "docker restart bagile-etl" || \
-            (crontab -l 2>/dev/null; echo "*/30 * * * * docker restart bagile-etl >/dev/null 2>&1") | crontab -)
