@@ -9,6 +9,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using System.Reflection;
+
+var version = Assembly.GetExecutingAssembly()
+    ?.GetName()
+    ?.Version?
+    .ToString() ?? "unknown";
+
+Console.WriteLine($"Version: {version}");
 
 Console.WriteLine("=== ETL Program started ===");
 
@@ -37,7 +45,12 @@ static void ConfigureLogging(HostApplicationBuilder builder)
 static void LogStartup(IHost host)
 {
     var logger = host.Services.GetRequiredService<ILogger<Program>>();
-    logger.LogInformation("ETL Service starting up...");
+    var version = System.Reflection.Assembly.GetExecutingAssembly()
+        ?.GetName()
+        ?.Version?
+        .ToString() ?? "unknown";
+
+    logger.LogInformation("ETL Service starting up... version {Version}", version);
 }
 
 static void ConfigureDatabase(HostApplicationBuilder builder)
