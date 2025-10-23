@@ -1,4 +1,4 @@
-CREATE TABLE course_schedules (
+CREATE TABLE bagile.course_schedules (
                                   id BIGSERIAL PRIMARY KEY,             -- internal system ID
                                   name TEXT NOT NULL,
                                   status TEXT,                          -- published / draft / sold_out / cancelled
@@ -16,13 +16,13 @@ CREATE TABLE course_schedules (
 );
 
 CREATE UNIQUE INDEX idx_course_schedules_source
-    ON course_schedules(source_system, source_product_id);
+    ON bagile.course_schedules(source_system, source_product_id);
 
 CREATE INDEX idx_course_schedules_status
-    ON course_schedules(status);
+    ON bagile.course_schedules(status);
 
 CREATE INDEX idx_course_schedules_start_date
-    ON course_schedules(start_date);
+    ON bagile.course_schedules(start_date);
 
 CREATE INDEX idx_course_schedules_format_type
-    ON course_schedules(format_type);
+    ON bagile.course_schedules(format_type);
