@@ -1,9 +1,18 @@
 ﻿using Bagile.Api.Endpoints;
 using Bagile.Api.Handlers;
 using Bagile.Api.Services;
-using Bagile.Infrastructure.Clients;   
+using Bagile.Infrastructure.Clients;
 using Bagile.Infrastructure.Repositories;
 using Npgsql;
+using System.Reflection;
+
+var version = Assembly.GetExecutingAssembly()
+    ?.GetName()
+    ?.Version?
+    .ToString() ?? "unknown";
+
+Console.WriteLine($"Version: {version}");
+Console.WriteLine("=== API Program started ===");
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,6 +43,9 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+// Log startup with version info
+app.Logger.LogInformation("API Service starting up... version {Version}", version);
 
 // Detailed errors for dev & test
 if (app.Environment.IsDevelopment() ||
