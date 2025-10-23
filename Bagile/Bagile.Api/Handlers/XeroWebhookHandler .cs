@@ -1,9 +1,10 @@
-﻿using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
-using Bagile.Api.DTO;
+﻿using Bagile.Api.DTO;
 using Bagile.Infrastructure.Clients;
 using Bagile.Infrastructure.Filters;
+using Bagile.Infrastructure.Models;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 
 namespace Bagile.Api.Handlers;
 
@@ -45,31 +46,53 @@ public class XeroWebhookHandler : IWebhookHandler
         try
         {
             using var doc = JsonDocument.Parse(body);
-            var events = doc.RootElement.GetProperty("events");
 
-            if (events.ValueKind != JsonValueKind.Array || events.GetArrayLength() == 0)
+            if (!doc.RootElement.TryGetProperty("events", out var events) ||
+                events.ValueKind != JsonValueKind.Array ||
+                events.GetArrayLength() == 0)
             {
                 logger.LogInformation("Xero webhook handshake or empty payload, acknowledging.");
                 return new WebhookPayload(Source, string.Empty, "handshake", body);
             }
 
             var evt = events[0];
-            var externalId = evt.GetProperty("resourceId").GetString() ?? "";
+            var externalId = evt.GetProperty("resourceId").GetString();
+            if (string.IsNullOrEmpty(externalId))
+            {
+                logger.LogWarning("Webhook missing resourceId field. Raw body: {Body}", body);
+                return new WebhookPayload(Source, string.Empty, "invalid", body);
+            }
+
             var category = evt.GetProperty("eventCategory").GetString() ?? "UNKNOWN";
             var type = evt.GetProperty("eventType").GetString() ?? "UNKNOWN";
             var eventType = $"{category}.{type}".ToLower();
 
-            var invoice = _xeroClient.GetInvoiceByIdAsync(externalId).GetAwaiter().GetResult();
+            XeroInvoice? invoice = null;
 
-            if (invoice != null && XeroInvoiceFilter.ShouldCapture(invoice))
+            try
             {
-                var json = JsonSerializer.Serialize(invoice);
-                logger.LogInformation("Captured Xero invoice {Id}", invoice.InvoiceID);
-                return new WebhookPayload(Source, externalId, eventType, json);
+                invoice = _xeroClient.GetInvoiceByIdAsync(externalId).GetAwaiter().GetResult();
+            }
+            catch (HttpRequestException httpEx) when (httpEx.Message.Contains("404"))
+            {
+                logger.LogWarning("Invoice {Id} not found (404). Ignoring.", externalId);
             }
 
-            logger.LogInformation("Ignored Xero invoice {Id}", externalId);
-            return new WebhookPayload(Source, externalId, eventType, body);
+            if (invoice == null)
+            {
+                logger.LogInformation("No valid invoice returned for {Id}. Skipping insert.", externalId);
+                return new WebhookPayload(Source, externalId, eventType, body);
+            }
+
+            if (!XeroInvoiceFilter.ShouldCapture(invoice))
+            {
+                logger.LogInformation("Filtered out Xero invoice {Id}", invoice.InvoiceID);
+                return new WebhookPayload(Source, externalId, eventType, body);
+            }
+
+            var json = JsonSerializer.Serialize(invoice);
+            logger.LogInformation("Captured Xero invoice {Id}", invoice.InvoiceID);
+            return new WebhookPayload(Source, externalId, eventType, json);
         }
         catch (Exception ex)
         {
@@ -77,4 +100,7 @@ public class XeroWebhookHandler : IWebhookHandler
             return null;
         }
     }
+
+
+
 }
