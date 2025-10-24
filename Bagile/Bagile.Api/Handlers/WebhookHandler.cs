@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using Bagile.Domain.Repositories;
 using Bagile.Infrastructure.Repositories;
 
 namespace Bagile.Api.Handlers;

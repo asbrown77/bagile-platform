@@ -28,6 +28,11 @@ namespace Bagile.EtlService.Services
                     using var scope = _scopeFactory.CreateScope();
                     var runner = scope.ServiceProvider.GetRequiredService<EtlRunner>();
                     await runner.RunAsync(stoppingToken);
+
+                    var processor = scope.ServiceProvider.GetRequiredService<RawOrderProcessor>();
+                    await processor.ProcessPendingAsync(stoppingToken);
+
+                    _logger.LogInformation("ETL + RawOrder processing cycle completed successfully.");
                 }
                 catch (Exception ex)
                 {

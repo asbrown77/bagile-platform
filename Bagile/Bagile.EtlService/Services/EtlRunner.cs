@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Bagile.Domain.Repositories;
 using Bagile.EtlService.Collectors;
 using Bagile.EtlService.Utils;
 using Bagile.Infrastructure.Repositories;

@@ -1,0 +1,364 @@
+{
+  "id": 12243,
+  "total": "2520",
+  "_links": {
+    "self": [
+      {
+        "href": "https://www.bagile.co.uk/wp-json/wc/v3/orders/12243",
+        "targetHints": { "allow": [ "GET", "POST", "PUT", "PATCH", "DELETE" ] }
+      }
+    ],
+    "collection": [ { "href": "https://www.bagile.co.uk/wp-json/wc/v3/orders" } ],
+    "email_templates": [
+      {
+        "href": "https://www.bagile.co.uk/wp-json/wc/v3/orders/12243/actions/email_templates",
+        "embeddable": true
+      }
+    ]
+  },
+  "number": "12243",
+  "status": "processing",
+  "billing": {
+    "city": "London",
+    "email": "henry.heselden@themdu.com",
+    "phone": "07843469915",
+    "state": "",
+    "company": "MDU Services Ltd",
+    "country": "GB",
+    "postcode": "E14 5GS",
+    "address_1": "One Canada Square",
+    "address_2": "Canary Wharf",
+    "last_name": "Heselden",
+    "first_name": "Henry"
+  },
+  "refunds": [],
+  "version": "10.2.2",
+  "cart_tax": "420",
+  "currency": "GBP",
+  "shipping": {
+    "city": "",
+    "phone": "",
+    "state": "",
+    "company": "",
+    "country": "",
+    "postcode": "",
+    "address_1": "",
+    "address_2": "",
+    "last_name": "",
+    "first_name": ""
+  },
+  "cart_hash": "5ab0f8e21918dc56bc6e5c98daf3743e",
+  "date_paid": null,
+  "fee_lines": [],
+  "meta_data": [
+    {
+      "id": 478680,
+      "key": "_billing_eu_vat_number",
+      "value": ""
+    },
+    {
+      "id": 478681,
+      "key": "is_vat_exempt",
+      "value": "no"
+    },
+    {
+      "id": 478682,
+      "key": "_wcpbc_base_exchange_rate",
+      "value": "1"
+    },
+    {
+      "id": 478683,
+      "key": "_wcpbc_pricing_zone",
+      "value": {
+        "name": "Primary Market",
+        "order": 0,
+        "enabled": "yes",
+        "zone_id": "primary-market",
+        "currency": "GBP",
+        "countries": {
+          "14": "AT",
+          "22": "BE",
+          "40": "CA",
+          "60": "DK",
+          "75": "FI",
+          "76": "FR",
+          "83": "DE",
+          "106": "IE",
+          "109": "IT",
+          "112": "JP",
+          "128": "LU",
+          "154": "NL",
+          "162": "KP",
+          "165": "NO",
+          "206": "KR",
+          "213": "SE",
+          "214": "CH",
+          "233": "GB",
+          "234": "US"
+        },
+        "trim_zeros": "no",
+        "price_charm": "",
+        "exchange_rate": "1",
+        "round_nearest": "",
+        "currency_format": "[symbol]",
+        "exchange_rate_fee": 0,
+        "price_decimal_sep": "",
+        "round_after_taxes": "no",
+        "auto_exchange_rate": "no",
+        "price_num_decimals": "",
+        "price_thousand_sep": "",
+        "real_exchange_rate": "1",
+        "disable_tax_adjustment": "no"
+      }
+    },
+    {
+      "id": 478684,
+      "key": "wmc_order_info",
+      "value": {
+        "EUR": {
+          "pos": "left",
+          "hide": "0",
+          "rate": 1.1883850000000000246558329308754764497280120849609375,
+          "custom": "",
+          "decimals": "",
+          "decimal_sep": "",
+          "thousand_sep": ""
+        },
+        "GBP": {
+          "pos": "left",
+          "hide": "0",
+          "rate": 1,
+          "custom": "",
+          "is_main": 1,
+          "decimals": "",
+          "decimal_sep": "",
+          "thousand_sep": ""
+        }
+      }
+    },
+    {
+      "id": 478685,
+      "key": "WooCommerceEventsOrderTickets",
+      "value": {
+        "1": {
+          "1": {
+            "WooCommerceEventsPrice": "<span class=\"woocommerce-Price-amount amount\"><bdi><span class=\"woocommerce-Price-currencySymbol\">&pound;</span>1,260</bdi></span>",
+            "WooCommerceEventsStatus": "Unpaid",
+            "WooCommerceEventsOrderID": "12243",
+            "WooCommerceEventsProductID": "11840",
+            "WooCommerceEventsCustomerID": "0",
+            "WooCommerceEventsTicketType": "",
+            "WooCommerceEventsVariations": "",
+            "WooCommerceEventsVariationID": "",
+            "WooCommerceEventsAttendeeName": "Khalil",
+            "WooCommerceEventsAttendeeEmail": "Khalil.Nazir@themdu.com",
+            "WooCommerceEventsSeatingFields": "",
+            "WooCommerceEventsBookingOptions": "",
+            "WooCommerceEventsPurchaserEmail": "henry.heselden@themdu.com",
+            "WooCommerceEventsPurchaserPhone": "07843469915",
+            "WooCommerceEventsAttendeeCompany": "",
+            "WooCommerceEventsAttendeeLastName": "Nazir",
+            "WooCommerceEventsAttendeeTelephone": "",
+            "WooCommerceEventsPurchaserLastName": "Heselden",
+            "WooCommerceEventsPurchaserFirstName": "Henry",
+            "WooCommerceEventsAttendeeDesignation": "",
+            "WooCommerceEventsCustomAttendeeFields": ""
+          },
+          "2": {
+            "WooCommerceEventsPrice": "<span class=\"woocommerce-Price-amount amount\"><bdi><span class=\"woocommerce-Price-currencySymbol\">&pound;</span>1,260</bdi></span>",
+            "WooCommerceEventsStatus": "Unpaid",
+            "WooCommerceEventsOrderID": "12243",
+            "WooCommerceEventsProductID": "11840",
+            "WooCommerceEventsCustomerID": "0",
+            "WooCommerceEventsTicketType": "",
+            "WooCommerceEventsVariations": "",
+            "WooCommerceEventsVariationID": "",
+            "WooCommerceEventsAttendeeName": "Abiodun",
+            "WooCommerceEventsAttendeeEmail": "Abiodun.Odunlami@themdu.com",
+            "WooCommerceEventsSeatingFields": "",
+            "WooCommerceEventsBookingOptions": "",
+            "WooCommerceEventsPurchaserEmail": "henry.heselden@themdu.com",
+            "WooCommerceEventsPurchaserPhone": "07843469915",
+            "WooCommerceEventsAttendeeCompany": "",
+            "WooCommerceEventsAttendeeLastName": "Odunlami",
+            "WooCommerceEventsAttendeeTelephone": "",
+            "WooCommerceEventsPurchaserLastName": "Heselden",
+            "WooCommerceEventsPurchaserFirstName": "Henry",
+            "WooCommerceEventsAttendeeDesignation": "",
+            "WooCommerceEventsCustomAttendeeFields": ""
+          }
+        }
+      }
+    },
+    {
+      "id": 478686,
+      "key": "WooCommerceEventsTicketsPurchased",
+      "value": { "11840": 2 }
+    },
+    {
+      "id": 478687,
+      "key": "yith_wcpmr_order_cart",
+      "value": {
+        "items": {
+          "b1e29b063abb0df020455f6ef5a9db8d": {
+            "key": "b1e29b063abb0df020455f6ef5a9db8d",
+            "data": [],
+            "line_tax": 420,
+            "quantity": 2,
+            "data_hash": "b5c1d5ca8bae6d4896cf1807cdf763f0",
+            "variation": [],
+            "line_total": 2100,
+            "product_id": 11840,
+            "variation_id": 0,
+            "line_subtotal": 2100,
+            "line_tax_data": {
+              "total": { "1": 420 },
+              "subtotal": { "1": 420 }
+            },
+            "line_subtotal_tax": 420
+          }
+        },
+        "cart_total": "2520"
+      }
+    },
+    {
+      "id": 478688,
+      "key": "_wc_order_attribution_source_type",
+      "value": "referral"
+    },
+    {
+      "id": 478689,
+      "key": "_wc_order_attribution_referrer",
+      "value": "https://www.scrum.org/"
+    },
+    {
+      "id": 478690,
+      "key": "_wc_order_attribution_utm_source",
+      "value": "scrum.org"
+    },
+    {
+      "id": 478691,
+      "key": "_wc_order_attribution_utm_medium",
+      "value": "referral"
+    },
+    {
+      "id": 478692,
+      "key": "_wc_order_attribution_utm_content",
+      "value": "/"
+    },
+    {
+      "id": 478693,
+      "key": "_wc_order_attribution_session_entry",
+      "value": "https://www.bagile.co.uk/course-schedule/"
+    },
+    {
+      "id": 478694,
+      "key": "_wc_order_attribution_session_start_time",
+      "value": "2025-10-23 14:12:38"
+    },
+    {
+      "id": 478695,
+      "key": "_wc_order_attribution_session_pages",
+      "value": "6"
+    },
+    {
+      "id": 478696,
+      "key": "_wc_order_attribution_session_count",
+      "value": "1"
+    },
+    {
+      "id": 478697,
+      "key": "_wc_order_attribution_user_agent",
+      "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0"
+    },
+    {
+      "id": 478698,
+      "key": "_wc_order_attribution_device_type",
+      "value": "Desktop"
+    },
+    {
+      "id": 478699,
+      "key": "_ga_tracked",
+      "value": "1"
+    },
+    {
+      "id": 478702,
+      "key": "exempt_vat_from_admin",
+      "value": "never"
+    }
+  ],
+  "order_key": "wc_order_fGb5oZSlIhTet",
+  "parent_id": 0,
+  "tax_lines": [
+    {
+      "id": 5370,
+      "label": "VAT",
+      "rate_id": 1,
+      "compound": false,
+      "meta_data": [],
+      "rate_code": "GB-VAT-1",
+      "tax_total": "420",
+      "rate_percent": 20,
+      "shipping_tax_total": "0"
+    }
+  ],
+  "total_tax": "420",
+  "line_items": [
+    {
+      "id": 5369,
+      "sku": "PSMII-081125-CB",
+      "name": "Professional Scrum Master - Advanced™ - 8-9 Dec 25",
+      "image": {
+        "id": "101",
+        "src": "https://www.bagile.co.uk/wp-content/uploads/2021/04/Scrumorg-PSMII_outertext-1000.png"
+      },
+      "price": 1050,
+      "taxes": [
+        {
+          "id": 1,
+          "total": "420",
+          "subtotal": "420"
+        }
+      ],
+      "total": "2100",
+      "quantity": 2,
+      "subtotal": "2100",
+      "meta_data": [],
+      "tax_class": "",
+      "total_tax": "420",
+      "product_id": 11840,
+      "parent_name": null,
+      "subtotal_tax": "420",
+      "variation_id": 0,
+      "global_unique_id": ""
+    }
+  ],
+  "created_via": "checkout",
+  "customer_id": 0,
+  "is_editable": false,
+  "payment_url": "https://www.bagile.co.uk/checkout/order-pay/12243/?pay_for_order=true&key=wc_order_fGb5oZSlIhTet",
+  "coupon_lines": [],
+  "date_created": "2025-10-23T15:24:27",
+  "discount_tax": "0",
+  "shipping_tax": "0",
+  "customer_note": "Please invoice accounts@themdu.com and reference purchase order number IT25553 on the invoice.",
+  "date_modified": "2025-10-23T21:14:07",
+  "date_paid_gmt": null,
+  "needs_payment": false,
+  "date_completed": null,
+  "discount_total": "0",
+  "payment_method": "cod",
+  "shipping_lines": [],
+  "shipping_total": "0",
+  "transaction_id": "",
+  "currency_symbol": "£",
+  "date_created_gmt": "2025-10-23T14:24:27",
+  "needs_processing": true,
+  "date_modified_gmt": "2025-10-23T20:14:07",
+  "date_completed_gmt": null,
+  "prices_include_tax": false,
+  "customer_ip_address": "163.116.177.138",
+  "customer_user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0",
+  "payment_method_title": "Invoice payment",
+  "publishpress_future_workflow_manual_trigger": { "enabledWorkflows": [] }
+}

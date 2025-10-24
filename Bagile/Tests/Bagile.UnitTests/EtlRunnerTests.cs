@@ -1,4 +1,5 @@
-﻿using Bagile.EtlService.Services;
+﻿using Bagile.Domain.Repositories;
+using Bagile.EtlService.Services;
 using Bagile.EtlService.Collectors;
 using Bagile.Infrastructure;
 using Bagile.Infrastructure.Repositories;

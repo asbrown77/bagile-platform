@@ -1,10 +1,9 @@
-﻿using Bagile.Infrastructure.Models;
-using Dapper;
+﻿using Dapper;
 using Npgsql;
-using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading.Tasks;
+using Bagile.Domain.Entities;
+using Bagile.Domain.Repositories;
 
 namespace Bagile.Infrastructure.Repositories
 {
@@ -40,6 +39,33 @@ namespace Bagile.Infrastructure.Repositories
             await using var conn = new NpgsqlConnection(_connectionString);
             var result = await conn.ExecuteScalarAsync<int?>(sql, new { source, externalId, hash });
             return result.HasValue;
+        }
+
+        public async Task<IEnumerable<RawOrder>> GetUnprocessedAsync(int limit = 100)
+        {
+            const string sql = @"
+                SELECT id,
+                       source,
+                       external_id AS ExternalId,
+                       payload::text AS Payload,
+                       event_type AS EventType,
+                       payload_hash AS PayloadHash,
+                       created_at AS CreatedAt,
+                       processed_at AS ProcessedAt
+                FROM bagile.raw_orders
+                WHERE processed_at IS NULL
+                ORDER BY created_at
+                LIMIT @limit;";
+
+            await using var conn = new NpgsqlConnection(_connectionString);
+            return await conn.QueryAsync<RawOrder>(sql, new { limit });
+        }
+
+        public async Task MarkProcessedAsync(long id)
+        {
+            const string sql = @"UPDATE bagile.raw_orders SET processed_at = NOW() WHERE id = @id;";
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.ExecuteAsync(sql, new { id });
         }
 
         public async Task<int> InsertAsync(string source, string externalId, string payloadJson, string eventType)
@@ -85,7 +111,7 @@ namespace Bagile.Infrastructure.Repositories
                       AND payload ? 'UpdatedDateUTC';",
 
                 _ => @"
-                    SELECT MAX(imported_at)
+                    SELECT MAX(created_at)
                     FROM bagile.raw_orders
                     WHERE source = @source;"
             };
@@ -101,11 +127,11 @@ namespace Bagile.Infrastructure.Repositories
                        source,
                        external_id AS ExternalId,
                        payload::text AS Payload,
-                       imported_at AS ImportedAt,
+                       created_at AS CreatedAt,
                        event_type AS EventType,
                        payload_hash AS PayloadHash
                 FROM bagile.raw_orders
-                ORDER BY imported_at DESC;";
+                ORDER BY created_at DESC;";
 
             await using var conn = new NpgsqlConnection(_connectionString);
             return await conn.QueryAsync<RawOrder>(sql);
