@@ -2,48 +2,75 @@
 using Bagile.EtlService.Mappers;
 using Microsoft.Extensions.Logging;
 
-namespace Bagile.EtlService.Services;
-
-public class RawOrderProcessor
+namespace Bagile.EtlService.Services
 {
-    private readonly IOrderRepository _orderRepo;
-    private readonly IRawOrderRepository _rawRepo;
-    private readonly ILogger<RawOrderProcessor> _logger;
-
-    public RawOrderProcessor(IOrderRepository orderRepo, IRawOrderRepository rawRepo, ILogger<RawOrderProcessor> logger)
+    public class RawOrderProcessor
     {
-        _orderRepo = orderRepo;
-        _rawRepo = rawRepo;
-        _logger = logger;
-    }
+        private readonly IOrderRepository _orderRepo;
+        private readonly IRawOrderRepository _rawRepo;
+        private readonly IStudentRepository _studentRepo;
+        private readonly IEnrolmentRepository _enrolmentRepo;
+        private readonly ILogger<RawOrderProcessor> _logger;
 
-    public async Task ProcessPendingAsync(CancellationToken token)
-    {
-        while (true)
+        public RawOrderProcessor(
+            IOrderRepository orderRepo,
+            IRawOrderRepository rawRepo,
+            IStudentRepository studentRepo,
+            IEnrolmentRepository enrolmentRepo,
+            ILogger<RawOrderProcessor> logger)
         {
-            var unprocessed = await _rawRepo.GetUnprocessedAsync(100);
+            _orderRepo = orderRepo;
+            _rawRepo = rawRepo;
+            _studentRepo = studentRepo;
+            _enrolmentRepo = enrolmentRepo;
+            _logger = logger;
+        }
 
-            if (!unprocessed.Any())
-                break; // done, no more to process
-
-            foreach (var record in unprocessed)
+        public async Task ProcessPendingAsync(CancellationToken token)
+        {
+            while (true)
             {
-                try
-                {
-                    var order = OrderMapper.MapFromRaw(record.Source, record.Id, record.Payload);
-                    if (order == null) continue;
+                var unprocessed = await _rawRepo.GetUnprocessedAsync(100);
+                if (!unprocessed.Any())
+                    break; // nothing left to process
 
-                    await _orderRepo.UpsertOrderAsync(order, token);
-
-                    await _rawRepo.MarkProcessedAsync(record.Id);
-                }
-                catch (Exception ex)
+                foreach (var record in unprocessed)
                 {
-                    _logger.LogError(ex, "Error processing record {Id}", record.Id);
-                    await _rawRepo.MarkFailedAsync(record.Id, ex.Message); // <— new line
+                    try
+                    {
+                        var order = OrderMapper.MapFromRaw(record.Source, record.Id, record.Payload);
+                        if (order == null)
+                            continue;
+
+                        // FIXED: capture the new order ID from the repository
+                        var orderId = await _orderRepo.UpsertOrderAsync(order, token);
+
+                        // --- Map students + enrolments for WooCommerce orders
+                        if (record.Source.Equals("woo", StringComparison.OrdinalIgnoreCase))
+                        {
+                            var students = StudentMapper.MapFromWooOrder(record.Payload);
+
+                            foreach (var student in students)
+                            {
+                                var studentId = await _studentRepo.UpsertAsync(student);
+
+                                var enrolments = EnrolmentMapper.MapFromWooOrder(record.Payload, orderId);
+                                foreach (var enrol in enrolments)
+                                {
+                                    await _enrolmentRepo.UpsertAsync(studentId, orderId, enrol.CourseScheduleProductId);
+                                }
+                            }
+                        }
+
+                        await _rawRepo.MarkProcessedAsync(record.Id);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error processing record {Id}", record.Id);
+                        await _rawRepo.MarkFailedAsync(record.Id, ex.Message);
+                    }
                 }
             }
         }
     }
-
 }

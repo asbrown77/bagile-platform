@@ -1,0 +1,587 @@
+{
+  "id": 12228,
+  "total": "4698",
+  "_links": {
+    "self": [
+      {
+        "href": "https://www.bagile.co.uk/wp-json/wc/v3/orders/12228",
+        "targetHints": { "allow": [ "GET", "POST", "PUT", "PATCH", "DELETE" ] }
+      }
+    ],
+    "collection": [ { "href": "https://www.bagile.co.uk/wp-json/wc/v3/orders" } ],
+    "email_templates": [
+      {
+        "href": "https://www.bagile.co.uk/wp-json/wc/v3/orders/12228/actions/email_templates",
+        "embeddable": true
+      }
+    ]
+  },
+  "number": "12228",
+  "status": "completed",
+  "billing": {
+    "city": "Affing",
+    "email": "rechnungen@abus-sc.com",
+    "phone": "+49 8207 959900",
+    "state": "",
+    "company": "ABUS Security Center GmbH & Co. KG",
+    "country": "DE",
+    "postcode": "86444",
+    "address_1": "Linker Kreuthweg 5-7",
+    "address_2": "",
+    "last_name": "Sporbeck",
+    "first_name": "Julia"
+  },
+  "refunds": [],
+  "version": "10.2.2",
+  "cart_tax": "0",
+  "currency": "EUR",
+  "shipping": {
+    "city": "",
+    "phone": "",
+    "state": "",
+    "company": "",
+    "country": "",
+    "postcode": "",
+    "address_1": "",
+    "address_2": "",
+    "last_name": "",
+    "first_name": ""
+  },
+  "cart_hash": "5d89a07f6ecc1fed1ee637c6cb5aa21b",
+  "date_paid": "2025-10-24T12:17:05",
+  "fee_lines": [],
+  "meta_data": [
+    {
+      "id": 478397,
+      "key": "_billing_eu_vat_number",
+      "value": "DE201857368"
+    },
+    {
+      "id": 478398,
+      "key": "is_vat_exempt",
+      "value": "yes"
+    },
+    {
+      "id": 478399,
+      "key": "_wcpbc_base_exchange_rate",
+      "value": "1"
+    },
+    {
+      "id": 478400,
+      "key": "_wcpbc_pricing_zone",
+      "value": {
+        "name": "Primary Market",
+        "order": 0,
+        "enabled": "yes",
+        "zone_id": "primary-market",
+        "currency": "GBP",
+        "countries": {
+          "14": "AT",
+          "22": "BE",
+          "40": "CA",
+          "60": "DK",
+          "75": "FI",
+          "76": "FR",
+          "83": "DE",
+          "106": "IE",
+          "109": "IT",
+          "112": "JP",
+          "128": "LU",
+          "154": "NL",
+          "162": "KP",
+          "165": "NO",
+          "206": "KR",
+          "213": "SE",
+          "214": "CH",
+          "233": "GB",
+          "234": "US"
+        },
+        "trim_zeros": "no",
+        "price_charm": "",
+        "exchange_rate": "1",
+        "round_nearest": "",
+        "currency_format": "[symbol]",
+        "exchange_rate_fee": 0,
+        "price_decimal_sep": "",
+        "round_after_taxes": "no",
+        "auto_exchange_rate": "no",
+        "price_num_decimals": "",
+        "price_thousand_sep": "",
+        "real_exchange_rate": "1",
+        "disable_tax_adjustment": "no"
+      }
+    },
+    {
+      "id": 478401,
+      "key": "wmc_order_info",
+      "value": {
+        "EUR": {
+          "pos": "left",
+          "hide": "0",
+          "rate": 1.1883850000000000246558329308754764497280120849609375,
+          "custom": "",
+          "decimals": "",
+          "decimal_sep": "",
+          "thousand_sep": ""
+        },
+        "GBP": {
+          "pos": "left",
+          "hide": "0",
+          "rate": 1,
+          "custom": "",
+          "is_main": 1,
+          "decimals": "",
+          "decimal_sep": "",
+          "thousand_sep": ""
+        }
+      }
+    },
+    {
+      "id": 478402,
+      "key": "mailchimp_woocommerce_is_subscribed",
+      "value": "1"
+    },
+    {
+      "id": 478403,
+      "key": "_wdr_discounts",
+      "value": {
+        "saved_amount": {
+          "total": 522,
+          "cart_level": 522,
+          "product_level": 0,
+          "total_based_on_tax_settings": 522,
+          "product_level_based_on_tax_settings": 0
+        },
+        "free_shipping": false,
+        "cart_discounts": {
+          "applied_as": "coupon",
+          "applied_coupons": [
+            {
+              "name": "10% group discount",
+              "rules": [
+                {
+                  "id": 4,
+                  "title": "10% Group Discount",
+                  "discount": {
+                    "discount_label": "10% Group Discount",
+                    "discount_value": 522
+                  }
+                }
+              ],
+              "value": 522
+            }
+          ],
+          "combine_all_discounts": false
+        }
+      }
+    },
+    {
+      "id": 478404,
+      "key": "billing_eu_vat_number_details",
+      "value": {
+        "vat_number": {
+          "data": "201857368",
+          "label": "VAT Number"
+        },
+        "country_code": {
+          "data": "DE",
+          "label": "Country Code"
+        },
+        "business_name": {
+          "data": "---",
+          "label": "Business Name"
+        },
+        "business_address": {
+          "data": "---",
+          "label": "Business Address"
+        }
+      }
+    },
+    {
+      "id": 478405,
+      "key": "WooCommerceEventsOrderTickets",
+      "value": {
+        "1": {
+          "1": {
+            "WooCommerceEventsPrice": "<span class=\"woocommerce-Price-amount amount\"><bdi><span class=\"woocommerce-Price-currencySymbol\">&euro;</span>1,305</bdi></span>",
+            "WooCommerceEventsStatus": "Unpaid",
+            "WooCommerceEventsOrderID": "12228",
+            "WooCommerceEventsProductID": "11492",
+            "WooCommerceEventsCustomerID": "0",
+            "WooCommerceEventsTicketType": "",
+            "WooCommerceEventsVariations": "",
+            "WooCommerceEventsVariationID": "",
+            "WooCommerceEventsAttendeeName": "Manuel",
+            "WooCommerceEventsAttendeeEmail": "m.kaniuth@abus-sc.com",
+            "WooCommerceEventsSeatingFields": "",
+            "WooCommerceEventsBookingOptions": "",
+            "WooCommerceEventsPurchaserEmail": "rechnungen@abus-sc.com",
+            "WooCommerceEventsPurchaserPhone": "+49 8207 959900",
+            "WooCommerceEventsAttendeeCompany": "",
+            "WooCommerceEventsAttendeeLastName": "Kaniuth",
+            "WooCommerceEventsAttendeeTelephone": "",
+            "WooCommerceEventsPurchaserLastName": "Sporbeck",
+            "WooCommerceEventsPurchaserFirstName": "Julia",
+            "WooCommerceEventsAttendeeDesignation": "",
+            "WooCommerceEventsCustomAttendeeFields": ""
+          },
+          "2": {
+            "WooCommerceEventsPrice": "<span class=\"woocommerce-Price-amount amount\"><bdi><span class=\"woocommerce-Price-currencySymbol\">&euro;</span>1,305</bdi></span>",
+            "WooCommerceEventsStatus": "Unpaid",
+            "WooCommerceEventsOrderID": "12228",
+            "WooCommerceEventsProductID": "11492",
+            "WooCommerceEventsCustomerID": "0",
+            "WooCommerceEventsTicketType": "",
+            "WooCommerceEventsVariations": "",
+            "WooCommerceEventsVariationID": "",
+            "WooCommerceEventsAttendeeName": "Daniel",
+            "WooCommerceEventsAttendeeEmail": "d.schwabe@abus-sc.com",
+            "WooCommerceEventsSeatingFields": "",
+            "WooCommerceEventsBookingOptions": "",
+            "WooCommerceEventsPurchaserEmail": "rechnungen@abus-sc.com",
+            "WooCommerceEventsPurchaserPhone": "+49 8207 959900",
+            "WooCommerceEventsAttendeeCompany": "",
+            "WooCommerceEventsAttendeeLastName": "Schwabe",
+            "WooCommerceEventsAttendeeTelephone": "",
+            "WooCommerceEventsPurchaserLastName": "Sporbeck",
+            "WooCommerceEventsPurchaserFirstName": "Julia",
+            "WooCommerceEventsAttendeeDesignation": "",
+            "WooCommerceEventsCustomAttendeeFields": ""
+          },
+          "3": {
+            "WooCommerceEventsPrice": "<span class=\"woocommerce-Price-amount amount\"><bdi><span class=\"woocommerce-Price-currencySymbol\">&euro;</span>1,305</bdi></span>",
+            "WooCommerceEventsStatus": "Unpaid",
+            "WooCommerceEventsOrderID": "12228",
+            "WooCommerceEventsProductID": "11492",
+            "WooCommerceEventsCustomerID": "0",
+            "WooCommerceEventsTicketType": "",
+            "WooCommerceEventsVariations": "",
+            "WooCommerceEventsVariationID": "",
+            "WooCommerceEventsAttendeeName": "Julia",
+            "WooCommerceEventsAttendeeEmail": "j.sporbeck@abus-sc.com",
+            "WooCommerceEventsSeatingFields": "",
+            "WooCommerceEventsBookingOptions": "",
+            "WooCommerceEventsPurchaserEmail": "rechnungen@abus-sc.com",
+            "WooCommerceEventsPurchaserPhone": "+49 8207 959900",
+            "WooCommerceEventsAttendeeCompany": "",
+            "WooCommerceEventsAttendeeLastName": "Sporbeck",
+            "WooCommerceEventsAttendeeTelephone": "",
+            "WooCommerceEventsPurchaserLastName": "Sporbeck",
+            "WooCommerceEventsPurchaserFirstName": "Julia",
+            "WooCommerceEventsAttendeeDesignation": "",
+            "WooCommerceEventsCustomAttendeeFields": ""
+          },
+          "4": {
+            "WooCommerceEventsPrice": "<span class=\"woocommerce-Price-amount amount\"><bdi><span class=\"woocommerce-Price-currencySymbol\">&euro;</span>1,305</bdi></span>",
+            "WooCommerceEventsStatus": "Unpaid",
+            "WooCommerceEventsOrderID": "12228",
+            "WooCommerceEventsProductID": "11492",
+            "WooCommerceEventsCustomerID": "0",
+            "WooCommerceEventsTicketType": "",
+            "WooCommerceEventsVariations": "",
+            "WooCommerceEventsVariationID": "",
+            "WooCommerceEventsAttendeeName": "Oliver",
+            "WooCommerceEventsAttendeeEmail": "O.Faeller@abus-sc.com",
+            "WooCommerceEventsSeatingFields": "",
+            "WooCommerceEventsBookingOptions": "",
+            "WooCommerceEventsPurchaserEmail": "rechnungen@abus-sc.com",
+            "WooCommerceEventsPurchaserPhone": "+49 8207 959900",
+            "WooCommerceEventsAttendeeCompany": "",
+            "WooCommerceEventsAttendeeLastName": "Fäller",
+            "WooCommerceEventsAttendeeTelephone": "",
+            "WooCommerceEventsPurchaserLastName": "Sporbeck",
+            "WooCommerceEventsPurchaserFirstName": "Julia",
+            "WooCommerceEventsAttendeeDesignation": "",
+            "WooCommerceEventsCustomAttendeeFields": ""
+          }
+        }
+      }
+    },
+    {
+      "id": 478406,
+      "key": "WooCommerceEventsTicketsPurchased",
+      "value": { "11492": 4 }
+    },
+    {
+      "id": 478407,
+      "key": "yith_wcpmr_order_cart",
+      "value": {
+        "items": {
+          "89d50fbb82c5341bcb297265b9c0dd6f": {
+            "key": "89d50fbb82c5341bcb297265b9c0dd6f",
+            "data": {},
+            "line_tax": 0,
+            "quantity": 4,
+            "data_hash": "b5c1d5ca8bae6d4896cf1807cdf763f0",
+            "variation": [],
+            "line_total": 4697.9999980000002324231900274753570556640625,
+            "product_id": 11492,
+            "variation_id": 0,
+            "line_subtotal": 5219.9999980000002324231900274753570556640625,
+            "line_tax_data": {
+              "total": [],
+              "subtotal": []
+            },
+            "line_subtotal_tax": 0
+          }
+        },
+        "cart_total": "4698"
+      }
+    },
+    {
+      "id": 478408,
+      "key": "_wc_order_attribution_source_type",
+      "value": "typein"
+    },
+    {
+      "id": 478409,
+      "key": "_wc_order_attribution_referrer",
+      "value": "https://www.bagile.co.uk/course-schedule/"
+    },
+    {
+      "id": 478410,
+      "key": "_wc_order_attribution_utm_source",
+      "value": "(direct)"
+    },
+    {
+      "id": 478411,
+      "key": "_wc_order_attribution_session_entry",
+      "value": "https://www.bagile.co.uk/course-schedule/"
+    },
+    {
+      "id": 478412,
+      "key": "_wc_order_attribution_session_start_time",
+      "value": "2025-10-21 10:25:30"
+    },
+    {
+      "id": 478413,
+      "key": "_wc_order_attribution_session_pages",
+      "value": "6"
+    },
+    {
+      "id": 478414,
+      "key": "_wc_order_attribution_session_count",
+      "value": "1"
+    },
+    {
+      "id": 478415,
+      "key": "_wc_order_attribution_user_agent",
+      "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+    },
+    {
+      "id": 478416,
+      "key": "_wc_order_attribution_device_type",
+      "value": "Desktop"
+    },
+    {
+      "id": 478417,
+      "key": "_ga_tracked",
+      "value": "1"
+    },
+    {
+      "id": 478809,
+      "key": "WooCommerceEventsTicketsGenerated",
+      "value": "yes"
+    },
+    {
+      "id": 478810,
+      "key": "WooCommerceEventsTicketsSent",
+      "value": "yes"
+    }
+  ],
+  "order_key": "wc_order_3IhkZ9y9lov1T",
+  "parent_id": 0,
+  "tax_lines": [],
+  "total_tax": "0",
+  "line_items": [
+    {
+      "id": 5361,
+      "sku": "PSPOA-031125-CB",
+      "name": "Professional Scrum Product Owner Advanced™ - 3-4 Nov 25",
+      "image": {
+        "id": "105",
+        "src": "https://www.bagile.co.uk/wp-content/uploads/2021/04/Scrumorg-PSPOA_outertext-1000.png"
+      },
+      "price": 1174.499999500000058105797506868839263916015625,
+      "taxes": [],
+      "total": "4698",
+      "quantity": 4,
+      "subtotal": "5220",
+      "meta_data": [
+        {
+          "id": 40391,
+          "key": "_advanced_woo_discount_item_total_discount",
+          "value": {
+            "product_id": 11492,
+            "cart_quantity": 4,
+            "initial_price": 1305,
+            "discount_lines": {
+              "non_applied": {
+                "price": 1305,
+                "discount": 0,
+                "quantity": 4,
+                "calculate_discount_from": 1305
+              }
+            },
+            "discounted_price": 1305,
+            "apply_as_cart_rule": [ "yes" ],
+            "cart_discount_details": {
+              "4": {
+                "cart_discount": "10",
+                "cart_shipping": "no",
+                "cart_discount_type": "percentage",
+                "cart_discount_label": "10% Group Discount",
+                "cart_discount_price": 522,
+                "cart_discount_product_price": 130.5
+              }
+            },
+            "total_discount_details": [],
+            "initial_price_based_on_tax_settings": 1305,
+            "discounted_price_based_on_tax_settings": 1305
+          },
+          "display_key": "_advanced_woo_discount_item_total_discount",
+          "display_value": {
+            "product_id": 11492,
+            "cart_quantity": 4,
+            "initial_price": 1305,
+            "discount_lines": {
+              "non_applied": {
+                "price": 1305,
+                "discount": 0,
+                "quantity": 4,
+                "calculate_discount_from": 1305
+              }
+            },
+            "discounted_price": 1305,
+            "apply_as_cart_rule": [ "yes" ],
+            "cart_discount_details": {
+              "4": {
+                "cart_discount": "10",
+                "cart_shipping": "no",
+                "cart_discount_type": "percentage",
+                "cart_discount_label": "10% Group Discount",
+                "cart_discount_price": 522,
+                "cart_discount_product_price": 130.5
+              }
+            },
+            "total_discount_details": [],
+            "initial_price_based_on_tax_settings": 1305,
+            "discounted_price_based_on_tax_settings": 1305
+          }
+        },
+        {
+          "id": 40392,
+          "key": "_wdr_discounts",
+          "value": {
+            "saved_amount": 0,
+            "applied_rules": [
+              {
+                "id": 4,
+                "type": "bulk_discount",
+                "title": "10% Group Discount",
+                "discount": {
+                  "applied_in": "cart_level",
+                  "discount_type": "percentage",
+                  "discount_label": "10% Group Discount",
+                  "discount_price": 522,
+                  "discount_value": 10
+                }
+              }
+            ],
+            "initial_price": 1305,
+            "is_free_product": false,
+            "discounted_price": 1305,
+            "saved_amount_based_on_tax_settings": 0,
+            "initial_price_based_on_tax_settings": 1305,
+            "discounted_price_based_on_tax_settings": 1305
+          },
+          "display_key": "_wdr_discounts",
+          "display_value": {
+            "saved_amount": 0,
+            "applied_rules": [
+              {
+                "id": 4,
+                "type": "bulk_discount",
+                "title": "10% Group Discount",
+                "discount": {
+                  "applied_in": "cart_level",
+                  "discount_type": "percentage",
+                  "discount_label": "10% Group Discount",
+                  "discount_price": 522,
+                  "discount_value": 10
+                }
+              }
+            ],
+            "initial_price": 1305,
+            "is_free_product": false,
+            "discounted_price": 1305,
+            "saved_amount_based_on_tax_settings": 0,
+            "initial_price_based_on_tax_settings": 1305,
+            "discounted_price_based_on_tax_settings": 1305
+          }
+        }
+      ],
+      "tax_class": "",
+      "total_tax": "0",
+      "product_id": 11492,
+      "parent_name": null,
+      "subtotal_tax": "0",
+      "variation_id": 0,
+      "global_unique_id": ""
+    }
+  ],
+  "created_via": "checkout",
+  "customer_id": 0,
+  "is_editable": false,
+  "payment_url": "https://www.bagile.co.uk/checkout/order-pay/12228/?pay_for_order=true&key=wc_order_3IhkZ9y9lov1T",
+  "coupon_lines": [
+    {
+      "id": 5362,
+      "code": "10% group discount",
+      "discount": "522",
+      "meta_data": [
+        {
+          "id": 40395,
+          "key": "coupon_info",
+          "value": "[0,\"10% group discount\",\"percent\",10]",
+          "display_key": "coupon_info",
+          "display_value": "[0,\"10% group discount\",\"percent\",10]"
+        },
+        {
+          "id": 40396,
+          "key": "wdr_apply_coupon_product_ids",
+          "value": [ 11492 ],
+          "display_key": "wdr_apply_coupon_product_ids",
+          "display_value": [ 11492 ]
+        }
+      ],
+      "discount_tax": "99",
+      "discount_type": "percent",
+      "free_shipping": false,
+      "nominal_amount": 10
+    }
+  ],
+  "date_created": "2025-10-21T11:39:18",
+  "discount_tax": "0",
+  "shipping_tax": "0",
+  "customer_note": "VAT DE201857368",
+  "date_modified": "2025-10-24T12:17:05",
+  "date_paid_gmt": "2025-10-24T11:17:05",
+  "needs_payment": false,
+  "date_completed": "2025-10-24T12:17:05",
+  "discount_total": "522",
+  "payment_method": "cod",
+  "shipping_lines": [],
+  "shipping_total": "0",
+  "transaction_id": "",
+  "currency_symbol": "€",
+  "date_created_gmt": "2025-10-21T10:39:18",
+  "needs_processing": true,
+  "date_modified_gmt": "2025-10-24T11:17:05",
+  "date_completed_gmt": "2025-10-24T11:17:05",
+  "prices_include_tax": false,
+  "customer_ip_address": "213.4.127.28",
+  "customer_user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+  "payment_method_title": "Invoice payment",
+  "publishpress_future_workflow_manual_trigger": { "enabledWorkflows": [] }
+}
