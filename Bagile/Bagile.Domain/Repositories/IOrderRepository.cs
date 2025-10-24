@@ -3,23 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Bagile.Domain.Entities;
 
 namespace Bagile.Domain.Repositories;
 
 public interface IOrderRepository
 {
-    Task UpsertOrderAsync(
-        long rawOrderId,
-        string externalId,
-        string source,
-        string type,
-        string? billingCompany,
-        string? contactName,
-        string? contactEmail,
-        decimal totalAmount,
-        string? status,
-        DateTime? orderDate,
-        CancellationToken token);
+    Task UpsertOrderAsync(Order order, CancellationToken token);
 }
 
 
