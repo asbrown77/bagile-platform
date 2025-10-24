@@ -25,17 +25,23 @@ namespace Bagile.EtlService.Mappers
                         ? decimal.Parse(totalProp.GetString() ?? "0")
                         : 0;
 
-                    order.Status = root.TryGetProperty("status", out var s) ? s.GetString() : null;
+                    order.Status = root.TryGetProperty("status", out var s)
+                        ? s.GetString()
+                        : null;
 
                     if (root.TryGetProperty("billing", out var billing))
                     {
-                        order.BillingCompany = billing.TryGetProperty("company", out var comp) ? comp.GetString() : null;
+                        order.BillingCompany = billing.TryGetProperty("company", out var comp)
+                            ? comp.GetString()
+                            : null;
 
                         var first = billing.TryGetProperty("first_name", out var fn) ? fn.GetString() : "";
                         var last = billing.TryGetProperty("last_name", out var ln) ? ln.GetString() : "";
                         order.ContactName = $"{first} {last}".Trim();
 
-                        order.ContactEmail = billing.TryGetProperty("email", out var em) ? em.GetString() : null;
+                        order.ContactEmail = billing.TryGetProperty("email", out var em)
+                            ? em.GetString()
+                            : null;
                     }
 
                     order.Reference = root.TryGetProperty("number", out var num)
@@ -47,30 +53,45 @@ namespace Bagile.EtlService.Mappers
                     order.OrderDate = root.TryGetProperty("date_created", out var dt)
                         ? DateTime.Parse(dt.GetString() ?? DateTime.UtcNow.ToString())
                         : DateTime.UtcNow;
+
+                    // Normalize before return
+                    order.Status = NormalizeStatus(source, order.Status);
                     break;
 
                 case "xero":
                     order.Type = "private";
-                    order.ExternalId = root.TryGetProperty("InvoiceID", out var inv)
-                        ? inv.GetString() ?? ""
+
+                    order.ExternalId = root.TryGetProperty("InvoiceNumber", out var invNum)
+                        ? invNum.GetString() ?? ""
                         : "";
+
                     order.TotalAmount = root.TryGetProperty("Total", out var t)
                         ? decimal.Parse(t.GetRawText())
                         : 0;
-                    order.Status = root.TryGetProperty("Status", out var stat) ? stat.GetString() : null;
+
+                    order.Status = root.TryGetProperty("Status", out var stat)
+                        ? stat.GetString()
+                        : null;
 
                     if (root.TryGetProperty("Reference", out var refProp))
                         order.Reference = refProp.GetString();
 
                     if (root.TryGetProperty("Contact", out var contact))
                     {
-                        order.BillingCompany = contact.TryGetProperty("Name", out var nameProp) ? nameProp.GetString() : null;
-                        order.ContactEmail = contact.TryGetProperty("EmailAddress", out var emailProp) ? emailProp.GetString() : null;
+                        order.BillingCompany = contact.TryGetProperty("Name", out var nameProp)
+                            ? nameProp.GetString()
+                            : null;
+                        order.ContactEmail = contact.TryGetProperty("EmailAddress", out var emailProp)
+                            ? emailProp.GetString()
+                            : null;
                     }
 
                     order.OrderDate = root.TryGetProperty("DateString", out var ds)
                         ? DateTime.Parse(ds.GetString() ?? DateTime.UtcNow.ToString())
                         : DateTime.UtcNow;
+
+                    // Normalize before return
+                    order.Status = NormalizeStatus(source, order.Status);
                     break;
 
                 default:
@@ -78,6 +99,31 @@ namespace Bagile.EtlService.Mappers
             }
 
             return order;
+        }
+
+        private static string NormalizeStatus(string? source, string? rawStatus)
+        {
+            if (string.IsNullOrWhiteSpace(rawStatus))
+                return "pending";
+
+            rawStatus = rawStatus.Trim().ToLowerInvariant();
+            source = source?.ToLowerInvariant() ?? "";
+
+            return (source, rawStatus) switch
+            {
+                // WooCommerce
+                ("woo", "completed") or ("woo", "processing") => "completed",
+                ("woo", "pending") or ("woo", "on-hold") => "pending",
+                ("woo", "cancelled") or ("woo", "trash") or ("woo", "refunded") => "cancelled",
+                ("woo", "failed") => "failed",
+
+                // Xero
+                ("xero", "paid") => "completed",
+                ("xero", "authorised") or ("xero", "submitted") or ("xero", "draft") => "pending",
+                ("xero", "voided") or ("xero", "deleted") => "cancelled",
+
+                _ => rawStatus
+            };
         }
     }
 }

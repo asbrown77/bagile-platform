@@ -33,18 +33,7 @@ public class RawOrderProcessor
                     var order = OrderMapper.MapFromRaw(record.Source, record.Id, record.Payload);
                     if (order == null) continue;
 
-                    await _orderRepo.UpsertOrderAsync(
-                        order.RawOrderId,
-                        order.ExternalId,
-                        order.Source,
-                        order.Type,
-                        order.BillingCompany,
-                        order.ContactName,
-                        order.ContactEmail,
-                        order.TotalAmount,
-                        order.Status,
-                        order.OrderDate,
-                        token);
+                    await _orderRepo.UpsertOrderAsync(order, token);
 
                     await _rawRepo.MarkProcessedAsync(record.Id);
                 }

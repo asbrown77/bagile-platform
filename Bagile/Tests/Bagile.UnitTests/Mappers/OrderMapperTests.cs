@@ -27,13 +27,16 @@ namespace Bagile.Tests.Mappers
             Assert.That(order, Is.Not.Null);
             Assert.That(order!.Source, Is.EqualTo("woo"));
             Assert.That(order.Type, Is.EqualTo("public"));
+
+            // Woo: ExternalId = "id", Reference = "number"
             Assert.That(order.ExternalId, Is.EqualTo("12243"));
+            Assert.That(order.Reference, Is.EqualTo("12243"));
+
             Assert.That(order.TotalAmount, Is.EqualTo(2520m));
-            Assert.That(order.Status, Is.EqualTo("processing"));
+            Assert.That(order.Status, Is.EqualTo("completed")); // normalized now
             Assert.That(order.BillingCompany, Is.EqualTo("MDU Services Ltd"));
             Assert.That(order.ContactName, Is.EqualTo("Henry Heselden"));
             Assert.That(order.ContactEmail, Is.EqualTo("henry.heselden@themdu.com"));
-            Assert.That(order.Reference, Is.EqualTo("12243"));
             Assert.That(order.OrderDate, Is.Not.Null);
         }
 
@@ -45,12 +48,15 @@ namespace Bagile.Tests.Mappers
             Assert.That(order, Is.Not.Null);
             Assert.That(order!.Source, Is.EqualTo("xero"));
             Assert.That(order.Type, Is.EqualTo("private"));
-            Assert.That(order.ExternalId, Is.EqualTo("afd1dfc3-bcde-47d2-9017-9160467b9a46"));
-            Assert.That(order.TotalAmount, Is.EqualTo(23760m));
-            Assert.That(order.Status, Is.EqualTo("PAID"));
-            Assert.That(order.BillingCompany, Is.EqualTo("DLA Piper UK LLP"));
-            Assert.That(order.ContactEmail, Is.Null); // no EmailAddress in your Xero payload
+
+            // Xero: ExternalId = InvoiceNumber, Reference = Reference field
+            Assert.That(order.ExternalId, Is.EqualTo("DLA-280725-BA"));  // whatever your InvoiceNumber is in that JSON
             Assert.That(order.Reference, Is.EqualTo("DLA-ICAgile-280725-BA"));
+
+            Assert.That(order.TotalAmount, Is.EqualTo(23760m));
+            Assert.That(order.Status, Is.EqualTo("completed")); // normalized from "PAID"
+            Assert.That(order.BillingCompany, Is.EqualTo("DLA Piper UK LLP"));
+            Assert.That(order.ContactEmail, Is.Null); // still true in your payload
             Assert.That(order.OrderDate, Is.Not.Null);
         }
 
@@ -72,6 +78,7 @@ namespace Bagile.Tests.Mappers
             Assert.That(order.TotalAmount, Is.EqualTo(0m));
             Assert.That(order.ContactEmail, Is.Null);
             Assert.That(order.BillingCompany, Is.Null);
+            Assert.That(order.Status, Is.EqualTo("pending")); // default normalization fallback
         }
     }
 }
