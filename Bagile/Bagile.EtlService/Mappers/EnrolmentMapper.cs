@@ -5,7 +5,7 @@ namespace Bagile.EtlService.Mappers
 {
     public static class EnrolmentMapper
     {
-        public static IEnumerable<Enrolment> MapFromWooOrder(string payload, long orderId)
+        public static IEnumerable<Enrolment> MapFromWooOrder(string payload, long orderId, long studentId)
         {
             var result = new List<Enrolment>();
 
@@ -22,26 +22,25 @@ namespace Bagile.EtlService.Mappers
                 if (!meta.TryGetProperty("value", out var tickets))
                     continue;
 
-                foreach (var courseEntry in tickets.EnumerateObject()) // "1"
+                foreach (var courseEntry in tickets.EnumerateObject())
                 {
-                    foreach (var ticketEntry in courseEntry.Value.EnumerateObject()) // "1","2","3","4"
+                    foreach (var ticketEntry in courseEntry.Value.EnumerateObject())
                     {
                         var ticket = ticketEntry.Value;
+                        long? courseScheduleId = null;
 
-                        long? productId = null;
                         if (ticket.TryGetProperty("WooCommerceEventsProductID", out var pidProp) &&
-                            pidProp.ValueKind == JsonValueKind.String &&
                             long.TryParse(pidProp.GetString(), out var parsedId))
                         {
-                            productId = parsedId;
+                            // this can later be resolved to an actual FK in ETL or repo layer
+                            courseScheduleId = parsedId;
                         }
 
                         result.Add(new Enrolment
                         {
+                            StudentId = studentId,
                             OrderId = orderId,
-                            CourseScheduleProductId = productId,
-                            CourseScheduleId = null,
-                            StudentId = 0
+                            CourseScheduleId = courseScheduleId
                         });
                     }
                 }

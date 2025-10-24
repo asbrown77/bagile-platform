@@ -23,26 +23,26 @@ namespace Bagile.Tests.Mappers
         {
             // Arrange
             long orderId = 501;
+            long studentId = 999; // fake ID for test
 
             // Act
-            var enrolments = EnrolmentMapper.MapFromWooOrder(_wooJson, orderId).ToList();
+            var enrolments = EnrolmentMapper.MapFromWooOrder(_wooJson, orderId, studentId).ToList();
 
             // Assert
             Assert.That(enrolments, Is.Not.Null);
-            Assert.That(enrolments.Count, Is.EqualTo(2)); // Two attendees in sample Woo data
-
+            Assert.That(enrolments.Count, Is.EqualTo(2)); // Adjust based on actual sample data
             var first = enrolments.First();
+
             Assert.That(first.OrderId, Is.EqualTo(orderId));
-            Assert.That(first.CourseScheduleProductId, Is.EqualTo(11840)); // product_id from payload
-            Assert.That(first.CourseScheduleId, Is.Null); // not resolved yet
-            Assert.That(first.StudentId, Is.EqualTo(0)); // not set at this stage
+            Assert.That(first.StudentId, Is.EqualTo(studentId));
+            Assert.That(first.CourseScheduleId, Is.Null);
         }
 
         [Test]
         public void MapFromWooOrder_ShouldHandleMissingTicketsGracefully()
         {
             var payload = "{\"id\": 1001, \"total\": \"0\"}";
-            var enrolments = EnrolmentMapper.MapFromWooOrder(payload, 99).ToList();
+            var enrolments = EnrolmentMapper.MapFromWooOrder(payload, 99, 123).ToList();
 
             Assert.That(enrolments, Is.Not.Null);
             Assert.That(enrolments.Count, Is.EqualTo(0));

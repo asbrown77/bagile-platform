@@ -43,6 +43,19 @@ public class CourseScheduleRepository : ICourseScheduleRepository
         await conn.ExecuteAsync(sql, course);
     }
 
+    public async Task<long?> GetIdBySourceProductAsync(string sourceSystem, long sourceProductId)
+    {
+        const string sql = @"
+                SELECT id
+                FROM bagile.course_schedules
+                WHERE source_system = @sourceSystem
+                  AND source_product_id = @sourceProductId
+                LIMIT 1;";
+
+        await using var c = new NpgsqlConnection(_connStr);
+        return await c.QueryFirstOrDefaultAsync<long?>(sql, new { sourceSystem, sourceProductId });
+    }
+
     public async Task<IEnumerable<CourseSchedule>> GetAllAsync()
     {
         await using var conn = new NpgsqlConnection(_connStr);
