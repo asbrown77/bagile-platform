@@ -67,6 +67,17 @@ static void ConfigureDatabase(HostApplicationBuilder builder)
         return new OrderRepository(connStr);
     });
 
+    builder.Services.AddScoped<IStudentRepository>(sp =>
+    {
+        var connStr = GetConnectionString(sp);
+        return new StudentRepository(connStr);
+    });
+
+    builder.Services.AddScoped<IEnrolmentRepository>(sp =>
+    {
+        var connStr = GetConnectionString(sp);
+        return new EnrolmentRepository(connStr);
+    });
 
     builder.Services.AddScoped<ICourseScheduleRepository>(sp =>
     {
