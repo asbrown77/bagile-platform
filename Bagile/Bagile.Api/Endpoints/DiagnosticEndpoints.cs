@@ -1,4 +1,5 @@
-﻿using Bagile.Infrastructure.Repositories;
+﻿using Bagile.Domain.Repositories;
+using Bagile.Infrastructure.Repositories;
 using Npgsql;
 
 namespace Bagile.Api.Endpoints;
@@ -46,7 +47,7 @@ public static class DiagnosticEndpoints
             var safeLimit = Math.Clamp(limit ?? 10, 1, 100);
 
             var result = all
-                .OrderByDescending(r => r.ReceivedAt)
+                .OrderByDescending(r => r.CreatedAt)
                 .Take(safeLimit);
 
             return Results.Json(result);

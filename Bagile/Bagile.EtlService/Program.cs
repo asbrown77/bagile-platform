@@ -60,6 +60,13 @@ static void ConfigureDatabase(HostApplicationBuilder builder)
         var connStr = GetConnectionString(sp);
         return new RawOrderRepository(connStr);
     });
+    
+    builder.Services.AddScoped<IOrderRepository>(sp =>
+    {
+        var connStr = GetConnectionString(sp);
+        return new OrderRepository(connStr);
+    });
+
 
     builder.Services.AddScoped<ICourseScheduleRepository>(sp =>
     {
@@ -129,6 +136,7 @@ static void ConfigureEtl(HostApplicationBuilder builder)
     builder.Services.AddScoped<IImporter<WooProductDto>, WooCourseImporter>();
 
     // Core orchestration
+    builder.Services.AddScoped<RawOrderProcessor>();
     builder.Services.AddScoped<EtlRunner>();
     builder.Services.AddHostedService<EtlWorker>();
 }

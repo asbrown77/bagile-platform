@@ -33,6 +33,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Bagile.Domain\Bagile.Domain.csproj" />
     <ProjectReference Include="..\..\Bagile.EtlService\Bagile.EtlService.csproj" />
     <ProjectReference Include="..\..\Bagile.Infrastructure\Bagile.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Bagile.Api\Bagile.Api.csproj" />

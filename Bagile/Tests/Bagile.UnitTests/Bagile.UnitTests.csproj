@@ -10,11 +10,18 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="SampleData\woo_order.json" />
     <None Remove="SampleData\woo_product_10460.json" />
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="SampleData\woo_order.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="SampleData\woo_product_10460.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="SampleData\xero_invoice_import.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

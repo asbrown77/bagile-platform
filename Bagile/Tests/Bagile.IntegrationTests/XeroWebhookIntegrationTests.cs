@@ -9,6 +9,7 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Bagile.Domain.Entities;
 using Bagile.Infrastructure.Clients;
 
 [TestFixture]

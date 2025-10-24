@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Bagile.Infrastructure.Models
+﻿namespace Bagile.Domain.Entities
 {
     public class RawOrder
     {
@@ -9,7 +7,8 @@ namespace Bagile.Infrastructure.Models
         public string ExternalId { get; set; } = string.Empty;
         public string Payload { get; set; } = string.Empty;
         public string PayloadHash { get; set; } = string.Empty;
-        public DateTime ReceivedAt { get; set; }   
-        public string? EventType { get; set; }     
+        public string? EventType { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime? ProcessedAt { get; set; }
     }
 }

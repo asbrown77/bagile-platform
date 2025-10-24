@@ -5,6 +5,7 @@ using Bagile.Infrastructure.Clients;
 using Bagile.Infrastructure.Repositories;
 using Npgsql;
 using System.Reflection;
+using Bagile.Domain.Repositories;
 
 var version = Assembly.GetExecutingAssembly()
     ?.GetName()
