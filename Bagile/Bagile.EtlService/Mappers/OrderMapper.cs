@@ -38,9 +38,11 @@ namespace Bagile.EtlService.Mappers
                         order.ContactEmail = billing.TryGetProperty("email", out var em) ? em.GetString() : null;
                     }
 
-                    order.Reference = root.TryGetProperty("id", out var idReference)
-                        ? idReference.GetRawText()
-                        : string.Empty;
+                    order.Reference = root.TryGetProperty("number", out var num)
+                        ? num.GetString()
+                        : root.TryGetProperty("id", out var idRef)
+                            ? idRef.GetRawText()
+                            : string.Empty;
 
                     order.OrderDate = root.TryGetProperty("date_created", out var dt)
                         ? DateTime.Parse(dt.GetString() ?? DateTime.UtcNow.ToString())
