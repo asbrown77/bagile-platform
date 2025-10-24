@@ -1,18 +1,19 @@
-﻿using System.Text.Json;
+﻿using System.Data.Common;
+using System.Text.Json;
 using Bagile.Domain.Entities;
 
 namespace Bagile.EtlService.Mappers
 {
     public static class OrderMapper
     {
-        public static Order? MapFromRaw(string source, long rawOrderId, string payload)
+        public static Order? MapFromRaw(RawOrder rawOrder)
         {
-            var doc = JsonDocument.Parse(payload);
+            var doc = JsonDocument.Parse(rawOrder.Payload);
             var root = doc.RootElement;
 
-            var order = new Order { RawOrderId = rawOrderId, Source = source };
+            var order = new Order { RawOrderId = rawOrder.Id, Source = rawOrder.Source };
 
-            switch (source.ToLower())
+            switch (order.Source.ToLower())
             {
                 case "woo":
                     order.Type = "public";
@@ -55,7 +56,7 @@ namespace Bagile.EtlService.Mappers
                         : DateTime.UtcNow;
 
                     // Normalize before return
-                    order.Status = NormalizeStatus(source, order.Status);
+                    order.Status = NormalizeStatus(order.Source, order.Status);
                     break;
 
                 case "xero":
@@ -91,7 +92,7 @@ namespace Bagile.EtlService.Mappers
                         : DateTime.UtcNow;
 
                     // Normalize before return
-                    order.Status = NormalizeStatus(source, order.Status);
+                    order.Status = NormalizeStatus(order.Source, order.Status);
                     break;
 
                 default:

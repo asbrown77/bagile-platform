@@ -80,6 +80,7 @@ namespace Bagile.Infrastructure.Repositories
             const string sql = @"
             UPDATE bagile.raw_orders
             SET status = 'error',
+                error_message = @errorMessage,  
                 processed_at = NOW()
             WHERE id = @id;";
 

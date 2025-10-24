@@ -1,13 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Bagile.Domain.Entities;
 
 namespace Bagile.Domain.Repositories
 {
     public interface IEnrolmentRepository
     {
-        Task UpsertAsync(long studentId, long orderId, long? courseScheduleId);
+        Task UpsertAsync(Enrolment enrolment);
     }
 }
