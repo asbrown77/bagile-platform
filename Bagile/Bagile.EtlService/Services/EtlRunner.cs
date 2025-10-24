@@ -49,7 +49,7 @@ public class EtlRunner
             foreach (var raw in payloads)
             {
                 var id = JsonHelpers.ExtractId(raw);
-                await _rawOrderRepository.InsertIfChangedAsync(source, id, raw, "etl.import");
+                await _rawOrderRepository.InsertIfChangedAsync(source, id, raw, "import");
             }
 
             _logger.LogInformation("Finished collecting orders from {Source}", source);

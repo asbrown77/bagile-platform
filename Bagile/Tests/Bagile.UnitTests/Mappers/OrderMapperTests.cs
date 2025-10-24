@@ -49,14 +49,13 @@ namespace Bagile.Tests.Mappers
             Assert.That(order!.Source, Is.EqualTo("xero"));
             Assert.That(order.Type, Is.EqualTo("private"));
 
-            // Xero: ExternalId = InvoiceNumber, Reference = Reference field
-            Assert.That(order.ExternalId, Is.EqualTo("DLA-280725-BA"));  // whatever your InvoiceNumber is in that JSON
-            Assert.That(order.Reference, Is.EqualTo("DLA-ICAgile-280725-BA"));
-
-            Assert.That(order.TotalAmount, Is.EqualTo(23760m));
+            // Matches your JSON
+            Assert.That(order.ExternalId, Is.EqualTo("INV-0001"));
+            Assert.That(order.Reference, Is.EqualTo("PT-PSPO-001"));
+            Assert.That(order.TotalAmount, Is.EqualTo(14400m));
             Assert.That(order.Status, Is.EqualTo("completed")); // normalized from "PAID"
-            Assert.That(order.BillingCompany, Is.EqualTo("DLA Piper UK LLP"));
-            Assert.That(order.ContactEmail, Is.Null); // still true in your payload
+            Assert.That(order.BillingCompany, Is.EqualTo("Checkatrade"));
+            Assert.That(order.ContactEmail, Is.Null);
             Assert.That(order.OrderDate, Is.Not.Null);
         }
 
