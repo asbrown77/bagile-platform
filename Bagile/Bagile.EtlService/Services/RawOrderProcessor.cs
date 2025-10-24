@@ -40,6 +40,7 @@ public class RawOrderProcessor
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error processing record {Id}", record.Id);
+                    await _rawRepo.MarkFailedAsync(record.Id, ex.Message); // <— new line
                 }
             }
         }

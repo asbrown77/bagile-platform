@@ -44,18 +44,20 @@ namespace Bagile.Infrastructure.Repositories
         public async Task<IEnumerable<RawOrder>> GetUnprocessedAsync(int limit = 100)
         {
             const string sql = @"
-                SELECT id,
-                       source,
-                       external_id AS ExternalId,
-                       payload::text AS Payload,
-                       event_type AS EventType,
-                       payload_hash AS PayloadHash,
-                       created_at AS CreatedAt,
-                       processed_at AS ProcessedAt
-                FROM bagile.raw_orders
-                WHERE processed_at IS NULL
-                ORDER BY created_at
-                LIMIT @limit;";
+            SELECT id,
+                   source,
+                   external_id AS ExternalId,
+                   payload::text AS Payload,
+                   event_type AS EventType,
+                   payload_hash AS PayloadHash,
+                   created_at AS CreatedAt,
+                   processed_at AS ProcessedAt,
+                   status
+            FROM bagile.raw_orders
+            WHERE (processed_at IS NULL OR status = 'pending')
+              AND (event_type = 'import' OR event_type IS NULL)
+            ORDER BY created_at
+            LIMIT @limit;";
 
             await using var conn = new NpgsqlConnection(_connectionString);
             return await conn.QueryAsync<RawOrder>(sql, new { limit });
@@ -63,10 +65,28 @@ namespace Bagile.Infrastructure.Repositories
 
         public async Task MarkProcessedAsync(long id)
         {
-            const string sql = @"UPDATE bagile.raw_orders SET processed_at = NOW() WHERE id = @id;";
+            const string sql = @"
+            UPDATE bagile.raw_orders
+            SET processed_at = NOW(),
+                status = 'processed'
+            WHERE id = @id;";
+
             await using var conn = new NpgsqlConnection(_connectionString);
             await conn.ExecuteAsync(sql, new { id });
         }
+
+        public async Task MarkFailedAsync(long id, string errorMessage)
+        {
+            const string sql = @"
+            UPDATE bagile.raw_orders
+            SET status = 'error',
+                processed_at = NOW()
+            WHERE id = @id;";
+
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.ExecuteAsync(sql, new { id });
+        }
+
 
         public async Task<int> InsertAsync(string source, string externalId, string payloadJson, string eventType)
         {

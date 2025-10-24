@@ -35,8 +35,8 @@ public class EtlRunnerTests
 
         await runner.RunAsync();
 
-        repo.Verify(r => r.InsertIfChangedAsync("woo", "1", It.IsAny<string>(), "etl.import"), Times.Once);
-        repo.Verify(r => r.InsertIfChangedAsync("xero", "99", It.IsAny<string>(), "etl.import"), Times.Once);
+        repo.Verify(r => r.InsertIfChangedAsync("woo", "1", It.IsAny<string>(), "import"), Times.Once);
+        repo.Verify(r => r.InsertIfChangedAsync("xero", "99", It.IsAny<string>(), "import"), Times.Once);
     }
 
 }

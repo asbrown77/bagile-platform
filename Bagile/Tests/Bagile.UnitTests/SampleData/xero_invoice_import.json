@@ -1,8 +1,55 @@
 {
+  "Date": "/Date(1625097600000+0000)/",
   "Type": "ACCREC",
+  "Total": 14400.00,
   "Status": "PAID",
-  "InvoiceID": "afd1dfc3-bcde-47d2-9017-9160467b9a46",
-  "Reference": "DLA-ICAgile-280725-BA",
-  "Total": 23760.00,
-  "Contact": { "Name": "DLA Piper UK LLP" }
+  "Contact": {
+    "Name": "Checkatrade",
+    "Phones": [],
+    "Addresses": [],
+    "ContactID": "4933dea0-18e8-4fdc-b567-eaec2800c821",
+    "ContactGroups": [],
+    "ContactPersons": [],
+    "HasValidationErrors": false
+  },
+  "DueDate": "/Date(1626393600000+0000)/",
+  "Payments": [
+    {
+      "Date": "/Date(1626220800000+0000)/",
+      "Amount": 14400.00,
+      "PaymentID": "a34ad56b-4cdb-4d60-83a2-5546ffe515e3",
+      "Reference": "",
+      "HasAccount": false,
+      "CurrencyRate": 1.0000000000,
+      "HasValidationErrors": false
+    }
+  ],
+  "SubTotal": 12000.00,
+  "TotalTax": 2400.00,
+  "AmountDue": 0.00,
+  "HasErrors": false,
+  "InvoiceID": "341aaab4-0e92-40ce-833d-7f3352b1c557",
+  "LineItems": [],
+  "Reference": "PT-PSPO-001",
+  "AmountPaid": 14400.00,
+  "DateString": "2021-07-01T00:00:00",
+  "CreditNotes": [],
+  "Prepayments": [],
+  "CurrencyCode": "GBP",
+  "CurrencyRate": 1.0000000000,
+  "IsDiscounted": false,
+  "Overpayments": [],
+  "DueDateString": "2021-07-16T00:00:00",
+  "InvoiceNumber": "INV-0001",
+  "SentToContact": false,
+  "AmountCredited": 0.00,
+  "HasAttachments": false,
+  "UpdatedDateUTC": "/Date(1626291312767+0000)/",
+  "BrandingThemeID": "2d9f2137-af37-4170-9557-e614d3311497",
+  "FullyPaidOnDate": "/Date(1626220800000+0000)/",
+  "LineAmountTypes": "Exclusive",
+  "InvoiceAddresses": [],
+  "InvoicePaymentServices": []
 }
+
+
