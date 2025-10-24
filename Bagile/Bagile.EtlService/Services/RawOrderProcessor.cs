@@ -19,38 +19,41 @@ public class RawOrderProcessor
 
     public async Task ProcessPendingAsync(CancellationToken token)
     {
-        var unprocessed = await _rawRepo.GetUnprocessedAsync(100);
-
-        foreach (var record in unprocessed)
+        while (true)
         {
-            try
+            var unprocessed = await _rawRepo.GetUnprocessedAsync(100);
+
+            if (!unprocessed.Any())
+                break; // done, no more to process
+
+            foreach (var record in unprocessed)
             {
-                var order = OrderMapper.MapFromRaw(record.Source, record.Id, record.Payload);
-                if (order == null)
+                try
                 {
-                    _logger.LogWarning("Unknown source {Source} for record {Id}", record.Source, record.Id);
-                    continue;
+                    var order = OrderMapper.MapFromRaw(record.Source, record.Id, record.Payload);
+                    if (order == null) continue;
+
+                    await _orderRepo.UpsertOrderAsync(
+                        order.RawOrderId,
+                        order.ExternalId,
+                        order.Source,
+                        order.Type,
+                        order.BillingCompany,
+                        order.ContactName,
+                        order.ContactEmail,
+                        order.TotalAmount,
+                        order.Status,
+                        order.OrderDate,
+                        token);
+
+                    await _rawRepo.MarkProcessedAsync(record.Id);
                 }
-
-                await _orderRepo.UpsertOrderAsync(
-                    order.RawOrderId,
-                    order.ExternalId,
-                    order.Source,
-                    order.Type,
-                    order.BillingCompany,
-                    order.ContactName,
-                    order.ContactEmail,
-                    order.TotalAmount,
-                    order.Status,
-                    order.OrderDate,
-                    token);
-
-                await _rawRepo.MarkProcessedAsync(record.Id);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error processing raw record {Id}", record.Id);
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error processing record {Id}", record.Id);
+                }
             }
         }
     }
+
 }

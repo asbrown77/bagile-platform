@@ -6,7 +6,7 @@ public class Order
     public string ExternalId { get; set; } = "";
     public string Source { get; set; } = "";
     public string Type { get; set; } = "";
-    public string Reference { get; set; } = "";
+    public string? Reference { get; set; } = "";
     public string? BillingCompany { get; set; }
     public string? ContactName { get; set; }
     public string? ContactEmail { get; set; }
