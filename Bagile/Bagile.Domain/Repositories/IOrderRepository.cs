@@ -9,7 +9,8 @@ namespace Bagile.Domain.Repositories;
 
 public interface IOrderRepository
 {
-    Task UpsertOrderAsync(Order order, CancellationToken token);
+    Task<long> UpsertOrderAsync(Order order, CancellationToken token);
 }
+
 
 

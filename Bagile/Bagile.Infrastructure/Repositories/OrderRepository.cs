@@ -13,21 +13,26 @@ public class OrderRepository : IOrderRepository
         _connectionString = connectionString;
     }
 
-    public async Task UpsertOrderAsync(Order order, CancellationToken token)
+    public async Task<long> UpsertOrderAsync(Order order, CancellationToken token)
     {
         const string sql = @"
-            INSERT INTO bagile.orders 
-                (raw_order_id, external_id, source, type, billing_company, reference, contact_name, contact_email, total_amount, status, order_date)
-            VALUES 
-                (@rawOrderId, @externalId, @source, @type, @billingCompany, @reference, @contactName, @contactEmail, @total, @status, @orderDate)
-            ON CONFLICT (external_id) DO UPDATE 
-                SET billing_company = EXCLUDED.billing_company,
-                    contact_name = EXCLUDED.contact_name,
-                    contact_email = EXCLUDED.contact_email,
-                    total_amount = EXCLUDED.total_amount,
-                    status = EXCLUDED.status,
-                    order_date = EXCLUDED.order_date,
-                    updated_at = NOW();";
+                INSERT INTO bagile.orders 
+                    (raw_order_id, external_id, source, type, billing_company, reference,
+                     contact_name, contact_email, total_amount, status, order_date)
+                VALUES 
+                    (@rawOrderId, @externalId, @source, @type, @billingCompany, @reference,
+                     @contactName, @contactEmail, @total, @status, @orderDate)
+                ON CONFLICT (external_id)
+                DO UPDATE 
+                    SET billing_company = EXCLUDED.billing_company,
+                        contact_name = EXCLUDED.contact_name,
+                        contact_email = EXCLUDED.contact_email,
+                        total_amount = EXCLUDED.total_amount,
+                        status = EXCLUDED.status,
+                        order_date = EXCLUDED.order_date,
+                        updated_at = NOW()
+                RETURNING id;";
+
 
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(token);
@@ -45,6 +50,7 @@ public class OrderRepository : IOrderRepository
         cmd.Parameters.AddWithValue("status", (object?)order.Status ?? DBNull.Value);
         cmd.Parameters.AddWithValue("orderDate", (object?)order.OrderDate ?? DBNull.Value);
 
-        await cmd.ExecuteNonQueryAsync(token);
+        var result = await cmd.ExecuteScalarAsync(token);
+        return Convert.ToInt64(result);
     }
 }
