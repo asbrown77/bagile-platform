@@ -10,7 +10,11 @@ public class Order
     public string? BillingCompany { get; set; }
     public string? ContactName { get; set; }
     public string? ContactEmail { get; set; }
+    public int? TotalQuantity { get; set; }
+    public decimal SubTotal { get; set; }
+    public decimal TotalTax { get; set; }
     public decimal TotalAmount { get; set; }
     public string? Status { get; set; }
     public DateTime? OrderDate { get; set; }
+
 }

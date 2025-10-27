@@ -18,10 +18,12 @@ public class OrderRepository : IOrderRepository
         const string sql = @"
                 INSERT INTO bagile.orders 
                     (raw_order_id, external_id, source, type, billing_company, reference,
-                     contact_name, contact_email, total_amount, status, order_date)
+                     contact_name, contact_email, sub_total, total_tax, total_amount,
+                     total_quantity, status, order_date)
                 VALUES 
                     (@rawOrderId, @externalId, @source, @type, @billingCompany, @reference,
-                     @contactName, @contactEmail, @total, @status, @orderDate)
+                     @contactName, @contactEmail, @subTotal, @totalTax, @total, 
+                     @quantity, @status, @orderDate)
                 ON CONFLICT (external_id)
                 DO UPDATE 
                     SET billing_company = EXCLUDED.billing_company,
@@ -46,7 +48,10 @@ public class OrderRepository : IOrderRepository
         cmd.Parameters.AddWithValue("billingCompany", (object?)order.BillingCompany ?? DBNull.Value);
         cmd.Parameters.AddWithValue("contactName", (object?)order.ContactName ?? DBNull.Value);
         cmd.Parameters.AddWithValue("contactEmail", (object?)order.ContactEmail ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("total", order.TotalAmount);
+        cmd.Parameters.AddWithValue("subTotal", (object?)order.SubTotal ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("totalTax", (object?)order.TotalTax ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("total", (object?)order.TotalAmount ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("quantity", (object?)order.TotalQuantity ?? DBNull.Value);
         cmd.Parameters.AddWithValue("status", (object?)order.Status ?? DBNull.Value);
         cmd.Parameters.AddWithValue("orderDate", (object?)order.OrderDate ?? DBNull.Value);
 

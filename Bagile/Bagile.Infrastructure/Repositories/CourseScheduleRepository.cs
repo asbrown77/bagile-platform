@@ -43,6 +43,63 @@ public class CourseScheduleRepository : ICourseScheduleRepository
         await conn.ExecuteAsync(sql, course);
     }
 
+    public async Task<long> UpsertFromWooPayloadAsync(
+        long productId,
+        string? courseName,
+        string? sku,
+        DateTime? startDate,
+        DateTime? endDate,
+        decimal? price,
+        string? currency // ignored since table has no currency column
+    )
+    {
+        const string sql = @"
+        INSERT INTO bagile.course_schedules (
+            source_system,
+            source_product_id,
+            name,
+            sku,
+            start_date,
+            end_date,
+            price,
+            last_synced
+        )
+        VALUES (
+            'woo',
+            @productId,
+            @name,
+            @sku,
+            @startDate,
+            @endDate,
+            @price,
+            now()
+        )
+        ON CONFLICT (source_system, source_product_id)
+        DO UPDATE SET
+            name = EXCLUDED.name,
+            sku = EXCLUDED.sku,
+            start_date = EXCLUDED.start_date,
+            end_date = EXCLUDED.end_date,
+            price = EXCLUDED.price,
+            last_synced = now()
+        RETURNING id;";
+
+        await using var conn = new NpgsqlConnection(_connStr);
+        await conn.OpenAsync();
+
+        await using var cmd = new NpgsqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("productId", productId);
+        cmd.Parameters.AddWithValue("name", (object?)courseName ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("sku", (object?)sku ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("startDate", (object?)startDate ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("endDate", (object?)endDate ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("price", (object?)price ?? DBNull.Value);
+
+        var result = await cmd.ExecuteScalarAsync();
+        return Convert.ToInt64(result);
+    }
+
+
     public async Task<long?> GetIdBySourceProductAsync(string sourceSystem, long sourceProductId)
     {
         const string sql = @"

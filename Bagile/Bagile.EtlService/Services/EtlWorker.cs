@@ -32,7 +32,8 @@ namespace Bagile.EtlService.Services
                     var processor = scope.ServiceProvider.GetRequiredService<RawOrderProcessor>();
                     await processor.ProcessPendingAsync(stoppingToken);
 
-                    _logger.LogInformation("ETL + RawOrder processing cycle completed successfully.");
+                    _logger.LogInformation("ETL + RawOrder processing cycle completed. Pending raw orders exhausted.");
+
                 }
                 catch (Exception ex)
                 {

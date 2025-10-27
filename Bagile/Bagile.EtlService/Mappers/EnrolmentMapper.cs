@@ -22,17 +22,17 @@ namespace Bagile.EtlService.Mappers
                 if (!meta.TryGetProperty("value", out var tickets))
                     continue;
 
+                // Tickets structure: courseEntry → attendeeEntry → ticket object
                 foreach (var courseEntry in tickets.EnumerateObject())
                 {
-                    foreach (var ticketEntry in courseEntry.Value.EnumerateObject())
+                    foreach (var attendeeEntry in courseEntry.Value.EnumerateObject())
                     {
-                        var ticket = ticketEntry.Value;
-                        long? courseScheduleId = null;
+                        var ticket = attendeeEntry.Value;
 
-                        if (ticket.TryGetProperty("WooCommerceEventsProductID", out var pidProp) &&
-                            long.TryParse(pidProp.GetString(), out var parsedId))
+                        long? courseScheduleId = null;
+                        if (ticket.TryGetProperty("WooCommerceEventsProductID", out var pidProp)
+                            && long.TryParse(pidProp.GetString(), out var parsedId))
                         {
-                            // this can later be resolved to an actual FK in ETL or repo layer
                             courseScheduleId = parsedId;
                         }
 
@@ -46,7 +46,11 @@ namespace Bagile.EtlService.Mappers
                 }
             }
 
-            return result;
+            // Dedupe same student+course
+            return result
+                .GroupBy(e => new { e.StudentId, e.CourseScheduleId })
+                .Select(g => g.First())
+                .ToList();
         }
     }
 }
