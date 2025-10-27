@@ -20,5 +20,12 @@ namespace Bagile.Infrastructure.Repositories
             await using var c = new NpgsqlConnection(_conn);
             await c.ExecuteAsync(sql, enrolment);
         }
+
+        public async Task<int> CountByOrderIdAsync(long orderId)
+        {
+            const string sql = "SELECT COUNT(*) FROM bagile.enrolments WHERE order_id = @orderId;";
+            await using var conn = new NpgsqlConnection(_conn);
+            return await conn.ExecuteScalarAsync<int>(sql, new { orderId });
+        }
     }
 }

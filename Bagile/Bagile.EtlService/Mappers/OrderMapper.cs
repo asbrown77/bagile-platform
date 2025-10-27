@@ -26,6 +26,20 @@ namespace Bagile.EtlService.Mappers
                         ? decimal.Parse(totalProp.GetString() ?? "0")
                         : 0;
 
+                    order.TotalTax = root.TryGetProperty("total_tax", out var taxProp)
+                        ? decimal.Parse(taxProp.GetString() ?? "0")
+                        : 0;
+
+                    order.SubTotal = order.TotalAmount - order.TotalTax;
+
+
+                    if (root.TryGetProperty("line_items", out var items))
+                    {
+                        order.TotalQuantity = items
+                            .EnumerateArray()
+                            .Sum(i => i.TryGetProperty("quantity", out var q) ? q.GetInt32() : 0);
+                    }
+
                     order.Status = root.TryGetProperty("status", out var s)
                         ? s.GetString()
                         : null;
@@ -66,9 +80,17 @@ namespace Bagile.EtlService.Mappers
                         ? invNum.GetString() ?? ""
                         : "";
 
-                    order.TotalAmount = root.TryGetProperty("Total", out var t)
-                        ? decimal.Parse(t.GetRawText())
+                    order.TotalAmount = root.TryGetProperty("Total", out var total)
+                        ? total.GetDecimal()
                         : 0;
+
+                    order.TotalTax = root.TryGetProperty("TotalTax", out var tax)
+                        ? tax.GetDecimal()
+                        : 0;
+
+                    order.SubTotal = root.TryGetProperty("SubTotal", out var sub)
+                        ? sub.GetDecimal()
+                        : order.TotalAmount - order.TotalTax;
 
                     order.Status = root.TryGetProperty("Status", out var stat)
                         ? stat.GetString()
