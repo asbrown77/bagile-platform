@@ -1,16 +1,18 @@
-﻿using Bagile.Infrastructure.Models;
+﻿using System.Net;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using Bagile.Domain.Entities;
+using Bagile.Infrastructure.Clients;
+using Bagile.Infrastructure.Models;
 using Dapper;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
-using System.Net;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
-using Bagile.Domain.Entities;
-using Bagile.Infrastructure.Clients;
+
+namespace Bagile.IntegrationTests;
 
 [TestFixture]
 [Category("Integration")]
@@ -30,34 +32,66 @@ public class XeroWebhookIntegrationTests
 
         await _db.ExecuteAsync("DELETE FROM bagile.raw_orders;");
 
-        _factory = new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder =>
+        _factory = TestApiFactory.Create(
+            connStr,
+            configureServices: services =>
             {
-                builder.ConfigureAppConfiguration((ctx, config) =>
-                {
-                    var dict = new Dictionary<string, string>
-                    {
-                        ["ConnectionStrings:DefaultConnection"] = connStr,
-                        ["Xero:WebhookSecret"] = _webhookSecret
-                    };
-                    config.AddInMemoryCollection(dict);
-                });
+                // swap out external clients if needed, e.g. fake Xero
+                var descriptor = services.SingleOrDefault(
+                    d => d.ServiceType == typeof(IXeroApiClient));
+                if (descriptor != null)
+                    services.Remove(descriptor);
 
-                builder.ConfigureServices(services =>
+                services.AddSingleton<IXeroApiClient, FakeXeroApiClient>();
+            },
+            configureConfig: config =>
+            {
+                config.AddInMemoryCollection(new Dictionary<string, string>
                 {
-                    // remove the real client if registered
-                    var descriptor = services.SingleOrDefault(
-                        d => d.ServiceType == typeof(IXeroApiClient));
-                    if (descriptor != null)
-                        services.Remove(descriptor);
-
-                    // register fake
-                    services.AddSingleton<IXeroApiClient, FakeXeroApiClient>();
+                    ["Xero:WebhookSecret"] = _webhookSecret
                 });
             });
 
         _client = _factory.CreateClient();
     }
+
+    // [OneTimeSetUp]
+    // public async Task OneTimeSetup()
+    // {
+    //     var connStr = DatabaseFixture.ConnectionString;
+    //     _db = new NpgsqlConnection(connStr);
+    //     await _db.OpenAsync();
+    //
+    //     await _db.ExecuteAsync("DELETE FROM bagile.raw_orders;");
+    //
+    //     _factory = new WebApplicationFactory<Program>()
+    //         .WithWebHostBuilder(builder =>
+    //         {
+    //             builder.ConfigureAppConfiguration((ctx, config) =>
+    //             {
+    //                 var dict = new Dictionary<string, string>
+    //                 {
+    //                     ["ConnectionStrings:DefaultConnection"] = connStr,
+    //                     ["Xero:WebhookSecret"] = _webhookSecret
+    //                 };
+    //                 config.AddInMemoryCollection(dict);
+    //             });
+    //
+    //             builder.ConfigureServices(services =>
+    //             {
+    //                 // remove the real client if registered
+    //                 var descriptor = services.SingleOrDefault(
+    //                     d => d.ServiceType == typeof(IXeroApiClient));
+    //                 if (descriptor != null)
+    //                     services.Remove(descriptor);
+    //
+    //                 // register fake
+    //                 services.AddSingleton<IXeroApiClient, FakeXeroApiClient>();
+    //             });
+    //         });
+    //
+    //     _client = _factory.CreateClient();
+    // }
 
     [OneTimeTearDown]
     public void OneTimeTearDown()
@@ -95,7 +129,7 @@ public class XeroWebhookIntegrationTests
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var rows = (await _db.QueryAsync<RawOrder>(
-            "SELECT * FROM bagile.raw_orders WHERE external_id = @id", new { id = "abc-123" }))
+                "SELECT * FROM bagile.raw_orders WHERE external_id = @id", new { id = "abc-123" }))
             .ToList();
 
         rows.Should().ContainSingle();

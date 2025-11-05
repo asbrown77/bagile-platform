@@ -1,17 +1,15 @@
-using Bagile.Infrastructure.Clients;
-using Bagile.Infrastructure.Models;
+using Bagile.Domain.Entities;
 using Dapper;
 using FluentAssertions;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Bagile.Domain.Entities;
+
+namespace Bagile.IntegrationTests.Infrastructure;
 
 [TestFixture]
 [Category("Integration")]
@@ -19,49 +17,32 @@ public class WooWebhookIntegrationTests
 {
     private WebApplicationFactory<Program> _factory;
     private HttpClient _client;
-    private string _webhookSecret = "testsecret";
+    private readonly string _webhookSecret = "testsecret";
     private NpgsqlConnection _db;
 
     [OneTimeSetUp]
     public async Task OneTimeSetup()
     {
         var connStr = DatabaseFixture.ConnectionString;
+
         _db = new NpgsqlConnection(connStr);
         await _db.OpenAsync();
 
-        // The schema is already applied by DatabaseFixture.ApplySchemaAsync()
         await _db.ExecuteAsync("DELETE FROM bagile.raw_orders;");
 
-        _factory = new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder =>
+        _factory = TestApiFactory.Create(
+            connStr,
+            configureConfig: config =>
             {
-                builder.UseEnvironment("Testing");
-
-                builder.ConfigureAppConfiguration((ctx, config) =>
+                config.AddInMemoryCollection(new Dictionary<string, string>
                 {
-                    var dict = new Dictionary<string, string>
-                    {
-                        ["ConnectionStrings:DefaultConnection"] = connStr,
-                        ["WooCommerce:WebhookSecret"] = _webhookSecret
-                    };
-                    config.AddInMemoryCollection(dict);
-                });
-
-                builder.ConfigureServices(services =>
-                {
-                    var descriptor = services.SingleOrDefault(
-                        d => d.ServiceType == typeof(IXeroApiClient));
-                    if (descriptor != null)
-                        services.Remove(descriptor);
-
-                    services.AddSingleton<IXeroApiClient, FakeXeroApiClient>();
+                    // this is the one your Woo handler should read
+                    ["WooCommerce:WebhookSecret"] = _webhookSecret
                 });
             });
 
         _client = _factory.CreateClient();
     }
-
-
 
     [OneTimeTearDown]
     public void OneTimeTearDown()
@@ -74,11 +55,13 @@ public class WooWebhookIntegrationTests
     [Test]
     public async Task Minimal_Post_Works()
     {
-        var client = _factory.CreateClient();
-        var response = await client.PostAsync("/health", new StringContent("{}", Encoding.UTF8, "application/json"));
-        Console.WriteLine(response.StatusCode);
-    }
+        var response = await _client.PostAsync(
+            "/health",
+            new StringContent("{}", Encoding.UTF8, "application/json"));
 
+        Console.WriteLine(response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
 
     [Test]
     public async Task Webhook_Post_ValidPayload_UpsertsRawOrder()
@@ -93,23 +76,21 @@ public class WooWebhookIntegrationTests
         };
         request.Headers.Add("X-WC-Webhook-Signature", signature);
 
-        Console.WriteLine($"Request content: {await request.Content.ReadAsStringAsync()}");
-
         // Act
         var response = await _client.SendAsync(request);
-
         var body = await response.Content.ReadAsStringAsync();
         Console.WriteLine($"Response: {response.StatusCode}\n{body}");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-
         var rows = (await _db.QueryAsync<RawOrder>(
-            "SELECT * FROM bagile.raw_orders WHERE external_id = @id", new { id = "123" }))
+                "SELECT * FROM bagile.raw_orders WHERE external_id = @id",
+                new { id = "123" }))
             .ToList();
 
         rows.Should().ContainSingle();
+
         using var doc = JsonDocument.Parse(rows[0].Payload);
         doc.RootElement.GetProperty("foo").GetString().Should().Be("bar");
     }
@@ -118,12 +99,11 @@ public class WooWebhookIntegrationTests
     public async Task Webhook_Post_InvalidSignature_Returns401()
     {
         var payload = "{\"id\":456}";
-        var content = new StringContent(payload, Encoding.UTF8, "application/json");
-
-        var request = new HttpRequestMessage(HttpMethod.Post, "/webhooks/woo")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/webhooks/woo")
         {
-            Content = content
+            Content = new StringContent(payload, Encoding.UTF8, "application/json")
         };
+
         // intentionally wrong signature
         request.Headers.Add("X-WC-Webhook-Signature", "invalidsig");
 
@@ -134,10 +114,9 @@ public class WooWebhookIntegrationTests
 
     private static string ComputeHmacSha256Base64(string payload, string secret)
     {
-        var bodyBytes = Encoding.UTF8.GetBytes(payload); // always the same bytes the handler sees
+        var bodyBytes = Encoding.UTF8.GetBytes(payload);
         using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
         var hash = hmac.ComputeHash(bodyBytes);
         return Convert.ToBase64String(hash);
     }
-
 }
