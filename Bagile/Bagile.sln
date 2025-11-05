@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bagile.UnitTests", "Tests\B
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bagile.IntegrationTests", "Tests\Bagile.IntegrationTests\Bagile.IntegrationTests.csproj", "{0BE98FC5-922F-8AE3-612C-B6068378087E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bagile.AcceptanceTests", "Tests\Bagile.AcceptanceTests\Bagile.AcceptanceTests\Bagile.AcceptanceTests.csproj", "{8BA46DA3-A0E3-4C5C-A76E-664CFF182D38}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -53,6 +55,10 @@ Global
 		{0BE98FC5-922F-8AE3-612C-B6068378087E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0BE98FC5-922F-8AE3-612C-B6068378087E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0BE98FC5-922F-8AE3-612C-B6068378087E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8BA46DA3-A0E3-4C5C-A76E-664CFF182D38}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8BA46DA3-A0E3-4C5C-A76E-664CFF182D38}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8BA46DA3-A0E3-4C5C-A76E-664CFF182D38}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8BA46DA3-A0E3-4C5C-A76E-664CFF182D38}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -60,6 +66,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{F4ABEAC4-6F69-AC7B-201A-CB73C58AA415} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{0BE98FC5-922F-8AE3-612C-B6068378087E} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{8BA46DA3-A0E3-4C5C-A76E-664CFF182D38} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {4B834565-C004-4D9D-ACBB-71FD12E98EFB}

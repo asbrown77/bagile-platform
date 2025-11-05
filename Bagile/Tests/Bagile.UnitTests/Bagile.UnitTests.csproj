@@ -49,6 +49,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Application\Queries\" />
     <Folder Include="Domain\" />
     <Folder Include="EtlService\" />
   </ItemGroup>

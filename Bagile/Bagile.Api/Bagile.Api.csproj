@@ -9,16 +9,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="MediatR" Version="12.4.1" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.4" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.*" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Bagile.Infrastructure\Bagile.Infrastructure.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Controllers\" />
   </ItemGroup>
 
 </Project>

@@ -1,5 +1,4 @@
 ﻿using Bagile.Domain.Repositories;
-using Bagile.Infrastructure.Repositories;
 using Npgsql;
 
 namespace Bagile.Api.Endpoints;
@@ -8,51 +7,60 @@ public static class DiagnosticEndpoints
 {
     public static void MapDiagnosticEndpoints(this WebApplication app)
     {
+        app.MapHealthChecks("/health");
+
+        // Only map these routes in Development or Testing
+        return;
+
+        if (!app.Environment.IsDevelopment() &&
+            Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") != "Testing")
+            return;
+
         // DB test endpoint with host logging
         app.MapGet("/dbtest", async (IConfiguration config) =>
-        {
-            var connStr = config.GetConnectionString("DefaultConnection")
-                          ?? config.GetValue<string>("ConnectionStrings:DefaultConnection")
-                          ?? config.GetValue<string>("DbConnectionString");
-
-            if (string.IsNullOrWhiteSpace(connStr))
-                return Results.Problem("❌ No connection string found in configuration.");
-
-            try
             {
-                // Parse connection string to extract host
-                var builder = new NpgsqlConnectionStringBuilder(connStr);
-                var host = builder.Host;
+                var connStr = config.GetConnectionString("DefaultConnection")
+                              ?? config.GetValue<string>("ConnectionStrings:DefaultConnection")
+                              ?? config.GetValue<string>("DbConnectionString");
 
-                using var conn = new NpgsqlConnection(connStr);
-                await conn.OpenAsync();
+                if (string.IsNullOrWhiteSpace(connStr))
+                    return Results.Problem("❌ No connection string found in configuration.");
 
-                return Results.Ok($"✅ Connected successfully to {host}");
-            }
-            catch (Exception ex)
-            {
-                var builder = new NpgsqlConnectionStringBuilder(connStr);
-                var host = builder.Host;
+                try
+                {
+                    // Parse connection string to extract host
+                    var builder = new NpgsqlConnectionStringBuilder(connStr);
+                    var host = builder.Host;
 
-                return Results.Problem($"❌ Failed. Host: {host} | Error: {ex.Message}");
-            }
-        });
+                    using var conn = new NpgsqlConnection(connStr);
+                    await conn.OpenAsync();
 
+                    return Results.Ok($"✅ Connected successfully to {host}");
+                }
+                catch (Exception ex)
+                {
+                    var builder = new NpgsqlConnectionStringBuilder(connStr);
+                    var host = builder.Host;
+
+                    return Results.Problem($"❌ Failed. Host: {host} | Error: {ex.Message}");
+                }
+            })
+            .WithTags("Diagnostics");
 
         app.MapGet("/debug/raw_orders", async (IRawOrderRepository repo, int? limit) =>
-        {
-            var all = await repo.GetAllAsync();
+            {
+                var all = await repo.GetAllAsync();
 
-            // default 10, allow up to 100 max
-            var safeLimit = Math.Clamp(limit ?? 10, 1, 100);
+                // default 10, allow up to 100 max
+                var safeLimit = Math.Clamp(limit ?? 10, 1, 100);
 
-            var result = all
-                .OrderByDescending(r => r.CreatedAt)
-                .Take(safeLimit);
+                var result = all
+                    .OrderByDescending(r => r.CreatedAt)
+                    .Take(safeLimit);
 
-            return Results.Json(result);
-        });
+                return Results.Json(result);
+            })
+            .WithTags("Diagnostics");
 
-        app.MapHealthChecks("/health");
     }
 }

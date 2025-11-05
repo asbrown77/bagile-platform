@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Linq;
+using System.Text.Json;
 using Bagile.Domain.Entities;
 using Bagile.Domain.Repositories;
 using Bagile.EtlService.Mappers;
@@ -8,6 +9,9 @@ namespace Bagile.EtlService.Services
 {
     public class RawOrderProcessor
     {
+        private const string WooSource = "woo";
+        private static readonly TimeSpan BatchDelay = TimeSpan.FromSeconds(2);
+
         private readonly IOrderRepository _orderRepo;
         private readonly IRawOrderRepository _rawRepo;
         private readonly IStudentRepository _studentRepo;
@@ -50,8 +54,7 @@ namespace Bagile.EtlService.Services
                     await ProcessSingleOrderAsync(rawOrder, token);
                 }
 
-                // small breather between batches
-                await Task.Delay(TimeSpan.FromSeconds(2), token);
+                await Task.Delay(BatchDelay, token);
             }
         }
 
@@ -72,27 +75,12 @@ namespace Bagile.EtlService.Services
 
                 var orderId = await _orderRepo.UpsertOrderAsync(order, token);
 
-                if (rawOrder.Source.Equals("woo", StringComparison.OrdinalIgnoreCase))
+                if (rawOrder.Source.Equals(WooSource, StringComparison.OrdinalIgnoreCase))
                 {
                     await ProcessWooOrderAsync(rawOrder, orderId);
                 }
 
-                // --- Sanity check: orders without enough enrolments ---
-                if (order.TotalQuantity.HasValue)
-                {
-                    var enrolmentCount = await _enrolmentRepo.CountByOrderIdAsync(orderId);
-
-                    if (enrolmentCount < order.TotalQuantity.Value)
-                    {
-                        _logger.LogWarning(
-                            "Order {OrderId}, {Name}, expected {ExpectedQty} attendees, found only {ActualQty}.",
-                            orderId,
-                            order.BillingCompany,
-                            order.TotalQuantity,
-                            enrolmentCount
-                        );
-                    }
-                }
+                await ValidateEnrolmentConsistencyAsync(order, orderId);
 
                 await _rawRepo.MarkProcessedAsync(rawOrder.Id);
             }
@@ -103,54 +91,82 @@ namespace Bagile.EtlService.Services
             }
         }
 
+        private async Task ValidateEnrolmentConsistencyAsync(Order order, long orderId)
+        {
+            if (!order.TotalQuantity.HasValue)
+                return;
+
+            var enrolmentCount = await _enrolmentRepo.CountByOrderIdAsync(orderId);
+
+            if (enrolmentCount < order.TotalQuantity.Value)
+            {
+                _logger.LogWarning(
+                    "Order {OrderId}, {Name}, expected {ExpectedQty} attendees, found only {ActualQty}.",
+                    orderId,
+                    order.BillingCompany,
+                    order.TotalQuantity,
+                    enrolmentCount
+                );
+            }
+        }
+
         private async Task ProcessWooOrderAsync(RawOrder rawOrder, long orderId)
         {
-            var students = StudentMapper.MapFromWooOrder(rawOrder.Payload);
+            var tickets = WooOrderTicketMapper.MapTickets(rawOrder.Payload);
 
-            foreach (var student in students)
+            foreach (var ticket in tickets)
             {
-                var studentId = await _studentRepo.UpsertAsync(student);
-                await CreateEnrolmentsForStudentAsync(rawOrder, orderId, studentId);
+                var studentId = await UpsertStudentFromTicketAsync(ticket);
+                var courseScheduleId = await ResolveCourseScheduleFromTicketAsync(rawOrder.Payload, ticket.ProductId);
+                await UpsertEnrolmentAsync(orderId, studentId, courseScheduleId);
             }
         }
 
-        private async Task CreateEnrolmentsForStudentAsync(RawOrder rawOrder, long orderId, long studentId)
+        private async Task<long> UpsertStudentFromTicketAsync(WooOrderTicketMapper.TicketDto ticket)
         {
-            var enrolments = EnrolmentMapper.MapFromWooOrder(rawOrder.Payload, orderId, studentId);
-
-            foreach (var enrolment in enrolments)
+            var student = new Student
             {
-                // Try to resolve by product ID first
-                var resolvedId = await _courseRepo.GetIdBySourceProductAsync("woo", enrolment.CourseScheduleId ?? 0);
+                FirstName = ticket.FirstName,
+                LastName = ticket.LastName,
+                Email = ticket.Email.ToLowerInvariant(),
+                Company = ticket.Company
+            };
 
-                if (!resolvedId.HasValue && enrolment.CourseScheduleId.HasValue)
-                {
-                    // Extract details from Woo payload (line_items, etc.)
-                    var courseData = ExtractCourseDetailsFromWoo(rawOrder.Payload, enrolment.CourseScheduleId.Value);
-
-                    // Auto-create or update missing course schedule
-                    resolvedId = await _courseRepo.UpsertFromWooPayloadAsync(
-                        enrolment.CourseScheduleId.Value,
-                        courseData.Name,
-                        courseData.Sku,
-                        courseData.StartDate,
-                        courseData.EndDate,
-                        courseData.Price,
-                        courseData.Currency
-                    );
-                }
-
-                enrolment.CourseScheduleId = resolvedId;
-                await _enrolmentRepo.UpsertAsync(enrolment);
-            }
+            return await _studentRepo.UpsertAsync(student);
         }
 
-        private async Task<long?> ResolveCourseScheduleIdAsync(long? productId)
+        private async Task<long?> ResolveCourseScheduleFromTicketAsync(string payload, long? productId)
         {
             if (!productId.HasValue)
                 return null;
 
-            return await _courseRepo.GetIdBySourceProductAsync("WooCommerce", productId.Value);
+            var existingId = await _courseRepo.GetIdBySourceProductAsync(WooSource, productId.Value);
+            if (existingId.HasValue)
+                return existingId;
+
+            var courseData = ExtractCourseDetailsFromWoo(payload, productId.Value);
+
+            return await _courseRepo.UpsertFromWooPayloadAsync(
+                productId.Value,
+                courseData.Name,
+                courseData.Sku,
+                courseData.StartDate,
+                courseData.EndDate,
+                courseData.Price,
+                courseData.Currency
+            );
+        }
+
+        private async Task UpsertEnrolmentAsync(long orderId, long studentId, long? courseScheduleId)
+        {
+            var enrolment = new Enrolment
+            {
+                StudentId = studentId,
+                OrderId = orderId,
+                CourseScheduleId = courseScheduleId
+            };
+
+            await _enrolmentRepo.UpsertAsync(enrolment);
         }
 
         private static (string? Name, string? Sku, DateTime? StartDate, DateTime? EndDate, decimal? Price, string? Currency)
@@ -166,34 +182,48 @@ namespace Bagile.EtlService.Services
             DateTime? startDate = null;
             DateTime? endDate = null;
 
-            // Try line_items
             if (root.TryGetProperty("line_items", out var items))
             {
                 foreach (var item in items.EnumerateArray())
                 {
-                    // Sometimes product_id is zero, so fallback to meta WooCommerceEventsProductID
-                    long? pid = item.TryGetProperty("product_id", out var pidProp) && pidProp.TryGetInt64(out var pidVal)
-                        ? pidVal
-                        : null;
+                    var pid = TryGetProductIdFromLineItem(item);
 
                     if (pid == productId || pid == 0)
                     {
                         name ??= item.TryGetProperty("name", out var n) ? n.GetString() : null;
                         price ??= item.TryGetProperty("price", out var p) ? p.GetDecimal() : null;
+                        sku ??= item.TryGetProperty("sku", out var s) ? s.GetString() : null;
                     }
                 }
             }
 
-            // Try to read the schedule from the course name pattern
             if (name != null)
             {
-                // Example: "Professional Scrum Master™ - 7-8 Aug 25"
-                var parts = name.Split('-');
-                if (parts.Length >= 2 && DateTime.TryParse(parts.Last().Trim().Replace("™", ""), out var parsedDate))
-                    startDate = parsedDate; // optional: parse both start and end dates from text
+                startDate = TryParseStartDateFromName(name);
             }
 
             return (name, sku, startDate, endDate, price, currency);
+        }
+
+        private static long? TryGetProductIdFromLineItem(JsonElement item)
+        {
+            if (!item.TryGetProperty("product_id", out var pidProp))
+                return null;
+
+            return pidProp.TryGetInt64(out var pidVal) ? pidVal : null;
+        }
+
+        private static DateTime? TryParseStartDateFromName(string name)
+        {
+            var parts = name.Split('-');
+            var lastPart = parts.LastOrDefault()?.Trim().Replace("™", "");
+
+            if (string.IsNullOrWhiteSpace(lastPart))
+                return null;
+
+            return DateTime.TryParse(lastPart, out var parsedDate)
+                ? parsedDate
+                : null;
         }
     }
 }
