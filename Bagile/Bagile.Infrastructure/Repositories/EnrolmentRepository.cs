@@ -1,4 +1,7 @@
-﻿using Bagile.Domain.Entities;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Bagile.Domain.Entities;
 using Bagile.Domain.Repositories;
 using Dapper;
 using Npgsql;
@@ -25,7 +28,7 @@ namespace Bagile.Infrastructure.Repositories
         {
             const string sql = "SELECT COUNT(*) FROM bagile.enrolments WHERE order_id = @orderId;";
             await using var conn = new NpgsqlConnection(_conn);
-            return await conn.ExecuteScalarAsync<int>(sql, new {orderId});
+            return await conn.ExecuteScalarAsync<int>(sql, new { orderId });
         }
 
         public async Task<long> InsertAsync(Enrolment enrolment)
@@ -62,7 +65,7 @@ namespace Bagile.Infrastructure.Repositories
             await using var conn = new NpgsqlConnection(_conn);
             return await conn.QueryFirstOrDefaultAsync<Enrolment>(
                 sql,
-                new {orderId, studentId, sku});
+                new { orderId, studentId, sku });
         }
 
         public async Task UpdateStatusAsync(
@@ -78,7 +81,7 @@ namespace Bagile.Infrastructure.Repositories
         WHERE id = @enrolmentId;";
 
             await using var conn = new NpgsqlConnection(_conn);
-            await conn.ExecuteAsync(sql, new {enrolmentId, status, transferredToEnrolmentId});
+            await conn.ExecuteAsync(sql, new { enrolmentId, status, transferredToEnrolmentId });
         }
 
         public async Task<IEnumerable<Enrolment>> GetByOrderIdAsync(long orderId)
@@ -89,7 +92,35 @@ namespace Bagile.Infrastructure.Repositories
         ORDER BY created_at;";
 
             await using var conn = new NpgsqlConnection(_conn);
-            return await conn.QueryAsync<Enrolment>(sql, new {orderId});
+            return await conn.QueryAsync<Enrolment>(sql, new { orderId });
+        }
+
+        public async Task<Enrolment?> FindHeuristicTransferSourceAsync(
+            long studentId,
+            string courseFamilyPrefix)
+        {
+            const string sql = @"
+        SELECT e.*
+        FROM bagile.enrolments e
+        JOIN bagile.course_schedules cs ON cs.id = e.course_schedule_id
+        JOIN bagile.orders o ON o.id = e.order_id
+        WHERE e.student_id = @studentId
+          AND e.status = 'active'
+          AND cs.sku ILIKE @skuPattern
+          AND COALESCE(o.billing_company, '') NOT IN ('b-agile', 'bagile', 'b agile')
+        ORDER BY e.created_at DESC;";
+
+            await using var conn = new NpgsqlConnection(_conn);
+            var results = (await conn.QueryAsync<Enrolment>(
+                sql,
+                new { studentId, skuPattern = courseFamilyPrefix + "%" }
+            )).ToList();
+
+            if (results.Count == 1)
+                return results[0];
+
+            // 0 or many = ambiguous, let caller fall back to normal enrolment
+            return null;
         }
     }
 }

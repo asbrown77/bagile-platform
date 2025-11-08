@@ -20,4 +20,7 @@ public interface IEnrolmentRepository
         long? transferredToEnrolmentId = null);
 
     Task<IEnumerable<Enrolment>> GetByOrderIdAsync(long orderId);
+
+    Task<Enrolment?> FindHeuristicTransferSourceAsync(long studentId, string courseFamilyPrefix);
+
 }
