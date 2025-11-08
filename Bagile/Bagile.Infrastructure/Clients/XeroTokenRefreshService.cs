@@ -34,7 +34,7 @@ public class XeroTokenRefreshService
 
         if (token.Refresh == null)
         {
-            _logger.LogError("No Xero refresh token found. Run /xero/connect first.");
+            _logger.LogError("No Xero refresh token found. Run https://api.bagile.co.uk/xero/connect first.");
             throw new InvalidOperationException("Xero integration not initialised.");
         }
 
