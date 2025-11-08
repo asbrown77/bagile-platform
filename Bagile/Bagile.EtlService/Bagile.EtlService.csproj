@@ -20,8 +20,4 @@
     <ProjectReference Include="..\Bagile.Domain\Bagile.Domain.csproj" />
     <ProjectReference Include="..\Bagile.Infrastructure\Bagile.Infrastructure.csproj" />
   </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Models\" />
-  </ItemGroup>
 </Project>

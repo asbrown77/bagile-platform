@@ -133,19 +133,35 @@ public class OrderQueries : IOrderQueries
         return result;
     }
 
-    private async Task<IEnumerable<EnrolmentDto>> GetEnrolmentsForOrderAsync(NpgsqlConnection conn, long orderId)
+    private async Task<IEnumerable<EnrolmentDto>> GetEnrolmentsForOrderAsync(
+        NpgsqlConnection conn,
+        long orderId)
     {
         var sql = @"
-            SELECT 
-                e.id AS EnrolmentId,
-                s.email AS StudentEmail,
-                CONCAT(s.first_name, ' ', s.last_name) AS StudentName,
-                cs.name AS CourseName,
-                cs.start_date AS CourseStartDate
-            FROM bagile.enrolments e
-            JOIN bagile.students s ON e.student_id = s.id
-            LEFT JOIN bagile.course_schedules cs ON e.course_schedule_id = cs.id
-            WHERE e.order_id = @orderId;";
+        SELECT
+            e.id AS EnrolmentId,
+            e.status AS Status,
+            s.email AS StudentEmail,
+            CONCAT(s.first_name, ' ', s.last_name) AS StudentName,
+            cs.name AS CourseName,
+            cs.start_date AS CourseStartDate,
+            e.original_sku IS NOT NULL AS IsTransfer,
+            e.transferred_from_enrolment_id AS TransferredFromEnrolmentId,
+            e.transferred_to_enrolment_id AS TransferredToEnrolmentId,
+            e.original_sku AS OriginalSku,
+            e.transfer_reason AS TransferReason,
+            CASE
+                WHEN e.transfer_reason = 'course_cancelled' THEN 'Course Cancelled by Provider'
+                WHEN e.transfer_reason = 'attendee_requested' THEN 'Attendee Requested Transfer'
+                ELSE NULL
+            END AS TransferReasonLabel,
+            e.refund_eligible AS RefundEligible,
+            e.transfer_notes AS TransferNotes
+        FROM bagile.enrolments e
+        JOIN bagile.students s ON e.student_id = s.id
+        LEFT JOIN bagile.course_schedules cs ON e.course_schedule_id = cs.id
+        WHERE e.order_id = @orderId
+        ORDER BY e.created_at;";
 
         return await conn.QueryAsync<EnrolmentDto>(sql, new { orderId });
     }

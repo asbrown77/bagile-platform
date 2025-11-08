@@ -14,7 +14,7 @@ public class CourseScheduleRepository : ICourseScheduleRepository
         _connStr = connStr;
     }
 
-    public async Task UpsertAsync(CourseSchedule course)
+    public async Task UpsertAsync(CourseSchedule schedule)
     {
         const string sql = @"
             INSERT INTO bagile.course_schedules
@@ -40,7 +40,7 @@ public class CourseScheduleRepository : ICourseScheduleRepository
                 last_synced = now();";
 
         await using var conn = new NpgsqlConnection(_connStr);
-        await conn.ExecuteAsync(sql, course);
+        await conn.ExecuteAsync(sql, schedule);
     }
 
     public async Task<long> UpsertFromWooPayloadAsync(
@@ -100,18 +100,29 @@ public class CourseScheduleRepository : ICourseScheduleRepository
     }
 
 
-    public async Task<long?> GetIdBySourceProductAsync(string sourceSystem, long sourceProductId)
+    public async Task<long?> GetIdBySourceProductAsync(long sourceProductId)
     {
         const string sql = @"
                 SELECT id
                 FROM bagile.course_schedules
-                WHERE source_system = @sourceSystem
-                  AND source_product_id = @sourceProductId
+                WHERE source_product_id = @sourceProductId
                 LIMIT 1;";
 
         await using var c = new NpgsqlConnection(_connStr);
-        return await c.QueryFirstOrDefaultAsync<long?>(sql, new { sourceSystem, sourceProductId });
+        return await c.QueryFirstOrDefaultAsync<long?>(sql, new { sourceProductId });
     }
+
+    public async Task<CourseSchedule?> GetBySourceProductIdAsync(long sourceProductId)
+    {
+        const string sql = @"
+                SELECT *
+                FROM bagile.course_schedules
+                WHERE source_product_id = @sourceProductId";
+
+        await using var c = new NpgsqlConnection(_connStr);
+        return await c.QueryFirstOrDefaultAsync<CourseSchedule?>(sql, new { sourceProductId });
+    }
+    
 
     public async Task<IEnumerable<CourseSchedule>> GetAllAsync()
     {

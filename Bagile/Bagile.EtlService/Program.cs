@@ -134,6 +134,8 @@ static void ConfigureHttpClients(HostApplicationBuilder builder)
     });
 
     builder.Services.AddHttpClient<XeroTokenRefreshService>();
+    builder.Services.AddHttpClient<IFooEventsTicketsClient, FooEventsTicketsClient>();
+
 }
 
 static void ConfigureEtl(HostApplicationBuilder builder)
@@ -141,7 +143,7 @@ static void ConfigureEtl(HostApplicationBuilder builder)
     // Collectors
     builder.Services.AddScoped<IProductCollector, WooProductCollector>();
     builder.Services.AddScoped<ISourceCollector, WooOrderCollector>();
-  //  builder.Services.AddScoped<ISourceCollector, XeroCollector>();
+   // builder.Services.AddScoped<ISourceCollector, XeroCollector>();
 
     // Importers
     builder.Services.AddScoped<IImporter<WooProductDto>, WooCourseImporter>();
