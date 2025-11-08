@@ -14,7 +14,7 @@ public class FooEventTicketDto
     public string Status { get; set; } = string.Empty;
 
     [JsonPropertyName("event_id")]
-    public long? EventId { get; set; }
+    public long EventId { get; set; }
 
     [JsonPropertyName("event_name")]
     public string? EventName { get; set; }
