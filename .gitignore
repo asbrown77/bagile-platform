@@ -361,3 +361,6 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/Bagile/Tests/Bagile.IntegrationTests/appsettings.Development.json
+/Bagile/Bagile.Api/appsettings.Development.json
+/Bagile/Bagile.EtlService/appsettings.Development.json
