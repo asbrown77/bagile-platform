@@ -21,6 +21,7 @@ public class ApiDriver
     public ApiDriver(HttpClient client)
     {
         _client = client;
+        _client.DefaultRequestHeaders.Add("X-Api-Key", "test-api-key");
     }
 
     public int LastResponseStatus => (int)(_lastResponse?.StatusCode ?? 0);

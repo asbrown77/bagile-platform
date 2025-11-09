@@ -7,99 +7,14 @@ using Bagile.Infrastructure.Clients;
 using Bagile.Infrastructure.Models;
 using Dapper;
 using FluentAssertions;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Npgsql;
 
 namespace Bagile.IntegrationTests;
 
 [TestFixture]
 [Category("Integration")]
-public class XeroWebhookIntegrationTests
+public class XeroWebhookIntegrationTests : IntegrationTestBase
 {
-    private WebApplicationFactory<Program> _factory;
-    private HttpClient _client;
     private string _webhookSecret = "testsecret";
-    private NpgsqlConnection _db;
-
-    [OneTimeSetUp]
-    public async Task OneTimeSetup()
-    {
-        var connStr = DatabaseFixture.ConnectionString;
-        _db = new NpgsqlConnection(connStr);
-        await _db.OpenAsync();
-
-        await _db.ExecuteAsync("DELETE FROM bagile.raw_orders;");
-
-        _factory = TestApiFactory.Create(
-            connStr,
-            configureServices: services =>
-            {
-                // swap out external clients if needed, e.g. fake Xero
-                var descriptor = services.SingleOrDefault(
-                    d => d.ServiceType == typeof(IXeroApiClient));
-                if (descriptor != null)
-                    services.Remove(descriptor);
-
-                services.AddSingleton<IXeroApiClient, FakeXeroApiClient>();
-            },
-            configureConfig: config =>
-            {
-                config.AddInMemoryCollection(new Dictionary<string, string>
-                {
-                    ["Xero:WebhookSecret"] = _webhookSecret
-                });
-            });
-
-        _client = _factory.CreateClient();
-    }
-
-    // [OneTimeSetUp]
-    // public async Task OneTimeSetup()
-    // {
-    //     var connStr = DatabaseFixture.ConnectionString;
-    //     _db = new NpgsqlConnection(connStr);
-    //     await _db.OpenAsync();
-    //
-    //     await _db.ExecuteAsync("DELETE FROM bagile.raw_orders;");
-    //
-    //     _factory = new WebApplicationFactory<Program>()
-    //         .WithWebHostBuilder(builder =>
-    //         {
-    //             builder.ConfigureAppConfiguration((ctx, config) =>
-    //             {
-    //                 var dict = new Dictionary<string, string>
-    //                 {
-    //                     ["ConnectionStrings:DefaultConnection"] = connStr,
-    //                     ["Xero:WebhookSecret"] = _webhookSecret
-    //                 };
-    //                 config.AddInMemoryCollection(dict);
-    //             });
-    //
-    //             builder.ConfigureServices(services =>
-    //             {
-    //                 // remove the real client if registered
-    //                 var descriptor = services.SingleOrDefault(
-    //                     d => d.ServiceType == typeof(IXeroApiClient));
-    //                 if (descriptor != null)
-    //                     services.Remove(descriptor);
-    //
-    //                 // register fake
-    //                 services.AddSingleton<IXeroApiClient, FakeXeroApiClient>();
-    //             });
-    //         });
-    //
-    //     _client = _factory.CreateClient();
-    // }
-
-    [OneTimeTearDown]
-    public void OneTimeTearDown()
-    {
-        _db?.Dispose();
-        _client?.Dispose();
-        _factory?.Dispose();
-    }
 
     [Test]
     public async Task XeroWebhook_Post_ValidPayload_UpsertsRawOrder()
