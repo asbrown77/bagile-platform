@@ -187,7 +187,7 @@ public class OrdersApiTests
 
         var courseId = await _db.ExecuteScalarAsync<long>(@"
             INSERT INTO bagile.course_schedules (name, status, start_date, source_system, source_product_id)
-            VALUES ('PSM Advanced', 'published', '2025-11-08', 'WooCommerce', 11840)
+            VALUES ('PSM Advanced', 'published', '2025-11-08', 'woo', 11840)
             RETURNING id;
         ");
 

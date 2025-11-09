@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
@@ -132,6 +133,16 @@ namespace Bagile.EtlService.Services
                     await CreateStandardEnrolmentAsync(orderId, studentId, courseScheduleId);
                 }
             }
+        }
+
+        private async Task<long?> ResolveCourseScheduleAsync(long? productId)
+        {
+            if (!productId.HasValue)
+                return null;
+
+            // We expect course_schedules to already exist for FooEvents tickets
+            var schedule = await _courseRepo.GetBySourceProductIdAsync(productId.Value);
+            return schedule?.Id;
         }
 
         private bool IsInternalTransferOrder(RawOrder rawOrder)
@@ -357,6 +368,21 @@ namespace Bagile.EtlService.Services
             DateTime? startDate = null;
             DateTime? endDate = null;
 
+            // NEW: infer base date from the order itself
+            DateTime? orderDate = null;
+            if (root.TryGetProperty("date_created", out var dc) &&
+                dc.ValueKind == JsonValueKind.String &&
+                DateTime.TryParse(dc.GetString(), out var created))
+            {
+                orderDate = created;
+            }
+            else if (root.TryGetProperty("date_paid", out var dp) &&
+                     dp.ValueKind == JsonValueKind.String &&
+                     DateTime.TryParse(dp.GetString(), out var paid))
+            {
+                orderDate = paid;
+            }
+
             if (root.TryGetProperty("line_items", out var items))
             {
                 foreach (var item in items.EnumerateArray())
@@ -372,18 +398,34 @@ namespace Bagile.EtlService.Services
                             price = p.GetDecimal();
                         }
 
-                        sku ??= item.TryGetProperty("sku", out var s) ? s.GetString() : null;
+                        if (item.TryGetProperty("sku", out var s))
+                        {
+                            var skuVal = s.GetString();
+                            if (!string.IsNullOrWhiteSpace(skuVal))
+                            {
+                                sku ??= skuVal;
+                            }
+                        }
                     }
                 }
             }
 
             if (name != null)
             {
-                startDate = TryParseStartDateFromName(name);
+                // pass orderDate into the parser so we infer the right year
+                startDate = TryParseStartDateFromName(name, orderDate);
+            }
+
+            // Fallback SKU if Woo did not provide one
+            if (string.IsNullOrWhiteSpace(sku) && name != null && startDate.HasValue)
+            {
+                var code = ExtractCourseCodeFromName(name);
+                sku = $"{code}-{startDate.Value:ddMMyy}";
             }
 
             return (name, sku, startDate, endDate, price, currency);
         }
+
 
         private static long? TryGetProductIdFromLineItem(JsonElement item)
         {
@@ -393,17 +435,109 @@ namespace Bagile.EtlService.Services
             return pidProp.TryGetInt64(out var pidVal) ? pidVal : null;
         }
 
-        private static DateTime? TryParseStartDateFromName(string name)
+        private static DateTime? TryParseStartDateFromName(string name, DateTime? baseDate)
         {
-            var parts = name.Split('-');
-            var lastPart = parts.LastOrDefault()?.Trim().Replace("™", "");
-
-            if (string.IsNullOrWhiteSpace(lastPart))
+            if (string.IsNullOrWhiteSpace(name))
                 return null;
 
-            return DateTime.TryParse(lastPart, out var parsedDate)
-                ? parsedDate
-                : null;
+            var cleaned = name.Replace("™", "").Trim();
+
+            const string marker = " - ";
+            var idx = cleaned.LastIndexOf(marker, StringComparison.Ordinal);
+            var segment = idx >= 0 ? cleaned[(idx + marker.Length)..].Trim() : cleaned;
+
+            var tokens = segment
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+            if (tokens.Length == 0)
+                return null;
+
+            // Day: first token, possibly "8-10"
+            var dayToken = tokens[0];
+            if (dayToken.Contains('-'))
+                dayToken = dayToken.Split('-')[0];
+
+            if (!int.TryParse(dayToken, out var day) || day <= 0 || day > 31)
+                return null;
+
+            // Month: first token that starts with letters
+            string? monthText = null;
+            for (var i = 0; i < tokens.Length; i++)
+            {
+                var t = tokens[i];
+                var letters = new string(t.TakeWhile(char.IsLetter).ToArray());
+                if (!string.IsNullOrEmpty(letters))
+                {
+                    monthText = letters;
+                    break;
+                }
+            }
+
+            if (string.IsNullOrEmpty(monthText))
+                return null;
+
+            if (!DateTime.TryParseExact(
+                    monthText,
+                    new[] { "MMM", "MMMM" },
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out var monthDate))
+            {
+                return null;
+            }
+
+            var month = monthDate.Month;
+
+            // Year: last purely numeric token (2 or 4 digits)
+            int? year = null;
+            for (var i = tokens.Length - 1; i >= 0; i--)
+            {
+                var t = tokens[i];
+                if (t.All(char.IsDigit) && (t.Length == 2 || t.Length == 4))
+                {
+                    if (int.TryParse(t, out var y))
+                    {
+                        if (t.Length == 2)
+                            y += 2000;
+
+                        year = y;
+                        break;
+                    }
+                }
+            }
+
+            // If no year in the name, infer from order date, not "now"
+            var reference = baseDate ?? DateTime.UtcNow;
+
+            if (!year.HasValue)
+            {
+                // simple rule:
+                //  - if course month >= order month → same year
+                //  - if course month < order month → next year (e.g. Jan after a Nov order)
+                year = month < reference.Month ? reference.Year + 1 : reference.Year;
+            }
+
+            return new DateTime(year.Value, month, day);
+        }
+
+        private static string ExtractCourseCodeFromName(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return "COURSE";
+
+            var beforeDash = name.Split('-')[0];
+            var words = beforeDash
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+            var chars = words
+                .Where(w => char.IsLetter(w[0]) && char.IsUpper(w[0]))
+                .Select(w => w[0])
+                .ToArray();
+
+            if (chars.Length >= 2)
+                return new string(chars);
+
+            return "COURSE";
         }
 
         private async Task CreateBillingEnrolmentAsync(RawOrder rawOrder, long orderId)

@@ -79,7 +79,7 @@ public class DatabaseDriver
 
         var courseId = await conn.ExecuteScalarAsync<long>(@"
             INSERT INTO bagile.course_schedules (name, status, start_date, source_system, source_product_id)
-            VALUES (@CourseName, 'published', NOW(), 'WooCommerce', 99999)
+            VALUES (@CourseName, 'published', NOW(), 'woo', 99999)
             ON CONFLICT (source_system, source_product_id) DO UPDATE SET name = EXCLUDED.name
             RETURNING id;
         ", new { CourseName = enrolment.CourseName });

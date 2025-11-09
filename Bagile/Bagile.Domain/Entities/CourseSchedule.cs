@@ -21,7 +21,7 @@ public class CourseSchedule
     public string? CourseType { get; set; }
     public int? CourseDefinitionId { get; set; }           // FK to course_definitions
     public bool IsPublic { get; set; } = true;
-    public string SourceSystem { get; set; } = "WooCommerce";
+    public string SourceSystem { get; set; } = "woo";
     public long? SourceProductId { get; set; }
     public DateTime LastSynced { get; set; } = DateTime.UtcNow;
 
