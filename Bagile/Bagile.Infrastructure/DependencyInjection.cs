@@ -13,6 +13,11 @@ public static class DependencyInjection
     {
         // Register query services
         services.AddScoped<IOrderQueries>(_ => new OrderQueries(connectionString));
+        services.AddScoped<ICourseScheduleQueries>(_ => new CourseScheduleQueries(connectionString));
+        services.AddScoped<IEnrolmentQueries>(_ => new EnrolmentQueries(connectionString));
+        services.AddScoped<IStudentQueries>(_ => new StudentQueries(connectionString));
+        services.AddScoped<IOrganisationQueries>(_ => new OrganisationQueries(connectionString));
+        services.AddScoped<ITransferQueries>(_ => new TransferQueries(connectionString));
 
         return services;
     }
