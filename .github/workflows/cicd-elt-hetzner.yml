@@ -87,6 +87,7 @@ jobs:
           host: ${{ vars.HETZNER_HOST }}
           username: root
           key: ${{ secrets.HETZNER_SSH_KEY }}
+          envs: DB_CONNECTION_STRING,WOOCOMMERCE_CONSUMER_KEY,WOOCOMMERCE_CONSUMER_SECRET,XERO_CLIENT_ID,XERO_CLIENT_SECRET,XERO_REDIRECT_URI,BAGILE_FOOEVENTS_APIKEY
           script: |
             cd /opt/bagile
 
