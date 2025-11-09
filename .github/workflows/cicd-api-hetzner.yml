@@ -24,8 +24,8 @@ jobs:
         run: |
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             TAG="${GITHUB_REF#refs/tags/}"
-            # strip the api-v prefix to make it a valid SemVer string for .NET
-            CLEAN_TAG="${TAG#api-v}"
+            # strip prefix to get semver only (e.g. 1.2.6)
+            CLEAN_TAG=$(echo "$TAG" | sed 's/^api-v//')
           else
             TAG="api-vdev-${GITHUB_SHA::7}"
             CLEAN_TAG="0.0.0"
@@ -60,6 +60,7 @@ jobs:
           context: .
           file: Bagile/Bagile.Api/Dockerfile
           push: true
+          # .NET gets semver (1.2.6), Docker tags keep prefix (api-v1.2.6)
           build-args: |
             APP_VERSION=${{ steps.vars.outputs.semver }}
           tags: |
@@ -74,16 +75,46 @@ jobs:
     steps:
       - name: Deploy via SSH to Hetzner
         uses: appleboy/ssh-action@v1.2.0
+        env:
+          DB_CONNECTION_STRING: ${{ secrets.DB_CONNECTION_STRING }}
+          BAGILE_API_KEY: ${{ secrets.BAGILE_API_KEY }}
+          WOOCOMMERCE_WEBHOOK_SECRET: ${{ secrets.WOOCOMMERCE_WEBHOOK_SECRET }}
+          XERO_CLIENT_ID: ${{ secrets.XERO_CLIENT_ID }}
+          XERO_CLIENT_SECRET: ${{ secrets.XERO_CLIENT_SECRET }}
+          XERO_REDIRECT_URI: ${{ secrets.XERO_REDIRECT_URI }}
+          XERO_WEBHOOK_SECRET: ${{ secrets.XERO_WEBHOOK_SECRET }}
         with:
           host: ${{ vars.HETZNER_HOST }}
           username: root
           key: ${{ secrets.HETZNER_SSH_KEY }}
           script: |
-            echo "Pulling latest API image..."
             cd /opt/bagile
+
+            echo "Pulling latest repo (docker-compose and config)..."
+            git pull origin main
+
+            echo "Ensuring config directory exists..."
+            mkdir -p config
+
+            echo "Writing API env file from GitHub secrets..."
+            cat > config/api.env <<EOF
+            ASPNETCORE_ENVIRONMENT=Production
+            ConnectionStrings__DefaultConnection=${DB_CONNECTION_STRING}
+
+            ApiKey=${BAGILE_API_KEY}
+
+            WooCommerce__WebhookSecret=${WOOCOMMERCE_WEBHOOK_SECRET}
+
+            Xero__ClientId=${XERO_CLIENT_ID}
+            Xero__ClientSecret=${XERO_CLIENT_SECRET}
+            Xero__RedirectUri=${XERO_REDIRECT_URI}
+            Xero__WebhookSecret=${XERO_WEBHOOK_SECRET}
+            EOF
+
+            echo "Pulling latest API image..."
             docker compose pull bagile-api
 
-            echo "Restarting API..."
+            echo "Recreating API container..."
             docker compose up -d bagile-api
 
             echo "Cleaning unused images..."
