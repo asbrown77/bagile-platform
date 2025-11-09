@@ -1,9 +1,6 @@
 using Bagile.Domain.Entities;
 using Dapper;
 using FluentAssertions;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.Configuration;
-using Npgsql;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
@@ -13,44 +10,9 @@ namespace Bagile.IntegrationTests.Infrastructure;
 
 [TestFixture]
 [Category("Integration")]
-public class WooWebhookIntegrationTests
+public class WooWebhookIntegrationTests : IntegrationTestBase
 {
-    private WebApplicationFactory<Program> _factory;
-    private HttpClient _client;
     private readonly string _webhookSecret = "testsecret";
-    private NpgsqlConnection _db;
-
-    [OneTimeSetUp]
-    public async Task OneTimeSetup()
-    {
-        var connStr = DatabaseFixture.ConnectionString;
-
-        _db = new NpgsqlConnection(connStr);
-        await _db.OpenAsync();
-
-        await _db.ExecuteAsync("DELETE FROM bagile.raw_orders;");
-
-        _factory = TestApiFactory.Create(
-            connStr,
-            configureConfig: config =>
-            {
-                config.AddInMemoryCollection(new Dictionary<string, string>
-                {
-                    // this is the one your Woo handler should read
-                    ["WooCommerce:WebhookSecret"] = _webhookSecret
-                });
-            });
-
-        _client = _factory.CreateClient();
-    }
-
-    [OneTimeTearDown]
-    public void OneTimeTearDown()
-    {
-        _db?.Dispose();
-        _client?.Dispose();
-        _factory?.Dispose();
-    }
 
     [Test]
     public async Task Minimal_Post_Works()

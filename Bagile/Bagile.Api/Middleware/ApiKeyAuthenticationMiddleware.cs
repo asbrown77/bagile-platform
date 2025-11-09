@@ -54,18 +54,17 @@ public class ApiKeyAuthenticationMiddleware
 
     private static bool IsExcludedFromAuth(string path)
     {
-        // Paths that should be open
-        var skipPaths = new[]
-        {
-            "/",
-            "/health",
-            "/swagger",
-            "/webhooks/",   // webhooks have their own signing
-            "/xero/connect",
-            "/xero/callback"
-        };
+        if (string.IsNullOrWhiteSpace(path))
+            return false;
 
-        // StartsWith so "/swagger/index.html" etc are allowed
-        return skipPaths.Any(p => path.StartsWith(p, StringComparison.OrdinalIgnoreCase));
+        path = path.ToLowerInvariant();
+
+        if (path == "/" || path.StartsWith("/health") || path.StartsWith("/swagger"))
+            return true;
+
+        return path.StartsWith("/webhooks")
+               || path.StartsWith("/api/webhooks")
+               || path.StartsWith("/xero")
+               || path.StartsWith("/api/xero");
     }
 }

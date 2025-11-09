@@ -1,7 +1,10 @@
 ﻿using Bagile.Application.Common.Interfaces;
-using Bagile.Infrastructure.Persistence.Queries;
 using Bagile.Domain.Repositories;
+using Bagile.Infrastructure.Clients;
+using Bagile.Infrastructure.Persistence.Queries;
 using Bagile.Infrastructure.Repositories;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,18 +13,23 @@ namespace Bagile.IntegrationTests;
 
 public static class TestApiFactory
 {
-    public static WebApplicationFactory<Program> Create(string connectionString,
+    public static WebApplicationFactory<Program> Create(string connectionString, string apiKey,
         Action<IServiceCollection>? configureServices = null,
         Action<IConfigurationBuilder>? configureConfig = null)
     {
         return new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder =>
             {
+                builder.UseEnvironment("Production");
+
                 builder.ConfigureAppConfiguration((ctx, config) =>
                 {
                     config.AddInMemoryCollection(new Dictionary<string, string>
                     {
-                        ["ConnectionStrings:DefaultConnection"] = connectionString
+                        ["ConnectionStrings:DefaultConnection"] = connectionString,
+                        ["ApiKey"] = apiKey,
+                        ["Xero:WebhookSecret"] = "testsecret",
+                        ["WooCommerce:WebhookSecret"] = "testsecret"
                     });
 
                     configureConfig?.Invoke(config);
@@ -54,6 +62,9 @@ public static class TestApiFactory
                     services.AddSingleton<IStudentQueries>(_ => new StudentQueries(connectionString));
                     services.AddSingleton<IOrganisationQueries>(_ => new OrganisationQueries(connectionString));
                     services.AddSingleton<ITransferQueries>(_ => new TransferQueries(connectionString));
+
+                    // Fake Xero client for integration tests
+                    services.AddSingleton<IXeroApiClient, FakeXeroApiClient>();
 
                     // Allow per-test-class overrides (e.g. fake Xero client)
                     configureServices?.Invoke(services);

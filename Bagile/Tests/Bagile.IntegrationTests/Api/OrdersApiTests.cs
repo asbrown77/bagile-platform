@@ -18,44 +18,8 @@ namespace Bagile.IntegrationTests.Api;
 
 [TestFixture]
 [Category("Integration")]
-public class OrdersApiTests
+public class OrdersApiTests : IntegrationTestBase
 {
-    private WebApplicationFactory<Program> _factory;
-    private HttpClient _client;
-    private NpgsqlConnection _db;
-
-    [OneTimeSetUp]
-    public async Task OneTimeSetup()
-    {
-        var connStr = DatabaseFixture.ConnectionString;
-
-        _db = new NpgsqlConnection(connStr);
-        await _db.OpenAsync();
-
-        _factory = TestApiFactory.Create(connStr);
-        _client = _factory.CreateClient();
-    }
-
-    [SetUp]
-    public async Task Setup()
-    {
-        // Clean test data before each test
-        await _db.ExecuteAsync(@"
-            DELETE FROM bagile.enrolments;
-            DELETE FROM bagile.orders;
-            DELETE FROM bagile.students;
-            DELETE FROM bagile.raw_orders;
-        ");
-    }
-
-    [OneTimeTearDown]
-    public void OneTimeTearDown()
-    {
-        _db?.Dispose();
-        _client?.Dispose();
-        _factory?.Dispose();
-    }
-
     [Test]
     public async Task GET_Orders_Should_Return_200_With_Empty_List()
     {

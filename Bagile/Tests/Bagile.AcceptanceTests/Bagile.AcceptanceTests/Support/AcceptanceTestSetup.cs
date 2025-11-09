@@ -2,6 +2,7 @@
 using Bagile.AcceptanceTests.Drivers;
 using BoDi;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
 using TechTalk.SpecFlow;
 
 [Binding]
@@ -52,7 +53,19 @@ public class AcceptanceTestSetup
             );
         }
 
-        _factory = new WebApplicationFactory<Program>();
+        _factory = new WebApplicationFactory<Program>()
+            .WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureAppConfiguration((ctx, config) =>
+                {
+                    config.AddInMemoryCollection(new Dictionary<string, string>
+                    {
+                        ["ApiKey"] = "test-api-key",
+                        ["ConnectionStrings:DefaultConnection"] = DatabaseFixture.ConnectionString
+                    });
+                });
+            });
+
 
         var client = _factory.CreateClient();
 

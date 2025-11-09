@@ -14,6 +14,8 @@ public abstract class IntegrationTestBase
     protected HttpClient _client = null!;
     protected NpgsqlConnection _db = null!;
 
+    private const string TestApiKey = "integration-test-api-key";
+
     [OneTimeSetUp]
     public async Task OneTimeSetup()
     {
@@ -22,8 +24,10 @@ public abstract class IntegrationTestBase
         _db = new NpgsqlConnection(connStr);
         await _db.OpenAsync();
 
-        _factory = TestApiFactory.Create(connStr);
+        _factory = TestApiFactory.Create(connStr, TestApiKey);
         _client = _factory.CreateClient();
+
+        _client.DefaultRequestHeaders.Add("X-Api-Key", TestApiKey);
     }
 
     [SetUp]
