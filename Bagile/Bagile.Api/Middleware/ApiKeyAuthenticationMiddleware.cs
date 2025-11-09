@@ -15,55 +15,57 @@ public class ApiKeyAuthenticationMiddleware
 
     public async Task InvokeAsync(HttpContext context, IConfiguration config)
     {
-        // Skip authentication for specific paths
-        var path = context.Request.Path.Value?.ToLower() ?? "";
+        var path = context.Request.Path.Value ?? string.Empty;
 
-        if (ShouldSkipAuth(path))
+        // 1. Allow some paths without authentication
+        if (IsExcludedFromAuth(path))
         {
             await _next(context);
             return;
         }
 
-        // Check for API key in header
-        if (!context.Request.Headers.TryGetValue(API_KEY_HEADER, out var extractedApiKey))
+        // 2. Get configured API key from config / env
+        var configuredKey = config["ApiKey"];
+        if (string.IsNullOrWhiteSpace(configuredKey))
         {
-            context.Response.StatusCode = 401;
-            await context.Response.WriteAsJsonAsync(new { error = "API Key is missing" });
+            // Config issue, not client’s fault
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            await context.Response.WriteAsync("API key is not configured.");
             return;
         }
 
-        var validApiKey = config.GetValue<string>("ApiKey");
-
-        if (string.IsNullOrEmpty(validApiKey))
+        if (!context.Request.Headers.TryGetValue(API_KEY_HEADER, out var providedKey))
         {
-            context.Response.StatusCode = 500;
-            await context.Response.WriteAsJsonAsync(new { error = "API Key not configured" });
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            await context.Response.WriteAsync("API key is missing.");
             return;
         }
 
-        if (!validApiKey.Equals(extractedApiKey))
+        if (!string.Equals(configuredKey, providedKey.ToString(), StringComparison.Ordinal))
         {
-            context.Response.StatusCode = 401;
-            await context.Response.WriteAsJsonAsync(new { error = "Invalid API Key" });
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            await context.Response.WriteAsync("Invalid API key.");
             return;
         }
 
+        // 5. All good, continue down the pipeline
         await _next(context);
     }
 
-    private static bool ShouldSkipAuth(string path)
+    private static bool IsExcludedFromAuth(string path)
     {
-        // Allow these paths without authentication
+        // Paths that should be open
         var skipPaths = new[]
         {
             "/",
             "/health",
             "/swagger",
-            "/webhooks/",  // Webhooks use their own signature validation
+            "/webhooks/",   // webhooks have their own signing
             "/xero/connect",
             "/xero/callback"
         };
 
-        return skipPaths.Any(p => path.StartsWith(p));
+        // StartsWith so "/swagger/index.html" etc are allowed
+        return skipPaths.Any(p => path.StartsWith(p, StringComparison.OrdinalIgnoreCase));
     }
 }
