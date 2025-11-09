@@ -24,7 +24,7 @@ jobs:
         run: |
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             TAG="${GITHUB_REF#refs/tags/}"
-            # strip prefix to get semver-only (e.g. 1.2.6)
+            # strip prefix to get semver only (e.g. 1.2.6)
             CLEAN_TAG=$(echo "$TAG" | sed 's/^etl-v//')
           else
             TAG="etl-vdev-${GITHUB_SHA::7}"
@@ -75,15 +75,51 @@ jobs:
     steps:
       - name: Deploy via SSH to Hetzner
         uses: appleboy/ssh-action@v1.2.0
+        env:
+          DB_CONNECTION_STRING: ${{ secrets.DB_CONNECTION_STRING }}
+          WOOCOMMERCE_CONSUMER_KEY: ${{ secrets.WOOCOMMERCE_CONSUMER_KEY }}
+          WOOCOMMERCE_CONSUMER_SECRET: ${{ secrets.WOOCOMMERCE_CONSUMER_SECRET }}
+          XERO_CLIENT_ID: ${{ secrets.XERO_CLIENT_ID }}
+          XERO_CLIENT_SECRET: ${{ secrets.XERO_CLIENT_SECRET }}
+          XERO_REDIRECT_URI: ${{ secrets.XERO_REDIRECT_URI }}
+          BAGILE_FOOEVENTS_APIKEY: ${{ secrets.BAGILE_FOOEVENTS_APIKEY }}
         with:
           host: ${{ vars.HETZNER_HOST }}
           username: root
           key: ${{ secrets.HETZNER_SSH_KEY }}
           script: |
             cd /opt/bagile
+
+            echo "Pulling latest repo (docker-compose and config)..."
+            git pull origin main
+
+            echo "Ensuring config directory exists..."
+            mkdir -p config
+
+            echo "Writing ETL env file from GitHub secrets..."
+            cat > config/etl.env <<EOF
+            DOTNET_ENVIRONMENT=Production
+            ConnectionStrings__DefaultConnection=${DB_CONNECTION_STRING}
+
+            WooCommerce__BaseUrl=https://www.bagile.co.uk
+            WooCommerce__ConsumerKey=${WOOCOMMERCE_CONSUMER_KEY}
+            WooCommerce__ConsumerSecret=${WOOCOMMERCE_CONSUMER_SECRET}
+
+            Xero__BaseUrl=https://api.xero.com
+            Xero__ClientId=${XERO_CLIENT_ID}
+            Xero__ClientSecret=${XERO_CLIENT_SECRET}
+            Xero__RedirectUri=${XERO_REDIRECT_URI}
+
+            Bagile__BaseUrl=https://www.bagile.co.uk
+            Bagile__FooEventsApiKey=${BAGILE_FOOEVENTS_APIKEY}
+            Bagile__ApiBaseUrl=http://bagile-api:8080
+            EOF
+
             echo "Pulling latest ETL image..."
             docker compose pull bagile-etl
+
             echo "Recreating ETL container..."
             docker compose up -d bagile-etl
+
             echo "Cleaning unused images..."
             docker system prune -f
