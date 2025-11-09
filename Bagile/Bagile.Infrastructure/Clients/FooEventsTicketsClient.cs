@@ -18,10 +18,10 @@ public class FooEventsTicketsClient : IFooEventsTicketsClient
         _http = http;
         _logger = logger;
 
-        var baseUrl = config["WordPress:BaseUrl"]
-            ?? throw new InvalidOperationException("WordPress:BaseUrl not configured");
-        var apiKey = config["WordPress:BagileApiKey"]
-            ?? throw new InvalidOperationException("WordPress:BagileApiKey not configured");
+        var baseUrl = config["Bagile:BaseUrl"]
+            ?? throw new InvalidOperationException("Bagile:BaseUrl not configured");
+        var apiKey = config["Bagile:FooEventsApiKey"]
+            ?? throw new InvalidOperationException("Bagile:FooEventsApiKey not configured");
 
         _http.BaseAddress = new Uri(baseUrl);
         _http.DefaultRequestHeaders.Add("X-Bagile-Key", apiKey);

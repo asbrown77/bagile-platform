@@ -72,6 +72,9 @@ app.Map("/error", () =>
 app.UseSwagger();
 app.UseSwaggerUI();
 
+// API Key Authentication 
+app.UseMiddleware<Bagile.Api.Middleware.ApiKeyAuthenticationMiddleware>();
+
 // Console logging for test visibility
 app.Use(async (context, next) =>
 {
