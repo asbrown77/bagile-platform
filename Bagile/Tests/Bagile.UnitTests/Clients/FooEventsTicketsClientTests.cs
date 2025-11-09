@@ -23,8 +23,8 @@ public class FooEventsTicketsClientTests
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string>
             {
-                ["WordPress:BaseUrl"] = "https://test.bagile.co.uk",
-                ["WordPress:BagileApiKey"] = "test-key"
+                ["Bagile:BaseUrl"] = "https://test.bagile.co.uk",
+                ["Bagile:FooEventsApiKey"] = "test-key"
             })
             .Build();
 
