@@ -364,3 +364,7 @@ FodyWeavers.xsd
 /Bagile/Tests/Bagile.IntegrationTests/appsettings.Development.json
 /Bagile/Bagile.Api/appsettings.Development.json
 /Bagile/Bagile.EtlService/appsettings.Development.json
+Archive/dev-reset-db.ps1
+Archive/production/db-deploy-prod.ps1
+Archive/production/db-reset-prod.ps1
+Archive/seeds/999_drop_all.sql
