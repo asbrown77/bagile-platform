@@ -104,6 +104,13 @@ public class XeroApiClient : IXeroApiClient
                 throw new XeroRateLimitException("Xero rate limit exceeded", retryAfter);
             }
 
+            // --- handle 404 ---
+            if (res.StatusCode == HttpStatusCode.NotFound)
+            {
+                _logger.LogWarning("Xero invoice not found at {Url}. Status 404 Not Found.", url);
+                throw new XeroNotFoundException("Xero invoice not found", url);
+            }
+
             res.EnsureSuccessStatusCode();
             return res;
         }

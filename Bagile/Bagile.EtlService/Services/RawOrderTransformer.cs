@@ -123,6 +123,14 @@ namespace Bagile.EtlService.Services
                 _logger.LogWarning(ex, "Rate limited by Xero while processing RawOrder {Id}. Leaving as pending.", rawOrder.Id);
                 return;
             }
+            catch (XeroNotFoundException ex)
+            {
+                _logger.LogWarning(ex,
+                    "Xero resource not found for RawOrder {Id}. Marking as error (will not retry).",
+                    rawOrder.Id);
+
+                await _rawRepo.MarkFailedAsync(rawOrder.Id, ex.Message);
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing RawOrder {Id}", rawOrder.Id);
