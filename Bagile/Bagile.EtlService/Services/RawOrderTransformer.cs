@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Bagile.Domain.Entities;
@@ -14,6 +15,7 @@ namespace Bagile.EtlService.Services
     public class RawOrderTransformer
     {
         private const string WooSource = "woo";
+        private const string XeroSource = "xero";
         private static readonly TimeSpan BatchDelay = TimeSpan.FromSeconds(2);
 
         private readonly IOrderRepository _orderRepo;
@@ -22,6 +24,7 @@ namespace Bagile.EtlService.Services
         private readonly IEnrolmentRepository _enrolmentRepo;
         private readonly ICourseScheduleRepository _courseRepo;
         private readonly IFooEventsTicketsClient _fooEventsClient;
+        private readonly IXeroApiClient _xeroClient;
         private readonly ILogger<RawOrderTransformer> _logger;
 
         private readonly WooOrderHandler _wooHandler;
@@ -33,6 +36,7 @@ namespace Bagile.EtlService.Services
             IEnrolmentRepository enrolmentRepo,
             ICourseScheduleRepository courseRepo,
             IFooEventsTicketsClient fooEventsClient,
+            IXeroApiClient xeroClient,
             ILogger<RawOrderTransformer> logger)
         {
             _orderRepo = orderRepo;
@@ -41,9 +45,9 @@ namespace Bagile.EtlService.Services
             _enrolmentRepo = enrolmentRepo;
             _courseRepo = courseRepo;
             _fooEventsClient = fooEventsClient;
+            _xeroClient = xeroClient;
             _logger = logger;
 
-            // Delegate all Woo-specific logic into a dedicated handler
             _wooHandler = new WooOrderHandler(
                 _studentRepo,
                 _enrolmentRepo,
@@ -79,6 +83,11 @@ namespace Bagile.EtlService.Services
         {
             try
             {
+                // Handle Xero webhook envelopes first
+                if (await TryEnrichXeroWebhookAsync(rawOrder, token))
+                    return; // handled, now a new full invoice exists in raw_orders
+
+                // Normal order mapping flow
                 var order = OrderMapper.MapFromRaw(rawOrder);
                 if (order == null)
                 {
@@ -100,7 +109,6 @@ namespace Bagile.EtlService.Services
                 }
 
                 await ValidateEnrolmentConsistencyAsync(order, orderId);
-
                 await _rawRepo.MarkProcessedAsync(rawOrder.Id);
             }
             catch (Exception ex)
@@ -108,6 +116,88 @@ namespace Bagile.EtlService.Services
                 _logger.LogError(ex, "Error processing RawOrder {Id}", rawOrder.Id);
                 await _rawRepo.MarkFailedAsync(rawOrder.Id, ex.Message);
             }
+        }
+
+        private async Task<bool> TryEnrichXeroWebhookAsync(RawOrder rawOrder, CancellationToken token)
+        {
+            if (!rawOrder.Source.Equals(XeroSource, StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            // Quick shape check for webhook envelope
+            if (string.IsNullOrWhiteSpace(rawOrder.Payload) ||
+                !rawOrder.Payload.Contains("\"resourceUrl\"", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            try
+            {
+                using var doc = JsonDocument.Parse(rawOrder.Payload);
+                var root = doc.RootElement;
+
+                if (!root.TryGetProperty("events", out var events) || events.GetArrayLength() == 0)
+                    return false;
+
+                var evt = events[0];
+                if (!evt.TryGetProperty("resourceUrl", out var urlProp))
+                    return false;
+
+                var resourceUrl = urlProp.GetString();
+                if (string.IsNullOrWhiteSpace(resourceUrl))
+                    return false;
+
+                _logger.LogInformation("Fetching full Xero invoice for RawOrder {Id} from {Url}", rawOrder.Id, resourceUrl);
+
+                var fullInvoiceJson = await _xeroClient.GetInvoiceByUrlAsync(resourceUrl, token);
+                if (string.IsNullOrWhiteSpace(fullInvoiceJson))
+                {
+                    _logger.LogWarning("No invoice returned for {Url}", resourceUrl);
+                    return false;
+                }
+
+                var invoiceId = ExtractInvoiceId(fullInvoiceJson);
+                if (string.IsNullOrWhiteSpace(invoiceId))
+                {
+                    _logger.LogWarning("Could not extract InvoiceID from Xero invoice fetched for RawOrder {Id}", rawOrder.Id);
+                    return false;
+                }
+
+                await _rawRepo.InsertAsync(
+                    source: XeroSource,
+                    externalId: invoiceId,
+                    payloadJson: fullInvoiceJson,
+                    eventType: "invoice.import");
+
+                await _rawRepo.MarkProcessedAsync(rawOrder.Id);
+                _logger.LogInformation("Inserted enriched Xero invoice from webhook {RawId}", rawOrder.Id);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to enrich Xero webhook RawOrder {Id}", rawOrder.Id);
+                await _rawRepo.MarkFailedAsync(rawOrder.Id, ex.Message);
+                return false;
+            }
+        }
+
+        private static string ExtractInvoiceId(string invoiceJson)
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(invoiceJson);
+                if (doc.RootElement.TryGetProperty("Invoices", out var invoices) &&
+                    invoices.ValueKind == JsonValueKind.Array &&
+                    invoices.GetArrayLength() > 0)
+                {
+                    var invoice = invoices[0];
+                    if (invoice.TryGetProperty("InvoiceID", out var idProp))
+                        return idProp.GetString() ?? string.Empty;
+                }
+            }
+            catch
+            {
+                // ignored
+            }
+
+            return string.Empty;
         }
 
         private async Task ValidateEnrolmentConsistencyAsync(Order order, long orderId)

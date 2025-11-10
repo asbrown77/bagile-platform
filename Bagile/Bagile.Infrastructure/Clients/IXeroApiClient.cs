@@ -12,4 +12,5 @@ public interface IXeroApiClient
     Task<XeroInvoice?> GetInvoiceByIdAsync(string invoiceId);
     Task<IEnumerable<string>> FetchInvoicesAsync(DateTime? modifiedSince = null,
         CancellationToken ct = default);
+    Task<string> GetInvoiceByUrlAsync(string resourceUrl, CancellationToken ct = default);
 }

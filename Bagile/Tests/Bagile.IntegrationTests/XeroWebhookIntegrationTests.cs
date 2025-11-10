@@ -105,4 +105,9 @@ public class FakeXeroApiClient : IXeroApiClient
     {
         throw new NotImplementedException();
     }
+
+    public Task<string> GetInvoiceByUrlAsync(string resourceUrl, CancellationToken ct = default)
+    {
+        throw new NotImplementedException();
+    }
 }

@@ -22,17 +22,22 @@ public class XeroApiClient : IXeroApiClient
         _auth = auth;
     }
 
-    // 1️⃣ For webhooks
+    // 1️⃣ For webhooks by invoice id
     public async Task<XeroInvoice?> GetInvoiceByIdAsync(string invoiceId)
     {
         var url = $"https://api.xero.com/api.xro/2.0/Invoices/{invoiceId}";
         var response = await SendAsync(url);
         var json = await response.Content.ReadAsStringAsync();
-        var doc = JsonDocument.Parse(json);
+
+        using var doc = JsonDocument.Parse(json);
         var invoice = doc.RootElement.GetProperty("Invoices").EnumerateArray().FirstOrDefault();
+        if (invoice.ValueKind == JsonValueKind.Undefined)
+            return null;
+
         return JsonSerializer.Deserialize<XeroInvoice>(invoice.GetRawText());
     }
 
+    // 2️⃣ For ETL collector
     public async Task<IEnumerable<string>> FetchInvoicesAsync(
         DateTime? modifiedSince = null, CancellationToken ct = default)
     {
@@ -45,11 +50,18 @@ public class XeroApiClient : IXeroApiClient
         var response = await SendAsync(url, ct);
         var json = await response.Content.ReadAsStringAsync(ct);
 
-        var doc = JsonDocument.Parse(json);
+        using var doc = JsonDocument.Parse(json);
         return doc.RootElement.GetProperty("Invoices")
                  .EnumerateArray()
                  .Select(x => x.GetRawText())
                  .ToList();
+    }
+
+    // 3️⃣ NEW: used by RawOrderTransformer to enrich webhook envelopes
+    public async Task<string> GetInvoiceByUrlAsync(string resourceUrl, CancellationToken ct = default)
+    {
+        var response = await SendAsync(resourceUrl, ct);
+        return await response.Content.ReadAsStringAsync(ct);
     }
 
     private async Task<HttpResponseMessage> SendAsync(string url, CancellationToken ct = default)
@@ -68,7 +80,6 @@ public class XeroApiClient : IXeroApiClient
 
     private async Task<string> EnsureTenantIdAsync(string accessToken, CancellationToken ct)
     {
-        // check if we already have one cached in DB
         var connStr = _config.GetConnectionString("DefaultConnection");
         await using var db = new Npgsql.NpgsqlConnection(connStr);
 
@@ -93,9 +104,9 @@ public class XeroApiClient : IXeroApiClient
         var discoveredTenantId = tenant.GetProperty("tenantId").GetString()!;
 
         await db.ExecuteAsync(@"
-        UPDATE bagile.integration_tokens
-        SET tenant_id = @t
-        WHERE source = 'xero'", new { t = discoveredTenantId });
+            UPDATE bagile.integration_tokens
+            SET tenant_id = @t
+            WHERE source = 'xero'", new { t = discoveredTenantId });
 
         _logger.LogInformation("Xero tenant discovered and cached: {TenantId}", discoveredTenantId);
         return discoveredTenantId;
