@@ -16,6 +16,15 @@ namespace Bagile.EtlService.Mappers
             switch (order.Source.ToLower())
             {
                 case "woo":
+                    // Only process real Woo orders with id and line_items
+                    if (root.ValueKind != JsonValueKind.Object ||
+                        !root.TryGetProperty("id", out _) ||
+                        !root.TryGetProperty("line_items", out var lineItems) ||
+                        lineItems.ValueKind != JsonValueKind.Array)
+                    {
+                        return null;
+                    }
+
                     order.Type = "public";
 
                     order.ExternalId = root.TryGetProperty("id", out var idProp)
@@ -74,6 +83,14 @@ namespace Bagile.EtlService.Mappers
                     break;
 
                 case "xero":
+                    // Only process real ACCREC invoices
+                    if (!root.TryGetProperty("Type", out var typeProp) ||
+                        !string.Equals(typeProp.GetString(), "ACCREC", StringComparison.OrdinalIgnoreCase) ||
+                        !root.TryGetProperty("InvoiceID", out _))
+                    {
+                        return null;
+                    }
+
                     order.Type = "private";
 
                     order.ExternalId = root.TryGetProperty("InvoiceNumber", out var invNum)

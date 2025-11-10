@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Bagile.EtlService.Services
 {
-    public class RawOrderProcessor
+    public class RawOrderTransformer
     {
         private const string WooSource = "woo";
         private static readonly TimeSpan BatchDelay = TimeSpan.FromSeconds(2);
@@ -22,18 +22,18 @@ namespace Bagile.EtlService.Services
         private readonly IEnrolmentRepository _enrolmentRepo;
         private readonly ICourseScheduleRepository _courseRepo;
         private readonly IFooEventsTicketsClient _fooEventsClient;
-        private readonly ILogger<RawOrderProcessor> _logger;
+        private readonly ILogger<RawOrderTransformer> _logger;
 
         private readonly WooOrderHandler _wooHandler;
 
-        public RawOrderProcessor(
+        public RawOrderTransformer(
             IOrderRepository orderRepo,
             IRawOrderRepository rawRepo,
             IStudentRepository studentRepo,
             IEnrolmentRepository enrolmentRepo,
             ICourseScheduleRepository courseRepo,
             IFooEventsTicketsClient fooEventsClient,
-            ILogger<RawOrderProcessor> logger)
+            ILogger<RawOrderTransformer> logger)
         {
             _orderRepo = orderRepo;
             _rawRepo = rawRepo;
@@ -82,9 +82,11 @@ namespace Bagile.EtlService.Services
                 var order = OrderMapper.MapFromRaw(rawOrder);
                 if (order == null)
                 {
-                    _logger.LogWarning(
-                        "Skipping unrecognized source '{Source}' for RawOrder {Id}.",
-                        rawOrder.Source, rawOrder.Id);
+                    _logger.LogInformation(
+                        "Skipping non actionable RawOrder {Id} from source {Source} with event type {EventType}.",
+                        rawOrder.Id,
+                        rawOrder.Source,
+                        rawOrder.EventType);
 
                     await _rawRepo.MarkProcessedAsync(rawOrder.Id);
                     return;

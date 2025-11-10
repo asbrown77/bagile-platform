@@ -54,8 +54,8 @@ namespace Bagile.Infrastructure.Repositories
                    processed_at AS ProcessedAt,
                    status
             FROM bagile.raw_orders
-            WHERE (processed_at IS NULL OR status = 'pending')
-              AND (event_type = 'import' OR event_type IS NULL)
+            WHERE status = 'pending'
+              AND processed_at IS NULL
             ORDER BY created_at
             LIMIT @limit;";
 
@@ -88,28 +88,24 @@ namespace Bagile.Infrastructure.Repositories
             await conn.ExecuteAsync(sql, new { id });
         }
 
-
         public async Task<int> InsertAsync(string source, string externalId, string payloadJson, string eventType)
         {
             var hash = ComputeSha256(payloadJson);
 
             const string sql = @"
-                INSERT INTO bagile.raw_orders (source, external_id, payload, event_type, payload_hash)
-                VALUES (@source, @externalId, CAST(@payloadJson AS jsonb), @eventType, @hash)
-                ON CONFLICT (source, payload_hash) DO NOTHING
-                RETURNING id;";
+            INSERT INTO bagile.raw_orders (source, external_id, payload, event_type, payload_hash, status)
+            VALUES (@source, @externalId, CAST(@payloadJson AS jsonb), @eventType, @hash, 'pending')
+            ON CONFLICT (source, payload_hash) DO NOTHING
+            RETURNING id;";
 
             await using var conn = new NpgsqlConnection(_connectionString);
             return await conn.ExecuteScalarAsync<int?>(sql, new { source, externalId, payloadJson, eventType, hash }) ?? 0;
         }
 
 
-        // Only insert if payload changed
         public async Task<int> InsertIfChangedAsync(string source, string externalId, string payloadJson, string eventType)
         {
-            var hash = ComputeSha256(payloadJson);
-
-            if (await ExistsAsync(source, externalId, hash))
+            if (await ExistsAsync(source, externalId, payloadJson))
                 return 0; // nothing inserted
 
             return await InsertAsync(source, externalId, payloadJson, eventType);

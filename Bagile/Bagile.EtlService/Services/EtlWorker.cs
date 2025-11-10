@@ -26,10 +26,10 @@ namespace Bagile.EtlService.Services
                 try
                 {
                     using var scope = _scopeFactory.CreateScope();
-                    var runner = scope.ServiceProvider.GetRequiredService<EtlRunner>();
+                    var runner = scope.ServiceProvider.GetRequiredService<SourceDataImporter>();
                     await runner.RunAsync(stoppingToken);
 
-                    var processor = scope.ServiceProvider.GetRequiredService<RawOrderProcessor>();
+                    var processor = scope.ServiceProvider.GetRequiredService<RawOrderTransformer>();
                     await processor.ProcessPendingAsync(stoppingToken);
 
                     _logger.LogInformation("ETL + RawOrder processing cycle completed. Pending raw orders exhausted.");

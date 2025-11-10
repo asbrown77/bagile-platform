@@ -9,7 +9,7 @@ using Moq;
 using NUnit.Framework;
 
 [TestFixture]
-public class EtlRunnerTests
+public class SourceDataImporterTests
 {
     [Test]
     public async Task EtlRunner_Inserts_All_Collected_Data()
@@ -27,11 +27,11 @@ public class EtlRunnerTests
         var repo = new Mock<IRawOrderRepository>();
 
         // new constructor: orders, products, repo, logger
-        var runner = new EtlRunner(
+        var runner = new SourceDataImporter(
             new[] { woo.Object, xero.Object },
             Enumerable.Empty<IProductCollector>(),
             repo.Object,
-            NullLogger<EtlRunner>.Instance);
+            NullLogger<SourceDataImporter>.Instance);
 
         await runner.RunAsync();
 

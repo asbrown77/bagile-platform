@@ -70,21 +70,37 @@ namespace Bagile.Tests.Mappers
         [Test]
         public void MapFromRaw_ShouldHandleMissingOptionalFieldsGracefully()
         {
+            // Minimal valid Woo payload. Has required structure but missing optional fields
+            var payload = "{\"id\": 9999, \"total\": \"0\", \"line_items\": [], \"billing\": {}}";
+
             var raw = new RawOrder
             {
                 Id = 104,
                 Source = "woo",
-                Payload = "{\"id\": 9999, \"total\": \"0\"}"
+                Payload = payload
             };
 
             var order = OrderMapper.MapFromRaw(raw);
 
             Assert.That(order, Is.Not.Null);
-            Assert.That(order!.Type, Is.EqualTo("public"));
+            Assert.That(order!.Source, Is.EqualTo("woo"));
+            Assert.That(order.Type, Is.EqualTo("public"));
+
+            // Core numeric mapping still works
             Assert.That(order.TotalAmount, Is.EqualTo(0m));
+            Assert.That(order.SubTotal, Is.EqualTo(0m));
+            Assert.That(order.TotalTax, Is.EqualTo(0m));
+
+            // Optional fields should be null, not crash
             Assert.That(order.ContactEmail, Is.Null);
             Assert.That(order.BillingCompany, Is.Null);
+            Assert.That(order.ContactName, Is.EqualTo(string.Empty).Or.EqualTo(null));
+
+            // No status in payload, so NormalizeStatus should default to pending
             Assert.That(order.Status, Is.EqualTo("pending"));
+
+            // OrderDate falls back to some non default value
+            Assert.That(order.OrderDate, Is.Not.EqualTo(default(DateTime)));
         }
     }
 }

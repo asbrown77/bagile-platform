@@ -7,18 +7,18 @@ using Microsoft.Extensions.Logging;
 
 namespace Bagile.EtlService.Services;
 
-public class EtlRunner
+public class SourceDataImporter
 {
     private readonly IEnumerable<ISourceCollector> _orderCollectors;
     private readonly IEnumerable<IProductCollector> _productCollectors;
     private readonly IRawOrderRepository _rawOrderRepository;
-    private readonly ILogger<EtlRunner> _logger;
+    private readonly ILogger<SourceDataImporter> _logger;
 
-    public EtlRunner(
+    public SourceDataImporter(
         IEnumerable<ISourceCollector> orderCollectors,
         IEnumerable<IProductCollector> productCollectors,
         IRawOrderRepository rawOrderRepository,
-        ILogger<EtlRunner> logger)
+        ILogger<SourceDataImporter> logger)
     {
         _orderCollectors = orderCollectors;
         _productCollectors = productCollectors;
