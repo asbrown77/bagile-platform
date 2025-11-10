@@ -93,44 +93,26 @@ namespace Bagile.Infrastructure.Repositories
             await conn.ExecuteAsync(sql, new { id });
         }
 
-<<<<<<< HEAD
-=======
-
->>>>>>> ab3f69db0077185cff7b7866386f4d8978738edb
         public async Task<int> InsertAsync(string source, string externalId, string payloadJson, string eventType)
         {
             var hash = ComputeSha256(payloadJson);
 
             const string sql = @"
-<<<<<<< HEAD
+
             INSERT INTO bagile.raw_orders (source, external_id, payload, event_type, payload_hash, status)
             VALUES (@source, @externalId, CAST(@payloadJson AS jsonb), @eventType, @hash, 'pending')
             ON CONFLICT (source, payload_hash) DO NOTHING
             RETURNING id;";
-=======
-                INSERT INTO bagile.raw_orders (source, external_id, payload, event_type, payload_hash)
-                VALUES (@source, @externalId, CAST(@payloadJson AS jsonb), @eventType, @hash)
-                ON CONFLICT (source, payload_hash) DO NOTHING
-                RETURNING id;";
->>>>>>> ab3f69db0077185cff7b7866386f4d8978738edb
+
 
             await using var conn = new NpgsqlConnection(_connectionString);
             return await conn.ExecuteScalarAsync<int?>(sql, new { source, externalId, payloadJson, eventType, hash }) ?? 0;
         }
 
 
-<<<<<<< HEAD
         public async Task<int> InsertIfChangedAsync(string source, string externalId, string payloadJson, string eventType)
         {
             if (await ExistsAsync(source, externalId, payloadJson))
-=======
-        // Only insert if payload changed
-        public async Task<int> InsertIfChangedAsync(string source, string externalId, string payloadJson, string eventType)
-        {
-            var hash = ComputeSha256(payloadJson);
-
-            if (await ExistsAsync(source, externalId, hash))
->>>>>>> ab3f69db0077185cff7b7866386f4d8978738edb
                 return 0; // nothing inserted
 
             return await InsertAsync(source, externalId, payloadJson, eventType);
