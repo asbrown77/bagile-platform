@@ -4,6 +4,7 @@ using Bagile.Infrastructure.Models;
 using Dapper;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
 
@@ -13,6 +14,10 @@ public class XeroApiClient : IXeroApiClient
     private readonly ILogger<XeroApiClient> _logger;
     private readonly HttpClient _http;
     private readonly XeroTokenRefreshService _auth;
+
+    private static readonly SemaphoreSlim _rateLock = new(1, 1);
+    private DateTime _lastCall = DateTime.MinValue;
+    private static readonly TimeSpan MinGap = TimeSpan.FromMilliseconds(250); // 4 calls per second
 
     public XeroApiClient(HttpClient http, IConfiguration config, ILogger<XeroApiClient> logger, XeroTokenRefreshService auth)
     {
@@ -57,13 +62,16 @@ public class XeroApiClient : IXeroApiClient
                  .ToList();
     }
 
-    // 3️⃣ NEW: used by RawOrderTransformer to enrich webhook envelopes
+    // 3️⃣ Used by RawOrderTransformer to enrich webhook envelopes
     public async Task<string> GetInvoiceByUrlAsync(string resourceUrl, CancellationToken ct = default)
     {
         var response = await SendAsync(resourceUrl, ct);
         return await response.Content.ReadAsStringAsync(ct);
     }
 
+    // ---------------------------------------------------------
+    // Core HTTP sender with rate limiting and 429 handling
+    // ---------------------------------------------------------
     private async Task<HttpResponseMessage> SendAsync(string url, CancellationToken ct = default)
     {
         var token = await _auth.EnsureAccessTokenAsync();
@@ -73,9 +81,36 @@ public class XeroApiClient : IXeroApiClient
         req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         req.Headers.Add("xero-tenant-id", tenantId);
 
-        var res = await _http.SendAsync(req, ct);
-        res.EnsureSuccessStatusCode();
-        return res;
+        await _rateLock.WaitAsync(ct);
+        try
+        {
+            // Throttle slightly to avoid hitting Xero rate limits
+            var elapsed = DateTime.UtcNow - _lastCall;
+            if (elapsed < MinGap)
+                await Task.Delay(MinGap - elapsed, ct);
+
+            var res = await _http.SendAsync(req, ct);
+            _lastCall = DateTime.UtcNow;
+
+            // Handle 429 Too Many Requests
+            if (res.StatusCode == HttpStatusCode.TooManyRequests)
+            {
+                var retryAfter = res.Headers.RetryAfter?.Delta ?? TimeSpan.FromSeconds(60);
+                _logger.LogWarning(
+                    "Xero rate limit hit for {Url}. Status 429. Retry after {Seconds} seconds.",
+                    url,
+                    retryAfter.TotalSeconds);
+
+                throw new XeroRateLimitException("Xero rate limit exceeded", retryAfter);
+            }
+
+            res.EnsureSuccessStatusCode();
+            return res;
+        }
+        finally
+        {
+            _rateLock.Release();
+        }
     }
 
     private async Task<string> EnsureTenantIdAsync(string accessToken, CancellationToken ct)
@@ -110,5 +145,19 @@ public class XeroApiClient : IXeroApiClient
 
         _logger.LogInformation("Xero tenant discovered and cached: {TenantId}", discoveredTenantId);
         return discoveredTenantId;
+    }
+}
+
+// ---------------------------------------------------------
+// Supporting class for 429 handling
+// ---------------------------------------------------------
+public class XeroRateLimitException : Exception
+{
+    public TimeSpan? RetryAfter { get; }
+
+    public XeroRateLimitException(string message, TimeSpan? retryAfter = null)
+        : base(message)
+    {
+        RetryAfter = retryAfter;
     }
 }
