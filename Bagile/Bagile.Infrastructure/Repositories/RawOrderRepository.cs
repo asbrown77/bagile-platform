@@ -54,13 +54,8 @@ namespace Bagile.Infrastructure.Repositories
                    processed_at AS ProcessedAt,
                    status
             FROM bagile.raw_orders
-<<<<<<< HEAD
             WHERE status = 'pending'
               AND processed_at IS NULL
-=======
-            WHERE (processed_at IS NULL OR status = 'pending')
-              AND (event_type = 'import' OR event_type IS NULL)
->>>>>>> ab3f69db0077185cff7b7866386f4d8978738edb
             ORDER BY created_at
             LIMIT @limit;";
 
