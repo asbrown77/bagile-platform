@@ -28,23 +28,41 @@ public class ApiKeyAuthenticationMiddleware
         var configuredKey = config["ApiKey"];
         if (string.IsNullOrWhiteSpace(configuredKey))
         {
-            // Config issue, not client’s fault
+            // Config issue, not client's fault
             context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-            await context.Response.WriteAsync("API key is not configured.");
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsJsonAsync(new
+            {
+                Code = "ConfigurationError",
+                Message = "API key is not configured on server",
+                Status = 500
+            });
             return;
         }
 
         if (!context.Request.Headers.TryGetValue(API_KEY_HEADER, out var providedKey))
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            await context.Response.WriteAsync("API key is missing.");
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsJsonAsync(new
+            {
+                Code = "AuthenticationFailed",
+                Message = "API key is missing. Please provide X-Api-Key header.",
+                Status = 401
+            });
             return;
         }
 
         if (!string.Equals(configuredKey, providedKey.ToString(), StringComparison.Ordinal))
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            await context.Response.WriteAsync("Invalid API key.");
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsJsonAsync(new
+            {
+                Code = "AuthenticationFailed",
+                Message = "Invalid API key provided.",
+                Status = 401
+            });
             return;
         }
 
