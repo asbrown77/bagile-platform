@@ -1,5 +1,12 @@
-# bagile-platform
+# bagile Platform
 
-![CI](https://github.com/asbrown77/bagile-platform/actions/workflows/ci.yml/badge.svg)
+## 📚 Documentation
 
-A platform for ETL + API experiments...
+- **[API Reference](docs/API.md)** - Complete API documentation for developers
+- **[Getting Started](docs/GETTING_STARTED.md)** - Quick start guide
+
+## 🔗 Quick Links
+
+- **Production API:** https://api.bagile.co.uk
+- **API Docs (Interactive):** https://api.bagile.co.uk/swagger
+- **API Reference:** [View Documentation](docs/API.md)
