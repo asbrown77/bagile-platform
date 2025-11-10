@@ -149,7 +149,12 @@ static void ConfigureEtl(HostApplicationBuilder builder)
     builder.Services.AddScoped<IImporter<WooProductDto>, WooCourseImporter>();
 
     // Core orchestration
+<<<<<<< HEAD
     builder.Services.AddScoped<RawOrderTransformer>();
     builder.Services.AddScoped<SourceDataImporter>();
+=======
+    builder.Services.AddScoped<RawOrderProcessor>();
+    builder.Services.AddScoped<EtlRunner>();
+>>>>>>> ab3f69db0077185cff7b7866386f4d8978738edb
     builder.Services.AddHostedService<EtlWorker>();
 }

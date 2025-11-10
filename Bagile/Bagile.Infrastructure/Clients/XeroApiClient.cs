@@ -22,12 +22,17 @@ public class XeroApiClient : IXeroApiClient
         _auth = auth;
     }
 
+<<<<<<< HEAD
     // 1️⃣ For webhooks by invoice id
+=======
+    // 1️⃣ For webhooks
+>>>>>>> ab3f69db0077185cff7b7866386f4d8978738edb
     public async Task<XeroInvoice?> GetInvoiceByIdAsync(string invoiceId)
     {
         var url = $"https://api.xero.com/api.xro/2.0/Invoices/{invoiceId}";
         var response = await SendAsync(url);
         var json = await response.Content.ReadAsStringAsync();
+<<<<<<< HEAD
 
         using var doc = JsonDocument.Parse(json);
         var invoice = doc.RootElement.GetProperty("Invoices").EnumerateArray().FirstOrDefault();
@@ -38,6 +43,13 @@ public class XeroApiClient : IXeroApiClient
     }
 
     // 2️⃣ For ETL collector
+=======
+        var doc = JsonDocument.Parse(json);
+        var invoice = doc.RootElement.GetProperty("Invoices").EnumerateArray().FirstOrDefault();
+        return JsonSerializer.Deserialize<XeroInvoice>(invoice.GetRawText());
+    }
+
+>>>>>>> ab3f69db0077185cff7b7866386f4d8978738edb
     public async Task<IEnumerable<string>> FetchInvoicesAsync(
         DateTime? modifiedSince = null, CancellationToken ct = default)
     {
@@ -50,13 +62,18 @@ public class XeroApiClient : IXeroApiClient
         var response = await SendAsync(url, ct);
         var json = await response.Content.ReadAsStringAsync(ct);
 
+<<<<<<< HEAD
         using var doc = JsonDocument.Parse(json);
+=======
+        var doc = JsonDocument.Parse(json);
+>>>>>>> ab3f69db0077185cff7b7866386f4d8978738edb
         return doc.RootElement.GetProperty("Invoices")
                  .EnumerateArray()
                  .Select(x => x.GetRawText())
                  .ToList();
     }
 
+<<<<<<< HEAD
     // 3️⃣ NEW: used by RawOrderTransformer to enrich webhook envelopes
     public async Task<string> GetInvoiceByUrlAsync(string resourceUrl, CancellationToken ct = default)
     {
@@ -64,6 +81,8 @@ public class XeroApiClient : IXeroApiClient
         return await response.Content.ReadAsStringAsync(ct);
     }
 
+=======
+>>>>>>> ab3f69db0077185cff7b7866386f4d8978738edb
     private async Task<HttpResponseMessage> SendAsync(string url, CancellationToken ct = default)
     {
         var token = await _auth.EnsureAccessTokenAsync();
@@ -80,6 +99,10 @@ public class XeroApiClient : IXeroApiClient
 
     private async Task<string> EnsureTenantIdAsync(string accessToken, CancellationToken ct)
     {
+<<<<<<< HEAD
+=======
+        // check if we already have one cached in DB
+>>>>>>> ab3f69db0077185cff7b7866386f4d8978738edb
         var connStr = _config.GetConnectionString("DefaultConnection");
         await using var db = new Npgsql.NpgsqlConnection(connStr);
 
@@ -104,9 +127,15 @@ public class XeroApiClient : IXeroApiClient
         var discoveredTenantId = tenant.GetProperty("tenantId").GetString()!;
 
         await db.ExecuteAsync(@"
+<<<<<<< HEAD
             UPDATE bagile.integration_tokens
             SET tenant_id = @t
             WHERE source = 'xero'", new { t = discoveredTenantId });
+=======
+        UPDATE bagile.integration_tokens
+        SET tenant_id = @t
+        WHERE source = 'xero'", new { t = discoveredTenantId });
+>>>>>>> ab3f69db0077185cff7b7866386f4d8978738edb
 
         _logger.LogInformation("Xero tenant discovered and cached: {TenantId}", discoveredTenantId);
         return discoveredTenantId;

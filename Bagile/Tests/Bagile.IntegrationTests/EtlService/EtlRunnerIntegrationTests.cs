@@ -28,11 +28,19 @@ public class EtlRunnerIntegrationTests
 
         var repo = new RawOrderRepository($"{DatabaseFixture.ConnectionString};SearchPath=bagile");
 
+<<<<<<< HEAD
         var runner = new SourceDataImporter(
             new[] { wooCollector.Object, xeroCollector.Object },          // order collectors
             Enumerable.Empty<IProductCollector>(),                         // no product collectors
             repo,
             NullLogger<SourceDataImporter>.Instance);
+=======
+        var runner = new EtlRunner(
+            new[] { wooCollector.Object, xeroCollector.Object },          // order collectors
+            Enumerable.Empty<IProductCollector>(),                         // no product collectors
+            repo,
+            NullLogger<EtlRunner>.Instance);
+>>>>>>> ab3f69db0077185cff7b7866386f4d8978738edb
 
 
         // Act
