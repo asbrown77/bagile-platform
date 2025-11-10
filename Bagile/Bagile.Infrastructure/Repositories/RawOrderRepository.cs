@@ -85,7 +85,7 @@ namespace Bagile.Infrastructure.Repositories
             WHERE id = @id;";
 
             await using var conn = new NpgsqlConnection(_connectionString);
-            await conn.ExecuteAsync(sql, new { id });
+            await conn.ExecuteAsync(sql, new { id, errorMessage });
         }
 
         public async Task<int> InsertAsync(string source, string externalId, string payloadJson, string eventType)
