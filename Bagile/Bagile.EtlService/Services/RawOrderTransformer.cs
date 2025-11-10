@@ -83,6 +83,8 @@ namespace Bagile.EtlService.Services
         {
             try
             {
+                token.ThrowIfCancellationRequested();
+
                 // Handle Xero webhook envelopes first
                 if (await TryEnrichXeroWebhookAsync(rawOrder, token))
                     return; // handled, now a new full invoice exists in raw_orders
@@ -110,6 +112,16 @@ namespace Bagile.EtlService.Services
 
                 await ValidateEnrolmentConsistencyAsync(order, orderId);
                 await _rawRepo.MarkProcessedAsync(rawOrder.Id);
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogWarning("Processing of RawOrder {Id} was canceled by token.", rawOrder.Id);
+                return;
+            }
+            catch (XeroRateLimitException ex)
+            {
+                _logger.LogWarning(ex, "Rate limited by Xero while processing RawOrder {Id}. Leaving as pending.", rawOrder.Id);
+                return;
             }
             catch (Exception ex)
             {
