@@ -31,10 +31,9 @@ namespace Bagile.EtlService.Mappers
                         ? idProp.GetRawText()
                         : string.Empty;
 
-                    order.TotalAmount = root.ValueKind == JsonValueKind.Number
-                        ? root.GetDecimal()
-                        : decimal.TryParse(root.GetString(), out var amt) ? amt : 0;
-
+                    order.TotalAmount = root.TryGetProperty("total", out var totalProp)
+                        ? decimal.Parse(totalProp.GetString() ?? "0")
+                        : 0;
 
                     order.TotalTax = root.TryGetProperty("total_tax", out var taxProp)
                         ? decimal.Parse(taxProp.GetString() ?? "0")
