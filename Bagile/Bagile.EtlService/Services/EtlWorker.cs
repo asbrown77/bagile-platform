@@ -42,8 +42,8 @@ namespace Bagile.EtlService.Services
                     _logger.LogError(ex, "ETL cycle failed");
                 }
 
-                _logger.LogInformation("ETL cycle complete, sleeping...");
-                await Task.Delay(TimeSpan.FromHours(6), stoppingToken);
+                _logger.LogInformation("ETL cycle complete, sleeping for 5 minutes...");
+                await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
             }
         }
     }
