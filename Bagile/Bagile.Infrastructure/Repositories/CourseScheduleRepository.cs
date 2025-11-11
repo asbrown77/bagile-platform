@@ -130,4 +130,19 @@ public class CourseScheduleRepository : ICourseScheduleRepository
         return await conn.QueryAsync<CourseSchedule>(
             "SELECT * FROM bagile.course_schedules ORDER BY start_date DESC;");
     }
+
+    public async Task<long?> GetIdBySkuAsync(string sku)
+    {
+        if (string.IsNullOrWhiteSpace(sku))
+            return null;
+
+        const string sql = @"
+        SELECT id
+        FROM bagile.course_schedules
+        WHERE sku = @Sku
+        LIMIT 1;";
+
+        await using var conn = new NpgsqlConnection(_connStr);
+        return await conn.QueryFirstOrDefaultAsync<long?>(sql, new { Sku = sku });
+    }
 }

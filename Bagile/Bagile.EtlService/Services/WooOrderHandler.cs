@@ -543,13 +543,13 @@ namespace Bagile.EtlService.Services
         private async Task CreateBillingEnrolmentAsync(RawOrder rawOrder, long orderId)
         {
             _logger.LogWarning(
-                "No tickets found for order {OrderId}, creating billing-level enrolment",
+                "No tickets found for order {OrderId}, creating billing-level enrolment from line items",
                 orderId);
 
-            // Extract billing info from order JSON
             using var doc = JsonDocument.Parse(rawOrder.Payload);
             var root = doc.RootElement;
 
+            // 1. Get billing info (who paid)
             if (!root.TryGetProperty("billing", out var billing))
             {
                 _logger.LogWarning("No billing info for order {OrderId}", orderId);
@@ -576,6 +576,7 @@ namespace Bagile.EtlService.Services
                 ? coProp.GetString()
                 : null;
 
+            // 2. Create/update student
             var student = new Student
             {
                 Email = email.ToLowerInvariant(),
@@ -585,7 +586,46 @@ namespace Bagile.EtlService.Services
             };
 
             var studentId = await _studentRepo.UpsertAsync(student);
-            await CreateStandardEnrolmentAsync(orderId, studentId, null);
+
+            // 3. ✅ FIX: Process each line item to create enrolments with proper course_schedule_id
+            if (!root.TryGetProperty("line_items", out var lineItems))
+            {
+                _logger.LogWarning("No line items for order {OrderId}", orderId);
+                return;
+            }
+
+            foreach (var item in lineItems.EnumerateArray())
+            {
+                var productId = item.TryGetProperty("product_id", out var pidProp) && pidProp.TryGetInt64(out var pid)
+                    ? pid
+                    : (long?)null;
+
+                if (!productId.HasValue)
+                {
+                    _logger.LogWarning("Line item missing product_id in order {OrderId}", orderId);
+                    continue;
+                }
+
+                // Look up course schedule by product_id
+                var courseScheduleId = await ResolveCourseScheduleAsync(productId);
+
+                if (!courseScheduleId.HasValue)
+                {
+                    _logger.LogWarning(
+                        "Could not find course schedule for product_id {ProductId} in order {OrderId}",
+                        productId,
+                        orderId);
+                }
+
+                // Create enrolment (even if courseScheduleId is null, we still track it)
+                await CreateStandardEnrolmentAsync(orderId, studentId, courseScheduleId);
+
+                _logger.LogInformation(
+                    "Created billing-level enrolment for {Email} on order {OrderId}, course {CourseScheduleId}",
+                    email,
+                    orderId,
+                    courseScheduleId);
+            }
         }
 
         private bool IsTicketCancelled(string status)
