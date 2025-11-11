@@ -10,7 +10,6 @@ namespace Bagile.EtlService.Collectors;
 public class WooOrderCollector : ISourceCollector
 {
     private readonly IWooApiClient _woo;
-    private readonly IImporter<WooProductDto> _wooCourseProjector;
     private readonly ILogger<WooOrderCollector> _logger;
 
     public string SourceName => "woo";
@@ -18,11 +17,9 @@ public class WooOrderCollector : ISourceCollector
 
     public WooOrderCollector(
         IWooApiClient woo,
-        IImporter<WooProductDto> wooCourseProjector,
         ILogger<WooOrderCollector> logger)
     {
         _woo = woo;
-        _wooCourseProjector = wooCourseProjector;
         _logger = logger;
     }
 
@@ -63,25 +60,4 @@ public class WooOrderCollector : ISourceCollector
         _logger.LogInformation("WooCollector total orders collected: {Total}", allOrders.Count);
         return allOrders;
     }
-
-    public async Task CollectProductsAsync(CancellationToken ct = default)
-    {
-        _logger.LogInformation("Collecting WooCommerce products...");
-
-        var products = await _woo.FetchProductsAsync(ct);
-
-        if (products == null || products.Count == 0)
-        {
-            _logger.LogWarning("No WooCommerce products found.");
-            return;
-        }
-
-        foreach (var product in products)
-        {
-            await _wooCourseProjector.ApplyAsync(product);
-        }
-
-        _logger.LogInformation("Processed {Count} products into course_schedules.", products.Count);
-    }
-
 }

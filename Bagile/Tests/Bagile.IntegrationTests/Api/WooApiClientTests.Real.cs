@@ -13,7 +13,6 @@ public class WooApiClientTests
 {
     private IWooApiClient _client = null!;
 
-    [SetUp]
     public void Setup()
     {
         var config = new ConfigurationBuilder()
@@ -38,7 +37,7 @@ public class WooApiClientTests
     [Test]
     public async Task FetchProductsAsync_Should_Print_First_Product_With_MetaData()
     {
-        var products = await _client.FetchProductsAsync(CancellationToken.None);
+        var products = await _client.FetchProductsAsync(null, CancellationToken.None);
         var first = products.FirstOrDefault();
 
         Console.WriteLine(JsonSerializer.Serialize(first, new JsonSerializerOptions { WriteIndented = true }));

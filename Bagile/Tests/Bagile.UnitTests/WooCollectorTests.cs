@@ -19,8 +19,7 @@ public class WooCollectorTests
     public void Setup()
     {
         _mockApi = new Mock<IWooApiClient>();
-        _mockProjector = new Mock<IImporter<WooProductDto>>();
-        _collector = new WooOrderCollector(_mockApi.Object,_mockProjector.Object, NullLogger<WooOrderCollector>.Instance);
+        _collector = new WooOrderCollector(_mockApi.Object, NullLogger<WooOrderCollector>.Instance);
     }
 
     [Test]

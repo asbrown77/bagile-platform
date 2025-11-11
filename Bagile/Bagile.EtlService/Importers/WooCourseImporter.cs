@@ -42,7 +42,7 @@ public class WooCourseImporter : IImporter<WooProductDto>
             Sku = product.Sku,
             TrainerName = meta?.GetValueOrDefault("trainer_name"),
             FormatType = meta?.GetValueOrDefault("format_type"),
-            SourceSystem = "WooCommerce",
+            SourceSystem = "woo",
             SourceProductId = product.Id
         };
 

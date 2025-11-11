@@ -11,7 +11,7 @@ namespace Bagile.Infrastructure.Clients
     {
         Task<IReadOnlyList<string>> FetchOrdersAsync(DateTime? modifiedSince, CancellationToken ct);
         Task<IReadOnlyList<string>> FetchOrdersAsync(int page, int perPage, DateTime? modifiedSince, CancellationToken ct);
-        Task<IReadOnlyList<WooProductDto>> FetchProductsAsync(CancellationToken ct = default);
+        Task<IReadOnlyList<WooProductDto>> FetchProductsAsync(DateTime? modifiedSince = null, CancellationToken ct = default);
     }
 
 

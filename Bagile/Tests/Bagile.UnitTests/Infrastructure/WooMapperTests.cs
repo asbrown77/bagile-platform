@@ -50,7 +50,7 @@ namespace Bagile.UnitTests.Infrastructure
             result.FormatType.Should().Be("Live virtual training");
             result.StartDate.Should().Be(DateTime.Parse("2025-02-06"));
             result.EndDate.Should().Be(DateTime.Parse("2025-02-07"));
-            result.SourceSystem.Should().Be("WooCommerce");
+            result.SourceSystem.Should().Be("woo");
         }
     }
 }

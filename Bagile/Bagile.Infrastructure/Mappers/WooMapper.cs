@@ -54,7 +54,7 @@ public static class WooMapper
             FormatType = formatType,
             StartDate = startDate,
             EndDate = endDate,
-            SourceSystem = "WooCommerce"
+            SourceSystem = "woo"
         };
     }
 }

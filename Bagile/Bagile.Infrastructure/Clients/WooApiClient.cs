@@ -27,12 +27,9 @@ public class WooApiClient : IWooApiClient
             new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", creds);
     }
 
-
-    // ✅ existing overload kept for compatibility
     public Task<IReadOnlyList<string>> FetchOrdersAsync(DateTime? since = null, CancellationToken ct = default)
         => FetchOrdersAsync(page: 1, perPage: 100, since, ct);
 
-    // ✅ new paged version
     public async Task<IReadOnlyList<string>> FetchOrdersAsync(
         int page,
         int perPage,
@@ -65,21 +62,58 @@ public class WooApiClient : IWooApiClient
         return results;
     }
 
-    public async Task<IReadOnlyList<WooProductDto>> FetchProductsAsync(CancellationToken ct = default)
+
+    public async Task<IReadOnlyList<WooProductDto>> FetchProductsAsync(
+        DateTime? modifiedSince = null,
+        CancellationToken ct = default)
     {
-        const string url = "/wp-json/wc/v3/products?per_page=100";
-        _logger.LogInformation("Fetching Woo products: {Url}", url);
+        var allProducts = new List<WooProductDto>();
+        var page = 1;
+        const int pageSize = 100;
 
-        var response = await _http.GetFromJsonAsync<List<WooProductDto>>(url, ct);
-
-        if (response == null || response.Count == 0)
+        while (true)
         {
-            _logger.LogWarning("No Woo products returned");
-            return Array.Empty<WooProductDto>();
+            ct.ThrowIfCancellationRequested();
+
+            // Build URL with pagination
+            var queryBuilder = new StringBuilder($"/wp-json/wc/v3/products?page={page}&per_page={pageSize}");
+
+            // Optional: only fetch published products (exclude drafts, private, etc.)
+            queryBuilder.Append("&status=publish");
+
+            // Optional: incremental sync - only fetch modified products
+            if (modifiedSince != null)
+            {
+                queryBuilder.Append($"&modified_after={modifiedSince.Value:yyyy-MM-ddTHH:mm:ss}Z");
+            }
+
+            var url = queryBuilder.ToString();
+            _logger.LogInformation("Fetching Woo products page {Page}: {Url}", page, url);
+
+            var response = await _http.GetFromJsonAsync<List<WooProductDto>>(url, ct);
+
+            if (response == null || response.Count == 0)
+            {
+                _logger.LogInformation("No more products after page {Page}", page);
+                break;
+            }
+
+            allProducts.AddRange(response);
+            _logger.LogInformation("Fetched {Count} products from page {Page}", response.Count, page);
+
+            // If we got fewer than pageSize, we've reached the last page
+            if (response.Count < pageSize)
+            {
+                _logger.LogInformation("Reached last page ({Page}), stopping pagination", page);
+                break;
+            }
+
+            page++;
         }
 
-        _logger.LogInformation("Fetched {Count} Woo products", response.Count);
-        return response;
-    }
+        _logger.LogInformation("✅ Fetched total of {Count} WooCommerce products across {Pages} pages",
+            allProducts.Count, page);
 
+        return allProducts;
+    }
 }

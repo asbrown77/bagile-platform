@@ -90,6 +90,12 @@ static void ConfigureDatabase(HostApplicationBuilder builder)
         var connStr = GetConnectionString(sp);
         return new CourseDefinitionRepository(connStr);
     });
+
+    builder.Services.AddScoped<ISyncMetadataRepository>(sp =>
+    {
+        var connStr = GetConnectionString(sp);
+        return new SyncMetadataRepository(connStr);
+    });
 }
 
 static string GetConnectionString(IServiceProvider sp)
@@ -143,7 +149,7 @@ static void ConfigureEtl(HostApplicationBuilder builder)
     // Collectors
     builder.Services.AddScoped<IProductCollector, WooProductCollector>();
     builder.Services.AddScoped<ISourceCollector, WooOrderCollector>();
-    builder.Services.AddScoped<ISourceCollector, XeroCollector>();
+   // builder.Services.AddScoped<ISourceCollector, XeroCollector>();
 
     // Importers
     builder.Services.AddScoped<IImporter<WooProductDto>, WooCourseImporter>();
