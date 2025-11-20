@@ -87,12 +87,14 @@ namespace Bagile.EtlService.Services
                 var order = OrderMapper.MapFromRaw(rawOrder);
                 if (order == null)
                 {
-                    _logger.LogInformation(
-                        "Skipping non actionable RawOrder {Id} from source {Source} with event type {EventType}.",
-                        rawOrder.Id,
-                        rawOrder.Source,
-                        rawOrder.EventType);
+                    var handled = await ProcessTransferOrderAsync(rawOrder);
+                    if (handled)
+                    {
+                        await _rawRepo.MarkProcessedAsync(rawOrder.Id);
+                        return;
+                    }
 
+                    _logger.LogInformation("Skipping RawOrder {Id}. Not actionable and no transfer fallback possible.", rawOrder.Id);
                     await _rawRepo.MarkProcessedAsync(rawOrder.Id);
                     return;
                 }
@@ -213,6 +215,96 @@ namespace Bagile.EtlService.Services
 
             return string.Empty;
         }
+
+        private (string email, string first, string last, string company, string sku) ExtractTransferFallbackData(string payload)
+        {
+            using var doc = JsonDocument.Parse(payload);
+
+            var root = doc.RootElement;
+
+            var billing = root.GetProperty("billing");
+            string email = billing.GetProperty("email").GetString() ?? "";
+            string first = billing.GetProperty("first_name").GetString() ?? "";
+            string last = billing.GetProperty("last_name").GetString() ?? "";
+            string company = billing.GetProperty("company").GetString() ?? "";
+
+            string sku = "";
+            if (root.TryGetProperty("line_items", out var items) && items.ValueKind == JsonValueKind.Array)
+            {
+                if (items[0].TryGetProperty("sku", out var skuProp))
+                    sku = skuProp.GetString() ?? "";
+            }
+
+            return (email, first, last, company, sku);
+        }
+
+        private async Task<bool> ProcessTransferOrderAsync(RawOrder rawOrder)
+        {
+            try
+            {
+                var (email, first, last, company, sku) = ExtractTransferFallbackData(rawOrder.Payload);
+
+                if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(sku))
+                {
+                    _logger.LogWarning("Transfer fallback aborted for RawOrder {Id}. Missing email or sku.", rawOrder.Id);
+                    return false;
+                }
+
+                // Look up schedule
+                var scheduleId = await _courseRepo.GetIdBySkuAsync(sku);
+                if (!scheduleId.HasValue)
+                {
+                    _logger.LogWarning("No schedule found for SKU {Sku} in RawOrder {Id}.", sku, rawOrder.Id);
+                    return false;
+                }
+
+                // Upsert student
+                var studentId = await _studentRepo.UpsertAsync(new Student
+                {
+                    Email = email,
+                    FirstName = first,
+                    LastName = last,
+                    Company = company
+                });
+
+                // Upsert order (minimal)
+                var order = new Order
+                {
+                    RawOrderId = rawOrder.Id,
+                    ExternalId = rawOrder.ExternalId,
+                    BillingCompany = company,
+                    ContactEmail = email,
+                    ContactName = $"{first} {last}",
+                    Source = "woo",
+                    Status = "completed",
+                    TotalQuantity = 1, // transfer orders always 1 attendee
+                    OrderDate = rawOrder.CreatedAt
+                };
+
+                var orderId = await _orderRepo.UpsertOrderAsync(order, CancellationToken.None);
+
+                // Create enrolment
+                await _enrolmentRepo.InsertAsync(new Enrolment
+                {
+                    StudentId = studentId,
+                    CourseScheduleId = scheduleId.Value,
+                    OrderId = orderId,
+                    Status = "active",
+                    OriginalSku = sku,
+                    TransferReason = "transfer_detected"
+                });
+
+                _logger.LogInformation("Transfer fallback handled RawOrder {Id}. SKU={Sku}.", rawOrder.Id, sku);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in ProcessTransferOrderAsync for RawOrder {Id}", rawOrder.Id);
+                return false;
+            }
+        }
+
 
         private async Task ValidateEnrolmentConsistencyAsync(Order order, long orderId)
         {
