@@ -311,6 +311,198 @@ public class TransferOrderBugTests
 
     }
 
+    [Test]
+    [Order(6)]
+    public async Task Fix_TransferOrder_CourseScheduleIdPopulated_ViaSku()
+    {
+        // Arrange - Create transfer order with SKU that exists in DB
+        var transferOrderJson = @"{
+        ""id"": 88888,
+        ""status"": ""completed"",
+        ""total"": ""950"",
+        ""total_tax"": ""0"",
+        ""currency"": ""GBP"",
+        ""date_created"": ""2025-01-01T10:00:00"",
+        ""number"": ""88888"",
+        ""billing"": {
+            ""first_name"": ""Transfer"",
+            ""last_name"": ""Test"",
+            ""email"": ""transfer-fix@test.com"",
+            ""company"": ""Fix Test Corp""
+        },
+        ""line_items"": [
+            {
+                ""id"": 1,
+                ""product_id"": 99999,
+                ""name"": ""PSPO Course"",
+                ""sku"": ""PSPO-010125-AB"",
+                ""quantity"": 1,
+                ""price"": ""950""
+            }
+        ],
+        ""meta_data"": []
+    }";
+
+        await _db.ExecuteAsync(@"
+        INSERT INTO bagile.raw_orders (source, external_id, payload, event_type, status)
+        VALUES ('woo', 'TEST-88888', @payload::jsonb, 'import', 'pending')
+        ON CONFLICT DO NOTHING
+    ", new { payload = transferOrderJson });
+
+        var transformer = CreateRawOrderTransformer();
+
+        // Act
+        await transformer.ProcessPendingAsync(CancellationToken.None);
+
+        // Assert - Order created
+        var order = await _db.QueryFirstOrDefaultAsync<dynamic>(
+            "SELECT * FROM bagile.orders WHERE external_id = '88888'");
+
+        Assert.That(order, Is.Not.Null, "order should be created");
+
+        var orderId = (long)order.id;
+
+        // Assert - Enrolment created WITH course_schedule_id
+        var enrolments = await _db.QueryAsync<dynamic>(
+            "SELECT * FROM bagile.enrolments WHERE order_id = @orderId",
+            new { orderId });
+
+        enrolments.Should().HaveCount(1, "one enrolment should be created");
+
+        var enrolment = enrolments.First();
+
+        // ✅ THE FIX: course_schedule_id should NOT be null
+        Assert.That(enrolment.course_schedule_id, Is.Not.Null,
+            "course_schedule_id should be resolved via SKU lookup");
+
+        // Verify it's the correct course schedule
+        var courseSchedule = await _db.QueryFirstOrDefaultAsync<dynamic>(
+            "SELECT * FROM bagile.course_schedules WHERE id = @id",
+            new { id = enrolment.course_schedule_id });
+
+        Assert.That(courseSchedule, Is.Not.Null);
+        Assert.That(courseSchedule.sku, Is.EqualTo("PSPO-010125-AB"));
+
+    }
+
+    [Test]
+    [Order(7)]
+    public async Task Fix_TransferOrder_WithInvalidSku_GracefullyHandles()
+    {
+        // Arrange - Transfer order with SKU that DOESN'T exist
+        var transferOrderJson = @"{
+        ""id"": 77777,
+        ""status"": ""completed"",
+        ""total"": ""950"",
+        ""currency"": ""GBP"",
+        ""date_created"": ""2025-01-01T10:00:00"",
+        ""billing"": {
+            ""email"": ""invalid-sku@test.com"",
+            ""first_name"": ""Invalid"",
+            ""last_name"": ""Sku""
+        },
+        ""line_items"": [
+            {
+                ""product_id"": 88888,
+                ""sku"": ""INVALID-SKU-999"",
+                ""quantity"": 1
+            }
+        ],
+        ""meta_data"": []
+    }";
+
+        await _db.ExecuteAsync(@"
+        INSERT INTO bagile.raw_orders (source, external_id, payload, event_type, status)
+        VALUES ('woo', 'TEST-77777', @payload::jsonb, 'import', 'pending')
+    ", new { payload = transferOrderJson });
+
+        var transformer = CreateRawOrderTransformer();
+
+        // Act
+        await transformer.ProcessPendingAsync(CancellationToken.None);
+
+        // Assert - Order created
+        var order = await _db.QueryFirstOrDefaultAsync<dynamic>(
+            "SELECT * FROM bagile.orders WHERE external_id = '77777'");
+
+        Assert.That(order, Is.Not.Null);
+        var orderId = (long)order.id;
+
+        // Enrolment created but with NULL course_schedule_id (graceful degradation)
+        var enrolments = await _db.QueryAsync<dynamic>(
+            "SELECT * FROM bagile.enrolments WHERE order_id = @orderId",
+            new { orderId });
+
+        enrolments.Should().HaveCount(1, "enrolment still created even with invalid SKU");
+
+        var enrolment = enrolments.First();
+        Assert.That(enrolment.course_schedule_id, Is.Null,
+            "course_schedule_id should be null when SKU not found in DB");
+    }
+
+    [Test]
+    [Order(8)]
+    public async Task Fix_NormalOrder_WithProductId_StillWorks()
+    {
+        // Arrange - Ensure normal orders with valid product_id still work
+        var scheduleId = await _db.ExecuteScalarAsync<long>(@"
+        INSERT INTO bagile.course_schedules 
+            (name, sku, source_system, source_product_id, start_date, status)
+        VALUES 
+            ('Normal Order Test', 'NORMAL-SKU', 'woo', 55555, '2025-01-01', 'publish')
+        RETURNING id;
+    ");
+
+        var normalOrderJson = @"{
+        ""id"": 66666,
+        ""status"": ""completed"",
+        ""currency"": ""GBP"",
+        ""date_created"": ""2025-01-01T10:00:00"",
+        ""billing"": {
+            ""email"": ""normal@test.com"",
+            ""first_name"": ""Normal"",
+            ""last_name"": ""Order""
+        },
+        ""line_items"": [
+            {
+                ""product_id"": 55555,
+                ""sku"": ""NORMAL-SKU"",
+                ""quantity"": 1
+            }
+        ],
+        ""meta_data"": []
+    }";
+
+        await _db.ExecuteAsync(@"
+        INSERT INTO bagile.raw_orders (source, external_id, payload, event_type, status)
+        VALUES ('woo', 'TEST-66666', @payload::jsonb, 'import', 'pending')
+    ", new { payload = normalOrderJson });
+
+        var transformer = CreateRawOrderTransformer();
+
+        // Act
+        await transformer.ProcessPendingAsync(CancellationToken.None);
+
+        // Assert
+        var order = await _db.QueryFirstOrDefaultAsync<dynamic>(
+            "SELECT * FROM bagile.orders WHERE external_id = '66666'");
+
+        var orderId = (long)order.id;
+
+        var enrolments = await _db.QueryAsync<dynamic>(
+            "SELECT * FROM bagile.enrolments WHERE order_id = @orderId",
+            new { orderId });
+
+        enrolments.Should().HaveCount(1);
+
+        var enrolment = enrolments.First();
+
+        // Should resolve via product_id (original path)
+        var courseScheduleId = (long)enrolment.course_schedule_id;
+        courseScheduleId.Should().Be(scheduleId,
+            "normal orders should still resolve via product_id");
+    }
+
     private RawOrderTransformer CreateRawOrderTransformer()
     {
         var orderRepo = new OrderRepository(_connectionString);

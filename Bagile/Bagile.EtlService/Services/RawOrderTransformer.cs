@@ -1,14 +1,8 @@
-﻿using System;
-using System.Linq;
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.Text.Json;
 using Bagile.Domain.Entities;
 using Bagile.Domain.Repositories;
 using Bagile.EtlService.Mappers;
-using Bagile.EtlService.Models;
 using Bagile.Infrastructure.Clients;
-using Microsoft.Extensions.Logging;
 
 namespace Bagile.EtlService.Services
 {

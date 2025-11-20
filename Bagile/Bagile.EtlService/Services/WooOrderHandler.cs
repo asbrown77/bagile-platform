@@ -145,6 +145,49 @@ namespace Bagile.EtlService.Services
             return schedule?.Id;
         }
 
+        private async Task<long?> ResolveCourseScheduleByProductOrSkuAsync(
+            long? productId,
+            JsonElement lineItem,
+            long orderId)
+        {
+            // Try product_id first (existing behavior)
+            if (productId.HasValue)
+            {
+                var scheduleId = await ResolveCourseScheduleAsync(productId);
+                if (scheduleId.HasValue)
+                {
+                    return scheduleId;
+                }
+            }
+
+            if (lineItem.TryGetProperty("sku", out var skuProp))
+            {
+                var sku = skuProp.GetString();
+                if (!string.IsNullOrWhiteSpace(sku))
+                {
+                    var scheduleId = await _courseRepo.GetIdBySkuAsync(sku);
+                    if (scheduleId.HasValue)
+                    {
+                        _logger.LogInformation(
+                            "Transfer order {OrderId}: Resolved course schedule {ScheduleId} by SKU '{Sku}'",
+                            orderId,
+                            scheduleId,
+                            sku);
+                        return scheduleId;
+                    }
+                    else
+                    {
+                        _logger.LogWarning(
+                            "Transfer order {OrderId}: Could not find course schedule for SKU '{Sku}'",
+                            orderId,
+                            sku);
+                    }
+                }
+            }
+
+            return null;
+        }
+
         private bool IsInternalTransferOrder(RawOrder rawOrder)
         {
             try
@@ -607,7 +650,10 @@ namespace Bagile.EtlService.Services
                 }
 
                 // Look up course schedule by product_id
-                var courseScheduleId = await ResolveCourseScheduleAsync(productId);
+                var courseScheduleId = await ResolveCourseScheduleByProductOrSkuAsync(
+                    productId,
+                    item,
+                    orderId);
 
                 if (!courseScheduleId.HasValue)
                 {
