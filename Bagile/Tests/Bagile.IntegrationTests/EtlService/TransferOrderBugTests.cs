@@ -503,6 +503,176 @@ public class TransferOrderBugTests
             "normal orders should still resolve via product_id");
     }
 
+    [Test]
+    public async Task Transfer_Order_Should_Create_Transfer_Enrolment_But_Does_Not()
+    {
+        // Unique IDs prevent pollution from previous tests
+        var transferExternalId = $"TEST-{Guid.NewGuid()}";
+        var oldExternalId = $"TEST-OLD-{Guid.NewGuid()}";
+
+        // Arrange old schedule
+        var oldScheduleId = await SeedCourseScheduleAsync(
+            sku: "PSPO-071025-AB",
+            startDate: new DateTime(2025, 10, 7)
+        );
+
+        // Arrange new schedule for transfer
+        var newScheduleId = await SeedCourseScheduleAsync(
+            sku: "PSPOA-241125-AB",
+            startDate: new DateTime(2025, 11, 24)
+        );
+
+        var studentId = await SeedStudentAsync(
+            email: "transfer@test.com",
+            first: "Chris",
+            last: "Transfer",
+            company: "Bagile Ltd"
+        );
+
+        var oldOrderId = await SeedOrderAsync(
+            externalId: oldExternalId,
+            company: "Bagile Ltd",
+            email: "transfer@test.com",
+            createdAt: new DateTime(2025, 10, 7)
+        );
+
+        await SeedEnrolmentAsync(
+            orderId: oldOrderId,
+            studentId: studentId,
+            scheduleId: oldScheduleId
+        );
+
+        // Minimal transfer JSON with UNIQUE external id
+        var payload = $@"
+        {{
+            ""id"": ""{transferExternalId}"",
+            ""number"": ""{transferExternalId}"",
+            ""status"": ""completed"",
+            ""billing"": {{
+                ""email"": ""transfer@test.com"",
+                ""first_name"": ""Chris"",
+                ""last_name"": ""Transfer"",
+                ""company"": ""Bagile Ltd""
+            }},
+            ""line_items"": [
+                {{
+                    ""sku"": ""PSPOA-241125-AB"",
+                    ""quantity"": 1
+                }}
+            ],
+            ""meta_data"": []
+        }}";
+
+
+        // Insert raw transfer order
+        await _db.ExecuteAsync(@"
+        INSERT INTO bagile.raw_orders
+        (source, external_id, payload, event_type, status)
+        VALUES ('woo', @extId, @p::jsonb, 'import', 'pending')
+    ", new { extId = transferExternalId, p = payload });
+
+        // Act
+        await CreateRawOrderTransformer().ProcessPendingAsync(CancellationToken.None);
+
+        // Assert
+        var rows = (await _db.QueryAsync<dynamic>(@"
+        SELECT e.*
+        FROM bagile.enrolments e
+        JOIN bagile.orders o ON o.id = e.order_id
+        WHERE o.external_id IN (@oldExtId, @newExtId)
+        ORDER BY e.id
+    ", new { oldExtId = oldExternalId, newExtId = transferExternalId })).ToList();
+
+        rows.Should().HaveCount(2, "a new transfer enrolment should be created but isn't");
+    }
+
+    [Test]
+    public async Task Transfer_Order_Should_Create_Transfer_Enrolment_And_Link_To_Original()
+    {
+        // Arrange. Seed ORIGINAL enrolment on old order 12096
+        var oldScheduleId = await SeedCourseScheduleAsync(
+            sku: "PSPOA-071025-CB",
+            startDate: new DateTime(2025, 10, 7)
+        );
+
+        var studentId = await SeedStudentAsync(
+            email: "chris@test-transfer.com",
+            first: "Chris",
+            last: "Transfer",
+            company: "BAgile Limited"
+        );
+
+        var oldOrderId = await SeedOrderAsync(
+            externalId: "12096",
+            company: "BAgile Limited",
+            email: "chris@test-transfer.com",
+            createdAt: new DateTime(2025, 10, 7, 13, 0, 0)
+        );
+
+        var oldEnrolmentId = await SeedEnrolmentAsync(
+            orderId: oldOrderId,
+            studentId: studentId,
+            scheduleId: oldScheduleId
+        );
+
+        // IMPORTANT: Seed schedule that matches the transfer order SKU
+        // From woo-order-12164.json -> "sku": "PSPOA-241125-AB"
+        var transferScheduleId = await SeedCourseScheduleAsync(
+            sku: "PSPOA-241125-AB",
+            startDate: new DateTime(2025, 11, 24)
+        );
+
+        // Arrange. Insert raw transfer order from real Woo JSON
+        var jsonPath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData",
+            "woo-order-12164.json"
+        );
+
+        var rawJson = File.ReadAllText(jsonPath)
+            .Replace("\"id\": 12164", "\"id\": 99999")
+            .Replace("chrisbexon@bagile.co.uk", "chris@test-transfer.com");
+
+        await _db.ExecuteAsync(@"
+        INSERT INTO bagile.raw_orders (source, external_id, payload, event_type, status)
+        VALUES ('woo', '12164', @payload::jsonb, 'import', 'pending')
+        ON CONFLICT DO NOTHING;
+    ", new { payload = rawJson });
+
+        // Act
+        var transformer = CreateRawOrderTransformer();
+        await transformer.ProcessPendingAsync(CancellationToken.None);
+
+        // Assert
+        var rows = (await _db.QueryAsync<dynamic>(@"
+        SELECT 
+            o.external_id,
+            e.id,
+            e.status,
+            e.transferred_from_enrolment_id,
+            e.transferred_to_enrolment_id,
+            e.course_schedule_id
+        FROM bagile.orders o
+        JOIN bagile.enrolments e ON e.order_id = o.id
+        WHERE o.external_id IN ('12096','12164')
+        ORDER BY o.external_id, e.id;
+    ")).ToList();
+
+        rows.Should().HaveCount(2);
+
+        var original = rows.Single(r => r.external_id == "12096");
+        var transfer = rows.Single(r => r.external_id == "12164");
+
+        ((string)original.status).Should().Be("transferred");
+        ((long?)original.transferred_to_enrolment_id).Should().NotBeNull();
+
+        ((string)transfer.status).Should().Be("active");
+        ((long?)transfer.transferred_from_enrolment_id).Should().Be((long?)original.id);
+
+        // FIXED: This now passes because we seeded the correct schedule
+        ((long?)transfer.course_schedule_id).Should().NotBeNull();
+    }
+
     private RawOrderTransformer CreateRawOrderTransformer()
     {
         var orderRepo = new OrderRepository(_connectionString);
@@ -531,4 +701,113 @@ public class TransferOrderBugTests
             NullLogger<RawOrderTransformer>.Instance
         );
     }
+
+    //
+    // SEED HELPERS
+    //
+
+    private async Task<long> SeedCourseScheduleAsync(string sku, DateTime startDate)
+    {
+        return await _db.ExecuteScalarAsync<long>(@"
+        INSERT INTO bagile.course_schedules
+            (name, sku, source_system, source_product_id, start_date, status)
+        VALUES
+            (@name, @sku, 'woo', FLOOR(RANDOM() * 90000 + 10000), @startDate, 'publish')
+        RETURNING id;
+    ", new
+        {
+            name = $"Seeded {sku}",
+            sku,
+            startDate
+        });
+    }
+
+    private async Task<long> SeedStudentAsync(string email, string first, string last, string company)
+    {
+        return await _db.ExecuteScalarAsync<long>(@"
+        INSERT INTO bagile.students (email, first_name, last_name, company)
+        VALUES (@email, @first, @last, @company)
+        ON CONFLICT (email) DO UPDATE
+        SET first_name = EXCLUDED.first_name,
+            last_name  = EXCLUDED.last_name,
+            company    = EXCLUDED.company
+        RETURNING id;
+    ", new { email, first, last, company });
+    }
+
+    private async Task<long> SeedOrderAsync(
+        string externalId,
+        string company,
+        string email,
+        DateTime createdAt)
+    {
+        return await _db.ExecuteScalarAsync<long>(@"
+        INSERT INTO bagile.orders
+        (
+            external_id,
+            source,
+            type,
+            reference,
+            billing_company,
+            contact_email,
+            total_amount,
+            total_tax,
+            sub_total,
+            total_quantity,
+            status,
+            order_date,
+            created_at,
+            updated_at
+        )
+        VALUES
+        (
+            @externalId,
+            'woo',
+            'public',            -- REQUIRED
+            NULL,
+            @company,
+            @Email,
+            0,                    -- required NOT NULL
+            0,                    -- required NOT NULL
+            0,                    -- required NOT NULL
+            1,                    -- required NOT NULL
+            'completed',
+            @CreatedAt,
+            @CreatedAt,
+            @CreatedAt
+        )
+        ON CONFLICT (external_id) DO UPDATE SET
+            billing_company = EXCLUDED.billing_company,
+            contact_email  = EXCLUDED.contact_email,
+            order_date     = EXCLUDED.order_date,
+            updated_at     = NOW()
+        RETURNING id;
+    ",
+            new
+            {
+                externalId,
+                Email = email,
+                Company = company,
+                CreatedAt = createdAt
+            });
+    }
+
+
+    private async Task<long> SeedEnrolmentAsync(long orderId, long studentId, long scheduleId)
+    {
+        return await _db.ExecuteScalarAsync<long>(@"
+        INSERT INTO bagile.enrolments
+            (order_id, student_id, course_schedule_id, status, created_at)
+        VALUES
+            (@orderId, @studentId, @scheduleId, 'active', NOW())
+        RETURNING id;
+    ", new
+        {
+            orderId,
+            studentId,
+            scheduleId
+        });
+    }
+
+
 }

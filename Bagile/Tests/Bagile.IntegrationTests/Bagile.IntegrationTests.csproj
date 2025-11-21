@@ -9,6 +9,16 @@
     <PreserveCompilationContext>true</PreserveCompilationContext>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Remove="TestData\woo-order-12164.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="TestData\woo-order-12164.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 
   <ItemGroup>
     <None Update="appsettings.Development.json">

@@ -1,0 +1,160 @@
+{
+  "id": 12164,
+  "total": "1314",
+  "_links": {
+    "self": [
+      {
+        "href": "https://www.bagile.co.uk/wp-json/wc/v3/orders/12164",
+        "targetHints": {
+          "allow": [ "GET", "POST", "PUT", "PATCH", "DELETE" ]
+        }
+      }
+    ],
+    "customer": [
+      {
+        "href": "https://www.bagile.co.uk/wp-json/wc/v3/customers/2"
+      }
+    ],
+    "collection": [
+      {
+        "href": "https://www.bagile.co.uk/wp-json/wc/v3/orders"
+      }
+    ],
+    "email_templates": [
+      {
+        "href": "https://www.bagile.co.uk/wp-json/wc/v3/orders/12164/actions/email_templates",
+        "embeddable": true
+      }
+    ]
+  },
+  "number": "12164",
+  "status": "completed",
+  "billing": {
+    "city": "Rugby",
+    "email": "chrisbexon@bagile.co.uk",
+    "phone": "07837254938",
+    "state": "Warwickshire",
+    "company": "BAgile Limited",
+    "country": "GB",
+    "postcode": "CV22 7NN",
+    "address_1": "2b",
+    "address_2": "Dalkeith Avenue",
+    "last_name": "Bexon",
+    "first_name": "Chris"
+  },
+  "refunds": [],
+  "version": "10.2.2",
+  "cart_tax": "219",
+  "currency": "GBP",
+  "shipping": {
+    "city": "Rugby",
+    "phone": "07837254938",
+    "state": "Warwickshire",
+    "company": "BAgile Limited",
+    "country": "GB",
+    "postcode": "CV22 7NN",
+    "address_1": "2b",
+    "address_2": "Dalkeith Avenue",
+    "last_name": "Bexon",
+    "first_name": "Chris"
+  },
+  "cart_hash": "",
+  "date_paid": "2025-10-07T13:48:32",
+  "fee_lines": [],
+  "meta_data": [
+    {
+      "id": 476758,
+      "key": "_wc_order_attribution_source_type",
+      "value": "admin"
+    },
+    {
+      "id": 476773,
+      "key": "_shipping_email",
+      "value": "chrisbexon@bagile.co.uk"
+    },
+    {
+      "id": 476781,
+      "key": "WooCommerceEventsOrderAdminAddTicket",
+      "value": "yes"
+    },
+    {
+      "id": 476782,
+      "key": "WooCommerceEventsTicketsGenerated",
+      "value": "yes"
+    }
+  ],
+  "order_key": "wc_order_oBVKOhbOtpljf",
+  "parent_id": 0,
+  "tax_lines": [
+    {
+      "id": 5331,
+      "label": "VAT",
+      "rate_id": 1,
+      "compound": false,
+      "meta_data": [],
+      "rate_code": "GB-VAT-1",
+      "tax_total": "219",
+      "rate_percent": 20,
+      "shipping_tax_total": "0"
+    }
+  ],
+  "total_tax": "219",
+  "line_items": [
+    {
+      "id": 5330,
+      "sku": "PSPOA-241125-AB",
+      "name": "Professional Scrum Product Owner Advanced™ - 24-25 Nov 25",
+      "image": {
+        "id": "105",
+        "src": "https://www.bagile.co.uk/wp-content/uploads/2021/04/Scrumorg-PSPOA_outertext-1000.png"
+      },
+      "price": 1095,
+      "taxes": [
+        {
+          "id": 1,
+          "total": "219",
+          "subtotal": "219"
+        }
+      ],
+      "total": "1095",
+      "quantity": 1,
+      "subtotal": "1095",
+      "meta_data": [],
+      "tax_class": "",
+      "total_tax": "219",
+      "product_id": 11854,
+      "parent_name": null,
+      "subtotal_tax": "219",
+      "variation_id": 0,
+      "global_unique_id": ""
+    }
+  ],
+  "created_via": "",
+  "customer_id": 2,
+  "is_editable": false,
+  "payment_url": "https://www.bagile.co.uk/checkout/order-pay/12164/?pay_for_order=true&key=wc_order_oBVKOhbOtpljf",
+  "coupon_lines": [],
+  "date_created": "2025-10-07T13:48:32",
+  "discount_tax": "0",
+  "shipping_tax": "0",
+  "customer_note": "",
+  "date_modified": "2025-10-07T13:48:32",
+  "date_paid_gmt": "2025-10-07T12:48:32",
+  "needs_payment": false,
+  "date_completed": "2025-10-07T13:48:32",
+  "discount_total": "0",
+  "payment_method": "",
+  "shipping_lines": [],
+  "shipping_total": "0",
+  "transaction_id": "",
+  "currency_symbol": "£",
+  "date_created_gmt": "2025-10-07T12:48:32",
+  "needs_processing": true,
+  "date_modified_gmt": "2025-10-07T12:48:32",
+  "date_completed_gmt": "2025-10-07T12:48:32",
+  "prices_include_tax": false,
+  "customer_ip_address": "86.25.104.148",
+  "customer_user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+  "payment_method_title": "",
+  "publishpress_future_workflow_manual_trigger": { "enabledWorkflows": [] }
+}

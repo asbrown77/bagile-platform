@@ -20,8 +20,8 @@ namespace Bagile.Infrastructure.Repositories
                 VALUES (@StudentId, @OrderId, @CourseScheduleId)
                 ON CONFLICT (student_id, order_id, course_schedule_id) DO NOTHING;";
 
-            await using var c = new NpgsqlConnection(_conn);
-            await c.ExecuteAsync(sql, enrolment);
+            await using var conn = new NpgsqlConnection(_conn);
+            await conn.ExecuteAsync(sql, enrolment);
         }
 
         public async Task<int> CountByOrderIdAsync(long orderId)
@@ -31,18 +31,46 @@ namespace Bagile.Infrastructure.Repositories
             return await conn.ExecuteScalarAsync<int>(sql, new { orderId });
         }
 
+        public async Task<Enrolment?> FindActiveByStudentEmailAsync(string email)
+        {
+            const string sql = @"
+                SELECT e.*
+                FROM bagile.enrolments e
+                JOIN bagile.students s ON e.student_id = s.id
+                WHERE s.email = @email
+                  AND e.status = 'active'
+                ORDER BY e.created_at DESC
+                LIMIT 1;";
+
+            await using var conn = new NpgsqlConnection(_conn);
+            return await conn.QueryFirstOrDefaultAsync<Enrolment>(sql, new { email });
+        }
+
+        public async Task MarkTransferredAsync(long enrolmentId, long transferredToEnrolmentId)
+        {
+            const string sql = @"
+                UPDATE bagile.enrolments
+                SET status = 'transferred',
+                    transferred_to_enrolment_id = @toId,
+                    updated_at = NOW()
+                WHERE id = @id;";
+
+            await using var conn = new NpgsqlConnection(_conn);
+            await conn.ExecuteAsync(sql, new { id = enrolmentId, toId = transferredToEnrolmentId });
+        }
+
         public async Task<long> InsertAsync(Enrolment enrolment)
         {
             const string sql = @"
-        INSERT INTO bagile.enrolments
-            (student_id, order_id, course_schedule_id, status,
-             transferred_from_enrolment_id, original_sku,
-             transfer_reason, transfer_notes, refund_eligible)
-        VALUES
-            (@StudentId, @OrderId, @CourseScheduleId, @Status,
-             @TransferredFromEnrolmentId, @OriginalSku,
-             @TransferReason, @TransferNotes, @RefundEligible)
-        RETURNING id;";
+                INSERT INTO bagile.enrolments
+                    (student_id, order_id, course_schedule_id, status,
+                     transferred_from_enrolment_id, original_sku,
+                     transfer_reason, transfer_notes, refund_eligible)
+                VALUES
+                    (@StudentId, @OrderId, @CourseScheduleId, @Status,
+                     @TransferredFromEnrolmentId, @OriginalSku,
+                     @TransferReason, @TransferNotes, @RefundEligible)
+                RETURNING id;";
 
             await using var conn = new NpgsqlConnection(_conn);
             return await conn.ExecuteScalarAsync<long>(sql, enrolment);
@@ -54,13 +82,13 @@ namespace Bagile.Infrastructure.Repositories
             string sku)
         {
             const string sql = @"
-        SELECT e.*
-        FROM bagile.enrolments e
-        JOIN bagile.course_schedules cs ON e.course_schedule_id = cs.id
-        WHERE e.order_id = @orderId
-          AND e.student_id = @studentId
-          AND cs.sku = @sku
-          AND e.status != 'transferred';";
+                SELECT e.*
+                FROM bagile.enrolments e
+                JOIN bagile.course_schedules cs ON e.course_schedule_id = cs.id
+                WHERE e.order_id = @orderId
+                  AND e.student_id = @studentId
+                  AND cs.sku = @sku
+                  AND e.status != 'transferred';";
 
             await using var conn = new NpgsqlConnection(_conn);
             return await conn.QueryFirstOrDefaultAsync<Enrolment>(
@@ -74,11 +102,11 @@ namespace Bagile.Infrastructure.Repositories
             long? transferredToEnrolmentId = null)
         {
             const string sql = @"
-        UPDATE bagile.enrolments
-        SET status = @status,
-            transferred_to_enrolment_id = @transferredToEnrolmentId,
-            updated_at = NOW()
-        WHERE id = @enrolmentId;";
+                UPDATE bagile.enrolments
+                SET status = @status,
+                    transferred_to_enrolment_id = @transferredToEnrolmentId,
+                    updated_at = NOW()
+                WHERE id = @enrolmentId;";
 
             await using var conn = new NpgsqlConnection(_conn);
             await conn.ExecuteAsync(sql, new { enrolmentId, status, transferredToEnrolmentId });
@@ -87,9 +115,10 @@ namespace Bagile.Infrastructure.Repositories
         public async Task<IEnumerable<Enrolment>> GetByOrderIdAsync(long orderId)
         {
             const string sql = @"
-        SELECT * FROM bagile.enrolments
-        WHERE order_id = @orderId
-        ORDER BY created_at;";
+                SELECT * 
+                FROM bagile.enrolments
+                WHERE order_id = @orderId
+                ORDER BY created_at;";
 
             await using var conn = new NpgsqlConnection(_conn);
             return await conn.QueryAsync<Enrolment>(sql, new { orderId });
@@ -100,15 +129,15 @@ namespace Bagile.Infrastructure.Repositories
             string courseFamilyPrefix)
         {
             const string sql = @"
-        SELECT e.*
-        FROM bagile.enrolments e
-        JOIN bagile.course_schedules cs ON cs.id = e.course_schedule_id
-        JOIN bagile.orders o ON o.id = e.order_id
-        WHERE e.student_id = @studentId
-          AND e.status = 'active'
-          AND cs.sku ILIKE @skuPattern
-          AND COALESCE(o.billing_company, '') NOT IN ('b-agile', 'bagile', 'b agile')
-        ORDER BY e.created_at DESC;";
+                SELECT e.*
+                FROM bagile.enrolments e
+                JOIN bagile.course_schedules cs ON cs.id = e.course_schedule_id
+                JOIN bagile.orders o ON o.id = e.order_id
+                WHERE e.student_id = @studentId
+                  AND e.status = 'active'
+                  AND cs.sku ILIKE @skuPattern
+                  AND COALESCE(o.billing_company, '') NOT IN ('b-agile', 'bagile', 'b agile')
+                ORDER BY e.created_at DESC;";
 
             await using var conn = new NpgsqlConnection(_conn);
             var results = (await conn.QueryAsync<Enrolment>(
@@ -119,7 +148,6 @@ namespace Bagile.Infrastructure.Repositories
             if (results.Count == 1)
                 return results[0];
 
-            // 0 or many = ambiguous, let caller fall back to normal enrolment
             return null;
         }
     }

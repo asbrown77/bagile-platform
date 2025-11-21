@@ -73,28 +73,61 @@ namespace Bagile.EtlService.Services
             }
         }
 
+        private bool IsTransferOrder(string payload)
+        {
+            using var doc = JsonDocument.Parse(payload);
+            var root = doc.RootElement;
+
+            // A transfer order ALWAYS has line_items
+            if (!root.TryGetProperty("line_items", out var items) ||
+                items.ValueKind != JsonValueKind.Array)
+                return false;
+
+            // If WooCommerceEventsOrderTickets exists, this is NOT a transfer
+            if (root.TryGetProperty("meta_data", out var meta) &&
+                meta.EnumerateArray().Any(m =>
+                    m.TryGetProperty("key", out var key) &&
+                    key.GetString() == "WooCommerceEventsOrderTickets"))
+                return false;
+
+            // Otherwise this is a transfer
+            return true;
+        }
+
+
         private async Task ProcessSingleOrderAsync(RawOrder rawOrder, CancellationToken token)
         {
             try
             {
                 token.ThrowIfCancellationRequested();
 
-                // Handle Xero webhook envelopes first
+                // 1. Xero webhook envelopes
                 if (await TryEnrichXeroWebhookAsync(rawOrder, token))
-                    return; // handled, now a new full invoice exists in raw_orders
+                    return;
 
-                // Normal order mapping flow
-                var order = OrderMapper.MapFromRaw(rawOrder);
-                if (order == null)
+                // 2. Woo transfer orders, handled by our custom path
+                if (rawOrder.Source.Equals(WooSource, StringComparison.OrdinalIgnoreCase)
+                    && IsTransferOrder(rawOrder.Payload))
                 {
-                    var handled = await ProcessTransferOrderAsync(rawOrder);
+                    var handled = await HandleTransferOrderAsync(rawOrder);
+
                     if (handled)
                     {
                         await _rawRepo.MarkProcessedAsync(rawOrder.Id);
                         return;
                     }
 
-                    _logger.LogInformation("Skipping RawOrder {Id}. Not actionable and no transfer fallback possible.", rawOrder.Id);
+                    // If not handled, fall through to normal mapping
+                    _logger.LogWarning(
+                        "Transfer detection for RawOrder {Id} failed to handle. Falling back to normal mapping.",
+                        rawOrder.Id);
+                }
+
+                // 3. Normal order mapping
+                var order = OrderMapper.MapFromRaw(rawOrder);
+                if (order == null)
+                {
+                    _logger.LogInformation("Skipping RawOrder {Id}. Not actionable.", rawOrder.Id);
                     await _rawRepo.MarkProcessedAsync(rawOrder.Id);
                     return;
                 }
@@ -238,72 +271,124 @@ namespace Bagile.EtlService.Services
             return (email, first, last, company, sku);
         }
 
-        private async Task<bool> ProcessTransferOrderAsync(RawOrder rawOrder)
+private async Task<bool> HandleTransferOrderAsync(RawOrder rawOrder)
+{
+    try
+    {
+        var (email, first, last, company, sku) = ExtractTransferFallbackData(rawOrder.Payload);
+
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(sku))
         {
-            try
+            _logger.LogWarning("Transfer detection. missing email or sku on RawOrder {Id}", rawOrder.Id);
+            return false;
+        }
+
+        // 1. Extract Woo number and date_created so we behave like normal mapping
+        string externalId = rawOrder.ExternalId;
+        DateTime orderDate = rawOrder.CreatedAt;
+
+        using (var doc = JsonDocument.Parse(rawOrder.Payload))
+        {
+            var root = doc.RootElement;
+
+            if (root.TryGetProperty("number", out var numProp))
             {
-                var (email, first, last, company, sku) = ExtractTransferFallbackData(rawOrder.Payload);
-
-                if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(sku))
-                {
-                    _logger.LogWarning("Transfer fallback aborted for RawOrder {Id}. Missing email or sku.", rawOrder.Id);
-                    return false;
-                }
-
-                // Look up schedule
-                var scheduleId = await _courseRepo.GetIdBySkuAsync(sku);
-                if (!scheduleId.HasValue)
-                {
-                    _logger.LogWarning("No schedule found for SKU {Sku} in RawOrder {Id}.", sku, rawOrder.Id);
-                    return false;
-                }
-
-                // Upsert student
-                var studentId = await _studentRepo.UpsertAsync(new Student
-                {
-                    Email = email,
-                    FirstName = first,
-                    LastName = last,
-                    Company = company
-                });
-
-                // Upsert order (minimal)
-                var order = new Order
-                {
-                    RawOrderId = rawOrder.Id,
-                    ExternalId = rawOrder.ExternalId,
-                    BillingCompany = company,
-                    ContactEmail = email,
-                    ContactName = $"{first} {last}",
-                    Source = "woo",
-                    Status = "completed",
-                    TotalQuantity = 1, // transfer orders always 1 attendee
-                    OrderDate = rawOrder.CreatedAt
-                };
-
-                var orderId = await _orderRepo.UpsertOrderAsync(order, CancellationToken.None);
-
-                // Create enrolment
-                await _enrolmentRepo.InsertAsync(new Enrolment
-                {
-                    StudentId = studentId,
-                    CourseScheduleId = scheduleId.Value,
-                    OrderId = orderId,
-                    Status = "active",
-                    OriginalSku = sku,
-                    TransferReason = "transfer_detected"
-                });
-
-                _logger.LogInformation("Transfer fallback handled RawOrder {Id}. SKU={Sku}.", rawOrder.Id, sku);
-
-                return true;
+                var num = numProp.GetString();
+                if (!string.IsNullOrWhiteSpace(num))
+                    externalId = num;
             }
-            catch (Exception ex)
+
+            if (root.TryGetProperty("date_created", out var dateProp))
             {
-                _logger.LogError(ex, "Error in ProcessTransferOrderAsync for RawOrder {Id}", rawOrder.Id);
-                return false;
+                var dateStr = dateProp.GetString();
+                if (!string.IsNullOrWhiteSpace(dateStr) &&
+                    DateTime.TryParse(dateStr, out var parsed))
+                {
+                    orderDate = parsed;
+                }
             }
         }
+
+        // 2. Resolve schedule by SKU, but allow null for invalid SKU
+        long? scheduleId = await _courseRepo.GetIdBySkuAsync(sku);
+        if (!scheduleId.HasValue)
+        {
+            _logger.LogWarning("Transfer detection. no schedule found for SKU {Sku} on RawOrder {Id}", sku, rawOrder.Id);
+        }
+
+        // 3. Upsert student
+        var studentId = await _studentRepo.UpsertAsync(new Student
+        {
+            Email = email,
+            FirstName = first,
+            LastName = last,
+            Company = company
+        });
+
+        // 4. Create new order using Woo number as external id
+        var order = new Order
+        {
+            RawOrderId = rawOrder.Id,
+            ExternalId = externalId,
+            ContactEmail = email,
+            ContactName = $"{first} {last}",
+            BillingCompany = company,
+            Source = WooSource,
+            Status = "completed",
+            TotalQuantity = 1,
+            OrderDate = orderDate
+        };
+
+        var newOrderId = await _orderRepo.UpsertOrderAsync(order, CancellationToken.None);
+
+        // 5. Try find previous active enrolment for this student
+        var oldEnrol = await _enrolmentRepo.FindActiveByStudentEmailAsync(email);
+
+        long newEnrolId;
+
+        if (oldEnrol != null)
+        {
+            // 6a. New enrolment linked to previous one
+            newEnrolId = await _enrolmentRepo.InsertAsync(new Enrolment
+            {
+                OrderId = newOrderId,
+                StudentId = studentId,
+                CourseScheduleId = scheduleId,
+                Status = "active",
+                TransferredFromEnrolmentId = oldEnrol.Id,
+                TransferReason = "transfer_detected"
+            });
+
+            await _enrolmentRepo.MarkTransferredAsync(oldEnrol.Id, newEnrolId);
+        }
+        else
+        {
+            // 6b. No previous enrolment, still create one
+            newEnrolId = await _enrolmentRepo.InsertAsync(new Enrolment
+            {
+                OrderId = newOrderId,
+                StudentId = studentId,
+                CourseScheduleId = scheduleId,
+                Status = "active",
+                TransferReason = "transfer_detected_no_previous"
+            });
+        }
+
+        _logger.LogInformation(
+            "Handled transfer RawOrder {Id}. New order {OrderExternalId}, new enrolment {EnrolId}, previous enrolment {OldEnrolId}",
+            rawOrder.Id,
+            externalId,
+            newEnrolId,
+            oldEnrol?.Id);
+
+        return true;
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error in HandleTransferOrderAsync for RawOrder {Id}", rawOrder.Id);
+        return false;
+    }
+}
 
 
         private async Task ValidateEnrolmentConsistencyAsync(Order order, long orderId)
