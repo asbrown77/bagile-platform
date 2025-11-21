@@ -138,7 +138,9 @@ public class WooApiClientPaginationTests
             Times.AtLeastOnce(),
             ItExpr.Is<HttpRequestMessage>(req =>
                 req.RequestUri != null &&
-                req.RequestUri.ToString().Contains("status=publish,draft")),
+                req.RequestUri.ToString().Contains("status=publish") &&
+                req.RequestUri.ToString().Contains("status=draft")
+                ),
             ItExpr.IsAny<CancellationToken>()
         );
     }

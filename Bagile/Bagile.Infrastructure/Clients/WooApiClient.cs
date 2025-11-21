@@ -78,8 +78,11 @@ public class WooApiClient : IWooApiClient
             // Build URL with pagination
             var queryBuilder = new StringBuilder($"/wp-json/wc/v3/products?page={page}&per_page={pageSize}");
 
-            // Optional: only fetch published products (exclude drafts, private, etc.)
-            queryBuilder.Append("&status=publish,draft");
+            var statuses = new[] { "publish", "draft" };
+            foreach (var status in statuses)
+            {
+                queryBuilder.Append($"&status={status}");
+            }
 
             // Optional: incremental sync - only fetch modified products
             if (modifiedSince != null)
