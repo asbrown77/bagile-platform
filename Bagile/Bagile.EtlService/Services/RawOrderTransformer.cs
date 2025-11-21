@@ -249,29 +249,50 @@ namespace Bagile.EtlService.Services
             return string.Empty;
         }
 
-        private (string email, string first, string last, string company, string sku) ExtractTransferFallbackData(string payload)
+        private (string email, string first, string last, string company, string sku)
+            ExtractTransferFallbackData(string payload)
         {
             using var doc = JsonDocument.Parse(payload);
-
             var root = doc.RootElement;
 
-            var billing = root.GetProperty("billing");
-            string email = billing.GetProperty("email").GetString() ?? "";
-            string first = billing.GetProperty("first_name").GetString() ?? "";
-            string last = billing.GetProperty("last_name").GetString() ?? "";
-            string company = billing.GetProperty("company").GetString() ?? "";
+            // Billing block: always present in normal Woo orders
+            if (!root.TryGetProperty("billing", out var billing) ||
+                billing.ValueKind != JsonValueKind.Object)
+            {
+                return ("", "", "", "", "");
+            }
+
+            string email = billing.TryGetProperty("email", out var emailProp)
+                ? emailProp.GetString() ?? ""
+                : "";
+
+            string first = billing.TryGetProperty("first_name", out var fProp)
+                ? fProp.GetString() ?? ""
+                : "";
+
+            string last = billing.TryGetProperty("last_name", out var lProp)
+                ? lProp.GetString() ?? ""
+                : "";
+
+            string company = billing.TryGetProperty("company", out var compProp)
+                ? compProp.GetString() ?? ""
+                : "";
 
             string sku = "";
-            if (root.TryGetProperty("line_items", out var items) && items.ValueKind == JsonValueKind.Array)
+            if (root.TryGetProperty("line_items", out var items) &&
+                items.ValueKind == JsonValueKind.Array &&
+                items.GetArrayLength() > 0)
             {
-                if (items[0].TryGetProperty("sku", out var skuProp))
+                var firstItem = items[0];
+                if (firstItem.TryGetProperty("sku", out var skuProp))
                     sku = skuProp.GetString() ?? "";
             }
 
             return (email, first, last, company, sku);
         }
 
-private async Task<bool> HandleTransferOrderAsync(RawOrder rawOrder)
+
+        private async Task<bool> HandleTransferOrderAsync(RawOrder rawOrder)
 {
     try
     {

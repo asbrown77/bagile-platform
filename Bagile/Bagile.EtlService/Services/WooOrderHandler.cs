@@ -42,7 +42,7 @@ namespace Bagile.EtlService.Services
         {
             var isInternalTransfer = IsInternalTransferOrder(rawOrder);
 
-            // 1. Fast path: external orders with ticket data in the Woo payload
+            // 1. Fast path. external orders with ticket data in the Woo payload
             if (!isInternalTransfer)
             {
                 var legacyTickets = WooOrderTicketMapper.MapTickets(rawOrder.Payload).ToList();
@@ -58,7 +58,7 @@ namespace Bagile.EtlService.Services
                 }
             }
 
-            // 2. Slow / accurate path: FooEvents API
+            // 2. Slow or accurate path. FooEvents API
             var externalOrderId = ExtractExternalOrderId(rawOrder.Payload);
 
             var apiTickets = await _fooEventsClient.FetchTicketsForOrderAsync(
@@ -68,7 +68,7 @@ namespace Bagile.EtlService.Services
             if (!apiTickets.Any())
             {
                 _logger.LogWarning(
-                    "No FooEvents tickets found for order {OrderId} (internal: {Internal}). Falling back to billing-level enrolment.",
+                    "No FooEvents tickets found for order {OrderId} (internal: {Internal}). Falling back to billing level enrolment.",
                     orderId,
                     isInternalTransfer);
 
@@ -101,7 +101,7 @@ namespace Bagile.EtlService.Services
 
                 if (transferInfo.IsTransfer)
                 {
-                    // Explicit transfer from designation string (e.g. "Transfer from cancelled PSPO-081025-AB")
+                    // Explicit transfer from designation string. "Transfer from cancelled PSPO 081025 AB"
                     await HandleIndividualTransferAsync(
                         orderId,
                         studentId,
@@ -111,7 +111,7 @@ namespace Bagile.EtlService.Services
                 }
                 else if (isInternalTransfer)
                 {
-                    // b-agile / bagile order with no explicit designation → try heuristic transfer
+                    // b agile bookings with no explicit designation. try heuristic transfer
                     var courseSchedule = await _courseRepo.GetBySourceProductIdAsync(ticket.EventId);
                     var sku = courseSchedule?.Sku;
                     var courseFamily = ExtractCourseFamilyFromSku(sku);
@@ -129,7 +129,7 @@ namespace Bagile.EtlService.Services
                 }
                 else
                 {
-                    // Normal external order, no transfer signal → plain enrolment
+                    // Normal external order, no transfer signal. plain enrolment
                     await CreateStandardEnrolmentAsync(orderId, studentId, courseScheduleId);
                 }
             }
@@ -140,7 +140,6 @@ namespace Bagile.EtlService.Services
             if (!productId.HasValue)
                 return null;
 
-            // We expect course_schedules to already exist for FooEvents tickets
             var schedule = await _courseRepo.GetBySourceProductIdAsync(productId.Value);
             return schedule?.Id;
         }
@@ -150,8 +149,8 @@ namespace Bagile.EtlService.Services
             JsonElement lineItem,
             long orderId)
         {
-            // Try product_id first (existing behavior)
-            if (productId.HasValue)
+            // Try product id first, but only if greater than zero
+            if (productId.HasValue && productId.Value > 0)
             {
                 var scheduleId = await ResolveCourseScheduleAsync(productId);
                 if (scheduleId.HasValue)
@@ -160,6 +159,7 @@ namespace Bagile.EtlService.Services
                 }
             }
 
+            // Fall back to SKU
             if (lineItem.TryGetProperty("sku", out var skuProp))
             {
                 var sku = skuProp.GetString();
@@ -169,19 +169,17 @@ namespace Bagile.EtlService.Services
                     if (scheduleId.HasValue)
                     {
                         _logger.LogInformation(
-                            "Transfer order {OrderId}: Resolved course schedule {ScheduleId} by SKU '{Sku}'",
+                            "Order {OrderId}. resolved course schedule {ScheduleId} by SKU '{Sku}'",
                             orderId,
                             scheduleId,
                             sku);
                         return scheduleId;
                     }
-                    else
-                    {
-                        _logger.LogWarning(
-                            "Transfer order {OrderId}: Could not find course schedule for SKU '{Sku}'",
-                            orderId,
-                            sku);
-                    }
+
+                    _logger.LogWarning(
+                        "Order {OrderId}. could not find course schedule for SKU '{Sku}'",
+                        orderId,
+                        sku);
                 }
             }
 
@@ -236,7 +234,6 @@ namespace Bagile.EtlService.Services
                     Status = "active"
                 };
 
-                // Idempotent for standard enrolments
                 await _enrolmentRepo.UpsertAsync(enrolment);
             }
         }
@@ -256,7 +253,6 @@ namespace Bagile.EtlService.Services
 
         private async Task<long> UpsertStudentAsync(FooEventTicketDto ticket)
         {
-            // We only have a full name from FooEvents, so split it crudely
             var fullName = ticket.AttendeeName ?? string.Empty;
             var parts = fullName
                 .Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -271,7 +267,7 @@ namespace Bagile.EtlService.Services
                 Email = ticket.AttendeeEmail.ToLowerInvariant(),
                 FirstName = firstName,
                 LastName = lastName,
-                Company = null // FooEvents JSON does not give us company
+                Company = null
             };
 
             return await _studentRepo.UpsertAsync(student);
@@ -293,13 +289,12 @@ namespace Bagile.EtlService.Services
             TransferInfo transferInfo)
         {
             _logger.LogInformation(
-                "Processing individual transfer for {Email}: original SKU {OriginalSku}, reason {Reason}, refund eligible: {Refund}",
+                "Processing individual transfer for {Email}. original SKU {OriginalSku}, reason {Reason}, refund eligible. {Refund}",
                 ticket.AttendeeEmail,
                 transferInfo.OriginalSku,
                 transferInfo.Reason,
                 transferInfo.RefundEligible);
 
-            // Find original enrolment (same order, same student, original SKU)
             var originalEnrolment = await _enrolmentRepo.FindByOrderStudentAndSkuAsync(
                 orderId,
                 studentId,
@@ -307,7 +302,6 @@ namespace Bagile.EtlService.Services
 
             if (originalEnrolment != null)
             {
-                // Create new enrolment on the SAME order
                 var newEnrolment = new Enrolment
                 {
                     StudentId = studentId,
@@ -323,14 +317,13 @@ namespace Bagile.EtlService.Services
 
                 var newId = await _enrolmentRepo.InsertAsync(newEnrolment);
 
-                // Mark original as transferred
                 await _enrolmentRepo.UpdateStatusAsync(
                     originalEnrolment.Id,
                     "transferred",
                     transferredToEnrolmentId: newId);
 
                 _logger.LogInformation(
-                    "Transferred enrolment {OldId} → {NewId} for student {StudentId}",
+                    "Transferred enrolment {OldId} to {NewId} for student {StudentId}",
                     originalEnrolment.Id,
                     newId,
                     studentId);
@@ -338,12 +331,10 @@ namespace Bagile.EtlService.Services
             else
             {
                 _logger.LogWarning(
-                    "Transfer ticket but no original enrolment found for " +
-                    "student {StudentId}, SKU {Sku}",
+                    "Transfer ticket but no original enrolment found for student {StudentId}, SKU {Sku}",
                     studentId,
                     transferInfo.OriginalSku);
 
-                // Create as new (might be data issue)
                 await CreateStandardEnrolmentAsync(orderId, studentId, newCourseScheduleId);
             }
         }
@@ -379,23 +370,34 @@ namespace Bagile.EtlService.Services
             string payload,
             long? productId)
         {
-            if (!productId.HasValue)
-                return null;
+            long? existingId = null;
 
-            var existingId = await _courseRepo.GetIdBySourceProductAsync(productId.Value);
-            if (existingId.HasValue)
-                return existingId;
+            if (productId.HasValue && productId.Value > 0)
+            {
+                existingId = await _courseRepo.GetIdBySourceProductAsync(productId.Value);
+                if (existingId.HasValue)
+                    return existingId;
+            }
 
-            var courseData = ExtractCourseDetailsFromWoo(payload, productId.Value);
+            var courseData = ExtractCourseDetailsFromWoo(payload, productId ?? 0);
 
-            return await _courseRepo.UpsertFromWooPayloadAsync(
-                productId.Value,
+            if (!string.IsNullOrWhiteSpace(courseData.Sku))
+            {
+                var bySku = await _courseRepo.GetIdBySkuAsync(courseData.Sku);
+                if (bySku.HasValue)
+                    return bySku;
+            }
+
+            var newId = await _courseRepo.UpsertFromWooPayloadAsync(
+                productId ?? 0,
                 courseData.Name,
                 courseData.Sku,
                 courseData.StartDate,
                 courseData.EndDate,
                 courseData.Price,
                 courseData.Currency);
+
+            return newId;
         }
 
         private static (string? Name, string? Sku, DateTime? StartDate, DateTime? EndDate, decimal? Price, string? Currency)
@@ -411,7 +413,6 @@ namespace Bagile.EtlService.Services
             DateTime? startDate = null;
             DateTime? endDate = null;
 
-            // NEW: infer base date from the order itself
             DateTime? orderDate = null;
             if (root.TryGetProperty("date_created", out var dc) &&
                 dc.ValueKind == JsonValueKind.String &&
@@ -455,11 +456,9 @@ namespace Bagile.EtlService.Services
 
             if (name != null)
             {
-                // pass orderDate into the parser so we infer the right year
                 startDate = TryParseStartDateFromName(name, orderDate);
             }
 
-            // Fallback SKU if Woo did not provide one
             if (string.IsNullOrWhiteSpace(sku) && name != null && startDate.HasValue)
             {
                 var code = ExtractCourseCodeFromName(name);
@@ -468,7 +467,6 @@ namespace Bagile.EtlService.Services
 
             return (name, sku, startDate, endDate, price, currency);
         }
-
 
         private static long? TryGetProductIdFromLineItem(JsonElement item)
         {
@@ -495,15 +493,16 @@ namespace Bagile.EtlService.Services
             if (tokens.Length == 0)
                 return null;
 
-            // Day: first token, possibly "8-10"
             var dayToken = tokens[0];
-            if (dayToken.Contains('-'))
-                dayToken = dayToken.Split('-')[0];
+            if (dayToken.Contains('−') || dayToken.Contains('-'))
+            {
+                var parts = dayToken.Split('-', '−');
+                dayToken = parts[0];
+            }
 
             if (!int.TryParse(dayToken, out var day) || day <= 0 || day > 31)
                 return null;
 
-            // Month: first token that starts with letters
             string? monthText = null;
             for (var i = 0; i < tokens.Length; i++)
             {
@@ -531,7 +530,6 @@ namespace Bagile.EtlService.Services
 
             var month = monthDate.Month;
 
-            // Year: last purely numeric token (2 or 4 digits)
             int? year = null;
             for (var i = tokens.Length - 1; i >= 0; i--)
             {
@@ -549,14 +547,10 @@ namespace Bagile.EtlService.Services
                 }
             }
 
-            // If no year in the name, infer from order date, not "now"
             var reference = baseDate ?? DateTime.UtcNow;
 
             if (!year.HasValue)
             {
-                // simple rule:
-                //  - if course month >= order month → same year
-                //  - if course month < order month → next year (e.g. Jan after a Nov order)
                 year = month < reference.Month ? reference.Year + 1 : reference.Year;
             }
 
@@ -586,13 +580,12 @@ namespace Bagile.EtlService.Services
         private async Task CreateBillingEnrolmentAsync(RawOrder rawOrder, long orderId)
         {
             _logger.LogWarning(
-                "No tickets found for order {OrderId}, creating billing-level enrolment from line items",
+                "No FooEvents tickets found for order {OrderId}. creating billing level enrolment from line items",
                 orderId);
 
             using var doc = JsonDocument.Parse(rawOrder.Payload);
             var root = doc.RootElement;
 
-            // 1. Get billing info (who paid)
             if (!root.TryGetProperty("billing", out var billing))
             {
                 _logger.LogWarning("No billing info for order {OrderId}", orderId);
@@ -612,14 +605,15 @@ namespace Bagile.EtlService.Services
             var firstName = billing.TryGetProperty("first_name", out var fnProp)
                 ? fnProp.GetString()
                 : null;
+
             var lastName = billing.TryGetProperty("last_name", out var lnProp)
                 ? lnProp.GetString()
                 : null;
+
             var company = billing.TryGetProperty("company", out var coProp)
                 ? coProp.GetString()
                 : null;
 
-            // 2. Create/update student
             var student = new Student
             {
                 Email = email.ToLowerInvariant(),
@@ -630,7 +624,6 @@ namespace Bagile.EtlService.Services
 
             var studentId = await _studentRepo.UpsertAsync(student);
 
-            // 3. ✅ FIX: Process each line item to create enrolments with proper course_schedule_id
             if (!root.TryGetProperty("line_items", out var lineItems))
             {
                 _logger.LogWarning("No line items for order {OrderId}", orderId);
@@ -639,17 +632,15 @@ namespace Bagile.EtlService.Services
 
             foreach (var item in lineItems.EnumerateArray())
             {
-                var productId = item.TryGetProperty("product_id", out var pidProp) && pidProp.TryGetInt64(out var pid)
-                    ? pid
-                    : (long?)null;
+                long? productId = null;
 
-                if (!productId.HasValue)
+                if (item.TryGetProperty("product_id", out var pidProp) &&
+                    pidProp.TryGetInt64(out var pidVal) &&
+                    pidVal > 0)
                 {
-                    _logger.LogWarning("Line item missing product_id in order {OrderId}", orderId);
-                    continue;
+                    productId = pidVal;
                 }
 
-                // Look up course schedule by product_id
                 var courseScheduleId = await ResolveCourseScheduleByProductOrSkuAsync(
                     productId,
                     item,
@@ -657,17 +648,39 @@ namespace Bagile.EtlService.Services
 
                 if (!courseScheduleId.HasValue)
                 {
+                    if (productId == null)
+                    {
+                        _logger.LogWarning(
+                            "Line item for order {OrderId} has no product_id. Cannot create schedule.",
+                            orderId);
+
+                        await CreateStandardEnrolmentAsync(orderId, studentId, null);
+                        continue;
+                    }
+
+                    var courseData = ExtractCourseDetailsFromWoo(rawOrder.Payload, productId.Value);
+
+                    courseScheduleId = await _courseRepo.UpsertFromWooPayloadAsync(
+                        productId.Value,
+                        courseData.Name,
+                        courseData.Sku,
+                        courseData.StartDate,
+                        courseData.EndDate,
+                        courseData.Price,
+                        courseData.Currency);
+
                     _logger.LogWarning(
-                        "Could not find course schedule for product_id {ProductId} in order {OrderId}",
-                        productId,
-                        orderId);
+                        "Billing enrolment. created new course schedule {ScheduleId} for order {OrderId}, SKU {Sku}, name {Name}",
+                        courseScheduleId,
+                        orderId,
+                        courseData.Sku,
+                        courseData.Name);
                 }
 
-                // Create enrolment (even if courseScheduleId is null, we still track it)
                 await CreateStandardEnrolmentAsync(orderId, studentId, courseScheduleId);
 
                 _logger.LogInformation(
-                    "Created billing-level enrolment for {Email} on order {OrderId}, course {CourseScheduleId}",
+                    "Created billing level enrolment for {Email} on order {OrderId}, course {CourseScheduleId}",
                     email,
                     orderId,
                     courseScheduleId);
@@ -706,7 +719,7 @@ namespace Bagile.EtlService.Services
                 return false;
 
             _logger.LogInformation(
-                "Heuristic transfer: student {StudentId}, family {Family}, from enrolment {SourceId} → new schedule {NewScheduleId}",
+                "Heuristic transfer. student {StudentId}, family {Family}, from enrolment {SourceId} to new schedule {NewScheduleId}",
                 studentId,
                 courseFamily,
                 source.Id,
@@ -720,8 +733,8 @@ namespace Bagile.EtlService.Services
                 Status = "active",
                 TransferredFromEnrolmentId = source.Id,
                 OriginalSku = source.OriginalSku ?? null,
-                TransferReason = "attendee_requested", // heuristic default
-                TransferNotes = "Inferred transfer from b-agile order",
+                TransferReason = "attendee_requested",
+                TransferNotes = "Inferred transfer from b agile order",
                 RefundEligible = null
             };
 
