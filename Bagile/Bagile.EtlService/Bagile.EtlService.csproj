@@ -9,6 +9,25 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Handlers\**" />
+    <Content Remove="Handlers\**" />
+    <EmbeddedResource Remove="Handlers\**" />
+    <None Remove="Handlers\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Importers\WooImporter.cs" />
+    <Compile Remove="Mappers\EnrolmentMapper.cs" />
+    <Compile Remove="Mappers\OrderMapper.cs" />
+    <Compile Remove="RawOrderProcessor.cs" />
+    <Compile Remove="Services\IWooOrderParser.cs" />
+    <Compile Remove="Services\IWooOrderService.cs" />
+    <Compile Remove="Services\IXeroInvoiceParser.cs" />
+    <Compile Remove="Services\IXeroInvoiceService.cs" />
+    <Compile Remove="Transformers\ITransformer.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Dapper" Version="2.1.66" />
     <PackageReference Include="Npgsql" Version="8.*" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.*" />
@@ -19,5 +38,9 @@
     <ProjectReference Include="..\Bagile.Application\Bagile.Application.csproj" />
     <ProjectReference Include="..\Bagile.Domain\Bagile.Domain.csproj" />
     <ProjectReference Include="..\Bagile.Infrastructure\Bagile.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Transformers\" />
   </ItemGroup>
 </Project>

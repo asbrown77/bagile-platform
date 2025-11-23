@@ -1,14 +1,11 @@
-using Bagile.Domain.Repositories;
+﻿using Bagile.Domain.Repositories;
 using Bagile.EtlService.Collectors;
+using Bagile.EtlService.Models;
 using Bagile.EtlService.Projectors;
 using Bagile.EtlService.Services;
 using Bagile.Infrastructure.Clients;
 using Bagile.Infrastructure.Models;
 using Bagile.Infrastructure.Repositories;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Npgsql;
 using System.Reflection;
 
 var version = Assembly.GetExecutingAssembly()
@@ -17,7 +14,6 @@ var version = Assembly.GetExecutingAssembly()
     .ToString() ?? "unknown";
 
 Console.WriteLine($"Version: {version}");
-
 Console.WriteLine("=== ETL Program started ===");
 
 var builder = Host.CreateApplicationBuilder(args);
@@ -28,13 +24,12 @@ ConfigureHttpClients(builder);
 ConfigureEtl(builder);
 
 var host = builder.Build();
-
 LogStartup(host);
 
 await host.RunAsync();
 
 
-
+// ---------------------- LOGGING ----------------------
 static void ConfigureLogging(HostApplicationBuilder builder)
 {
     builder.Logging.ClearProviders();
@@ -45,57 +40,47 @@ static void ConfigureLogging(HostApplicationBuilder builder)
 static void LogStartup(IHost host)
 {
     var logger = host.Services.GetRequiredService<ILogger<Program>>();
-    var version = System.Reflection.Assembly.GetExecutingAssembly()
+    var version = Assembly.GetExecutingAssembly()
         ?.GetName()
         ?.Version?
         .ToString() ?? "unknown";
 
-    logger.LogInformation("ETL Service starting up... version {Version}", version);
+    logger.LogInformation("ETL Service starting... version {Version}", version);
 }
 
+
+// ---------------------- DATABASE ----------------------
 static void ConfigureDatabase(HostApplicationBuilder builder)
 {
     builder.Services.AddSingleton<IRawOrderRepository>(sp =>
-    {
-        var connStr = GetConnectionString(sp);
-        return new RawOrderRepository(connStr);
-    });
-    
+        new RawOrderRepository(GetConnectionString(sp)));
+
     builder.Services.AddScoped<IOrderRepository>(sp =>
-    {
-        var connStr = GetConnectionString(sp);
-        return new OrderRepository(connStr);
-    });
+        new OrderRepository(GetConnectionString(sp)));
 
     builder.Services.AddScoped<IStudentRepository>(sp =>
-    {
-        var connStr = GetConnectionString(sp);
-        return new StudentRepository(connStr);
-    });
+        new StudentRepository(GetConnectionString(sp)));
 
     builder.Services.AddScoped<IEnrolmentRepository>(sp =>
-    {
-        var connStr = GetConnectionString(sp);
-        return new EnrolmentRepository(connStr);
-    });
+        new EnrolmentRepository(GetConnectionString(sp)));
 
     builder.Services.AddScoped<ICourseScheduleRepository>(sp =>
-    {
-        var connStr = GetConnectionString(sp);
-        return new CourseScheduleRepository(connStr);
-    });
+        new CourseScheduleRepository(GetConnectionString(sp)));
 
     builder.Services.AddScoped<ICourseDefinitionRepository>(sp =>
-    {
-        var connStr = GetConnectionString(sp);
-        return new CourseDefinitionRepository(connStr);
-    });
+        new CourseDefinitionRepository(GetConnectionString(sp)));
 
     builder.Services.AddScoped<ISyncMetadataRepository>(sp =>
-    {
-        var connStr = GetConnectionString(sp);
-        return new SyncMetadataRepository(connStr);
-    });
+        new SyncMetadataRepository(GetConnectionString(sp)));
+
+    builder.Services.AddScoped<IRawRefundRepository>(sp =>
+        new RawRefundRepository(GetConnectionString(sp)));
+
+    builder.Services.AddScoped<IRawTransferRepository>(sp =>
+        new RawTransferRepository(GetConnectionString(sp)));
+
+    builder.Services.AddScoped<IRawPaymentRepository>(sp =>
+        new RawPaymentRepository(GetConnectionString(sp)));
 }
 
 static string GetConnectionString(IServiceProvider sp)
@@ -110,23 +95,18 @@ static string GetConnectionString(IServiceProvider sp)
         ?? config.GetValue<string>("DATABASE_URL")
         ?? throw new InvalidOperationException("Database connection string not configured.");
 
-    LogConnectionInfo(sp, logger, connStr);
+    var env = sp.GetRequiredService<IHostEnvironment>().EnvironmentName;
+    var safe = new Npgsql.NpgsqlConnectionStringBuilder(connStr);
+
+    if (!string.IsNullOrEmpty(safe.Password))
+        safe.Password = "*****";
+
+    logger.LogInformation("Environment: {Env}. Using connection: {Conn}", env, safe);
     return connStr;
 }
 
 
-static void LogConnectionInfo(IServiceProvider sp, ILogger logger, string connStr)
-{
-    var env = sp.GetRequiredService<IHostEnvironment>().EnvironmentName;
-    var safeConn = new Npgsql.NpgsqlConnectionStringBuilder(connStr);
-
-    if (!string.IsNullOrEmpty(safeConn.Password))
-        safeConn.Password = "*****";
-
-    logger.LogInformation("Environment: {Env}. Using connection: {Conn}", env, safeConn);
-}
-
-
+// ---------------------- HTTP CLIENTS ----------------------
 static void ConfigureHttpClients(HostApplicationBuilder builder)
 {
     builder.Services.AddHttpClient<IWooApiClient, WooApiClient>(c =>
@@ -141,9 +121,10 @@ static void ConfigureHttpClients(HostApplicationBuilder builder)
 
     builder.Services.AddHttpClient<XeroTokenRefreshService>();
     builder.Services.AddHttpClient<IFooEventsTicketsClient, FooEventsTicketsClient>();
-
 }
 
+
+// ---------------------- NEW ETL PIPELINE ----------------------
 static void ConfigureEtl(HostApplicationBuilder builder)
 {
     // Collectors
@@ -154,9 +135,19 @@ static void ConfigureEtl(HostApplicationBuilder builder)
     // Importers
     builder.Services.AddScoped<IImporter<WooProductDto>, WooCourseImporter>();
 
-    // Core orchestration
+    // Parsers and processors
+    builder.Services.AddScoped<IParser<CanonicalWooOrderDto>, WooOrderParser>();
+    builder.Services.AddScoped<IProcessor<CanonicalWooOrderDto>, WooOrderService>();
+
+    builder.Services.AddScoped<IParser<CanonicalXeroInvoiceDto>, XeroInvoiceParser>();
+    builder.Services.AddScoped<IProcessor<CanonicalXeroInvoiceDto>, XeroInvoiceService>();
+
+    builder.Services.AddScoped<RawOrderRouter>();
+
+    // Transformer (loops raw orders → parser → service)
     builder.Services.AddScoped<RawOrderTransformer>();
     builder.Services.AddScoped<SourceDataImporter>();
 
+    // Worker (runs ETL cycle)
     builder.Services.AddHostedService<EtlWorker>();
 }

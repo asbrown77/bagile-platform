@@ -27,6 +27,9 @@ public class WooApiClient : IWooApiClient
             new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", creds);
     }
 
+    // ------------------------------------------------------------
+    // Fetch Orders
+    // ------------------------------------------------------------
     public Task<IReadOnlyList<string>> FetchOrdersAsync(DateTime? since = null, CancellationToken ct = default)
         => FetchOrdersAsync(page: 1, perPage: 100, since, ct);
 
@@ -36,7 +39,6 @@ public class WooApiClient : IWooApiClient
         DateTime? since = null,
         CancellationToken ct = default)
     {
-        // Build base query
         var query = new StringBuilder($"/wp-json/wc/v3/orders?page={page}&per_page={perPage}");
 
         if (since != null)
@@ -45,78 +47,121 @@ public class WooApiClient : IWooApiClient
         var url = query.ToString();
         _logger.LogInformation("Fetching Woo orders: {Url}", url);
 
-        var response = await _http.GetFromJsonAsync<JsonDocument>(url, ct);
+        var json = await SafeGet<JsonDocument>(url, ct);
         var results = new List<string>();
 
-        if (response?.RootElement.ValueKind == JsonValueKind.Array)
+        if (json != null && json.RootElement.ValueKind == JsonValueKind.Array)
         {
-            foreach (var item in response.RootElement.EnumerateArray())
+            foreach (var item in json.RootElement.EnumerateArray())
                 results.Add(item.GetRawText());
         }
         else
         {
-            _logger.LogWarning("Unexpected response from WooCommerce: {Json}", response);
+            _logger.LogWarning("Unexpected Woo order response: {Json}", json);
         }
 
         _logger.LogInformation("Fetched {Count} Woo orders (page {Page})", results.Count, page);
         return results;
     }
 
-
+    // ------------------------------------------------------------
+    // Fetch Products (pagination + draft + publish)
+    // ------------------------------------------------------------
     public async Task<IReadOnlyList<WooProductDto>> FetchProductsAsync(
         DateTime? modifiedSince = null,
         CancellationToken ct = default)
     {
         var allProducts = new List<WooProductDto>();
-        var page = 1;
+        var statuses = new[] { "publish", "draft" };
         const int pageSize = 100;
 
-        while (true)
+        foreach (var status in statuses)
         {
-            ct.ThrowIfCancellationRequested();
+            var page = 1;
 
-            // Build URL with pagination
-            var queryBuilder = new StringBuilder($"/wp-json/wc/v3/products?page={page}&per_page={pageSize}");
-
-            var statuses = new[] { "publish", "draft" };
-            foreach (var status in statuses)
+            while (true)
             {
-                queryBuilder.Append($"&status={status}");
+                ct.ThrowIfCancellationRequested();
+
+                var url = BuildProductUrl(page, pageSize, status, modifiedSince);
+
+                _logger.LogInformation(
+                    "Fetching Woo products page {Page} status {Status}: {Url}",
+                    page, status, url);
+
+                var items = await SafeGet<List<WooProductDto>>(url, ct);
+
+                if (items == null || items.Count == 0)
+                {
+                    _logger.LogInformation(
+                        "No more products for status {Status} after page {Page}",
+                        status, page);
+                    break;
+                }
+
+                allProducts.AddRange(items);
+
+                if (items.Count < pageSize)
+                    break;
+
+                page++;
             }
-
-            // Optional: incremental sync - only fetch modified products
-            if (modifiedSince != null)
-            {
-                queryBuilder.Append($"&modified_after={modifiedSince.Value:yyyy-MM-ddTHH:mm:ss}Z");
-            }
-
-            var url = queryBuilder.ToString();
-            _logger.LogInformation("Fetching Woo products page {Page}: {Url}", page, url);
-
-            var response = await _http.GetFromJsonAsync<List<WooProductDto>>(url, ct);
-
-            if (response == null || response.Count == 0)
-            {
-                _logger.LogInformation("No more products after page {Page}", page);
-                break;
-            }
-
-            allProducts.AddRange(response);
-            _logger.LogInformation("Fetched {Count} products from page {Page}", response.Count, page);
-
-            // If we got fewer than pageSize, we've reached the last page
-            if (response.Count < pageSize)
-            {
-                _logger.LogInformation("Reached last page ({Page}), stopping pagination", page);
-                break;
-            }
-
-            page++;
         }
 
-        _logger.LogInformation("✅ Fetched total of {Count} WooCommerce products across {Pages} pages",
-            allProducts.Count, page);
+        var distinct = allProducts
+            .GroupBy(x => x.Id)
+            .Select(g => g.First())
+            .ToList();
 
-        return allProducts;
+        _logger.LogInformation("Fetched total {Count} distinct Woo products.", distinct.Count);
+
+        return distinct;
+    }
+
+    // ------------------------------------------------------------
+    // SAFE GETTER (fixes your ObjectDisposedException)
+    // ------------------------------------------------------------
+    private async Task<T?> SafeGet<T>(string url, CancellationToken ct)
+    {
+        try
+        {
+            var response = await _http.GetAsync(url, ct);
+            response.EnsureSuccessStatusCode();
+
+            await using var stream = await response.Content.ReadAsStreamAsync(ct);
+
+            return await JsonSerializer.DeserializeAsync<T>(
+                stream,
+                new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                },
+                ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error calling Woo API url={Url}", url);
+            return default;
+        }
+    }
+
+    // ------------------------------------------------------------
+    // URL builder
+    // ------------------------------------------------------------
+    private string BuildProductUrl(
+        int page,
+        int pageSize,
+        string status,
+        DateTime? modifiedSince)
+    {
+        var sb = new StringBuilder("/wp-json/wc/v3/products");
+        sb.Append($"?page={page}");
+        sb.Append($"&per_page={pageSize}");
+        sb.Append($"&status={status}");
+
+        if (modifiedSince != null)
+            sb.Append($"&modified_after={modifiedSince.Value:yyyy-MM-ddTHH:mm:ss}Z");
+
+        return sb.ToString();
     }
 }

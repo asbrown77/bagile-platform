@@ -15,14 +15,50 @@ namespace Bagile.Infrastructure.Repositories
 
         public async Task UpsertAsync(Enrolment enrolment)
         {
-            const string sql = @"
-                INSERT INTO bagile.enrolments (student_id, order_id, course_schedule_id)
-                VALUES (@StudentId, @OrderId, @CourseScheduleId)
-                ON CONFLICT (student_id, order_id, course_schedule_id) DO NOTHING;";
+            const string selectSql = @"
+        SELECT id
+        FROM bagile.enrolments
+        WHERE student_id = @StudentId
+          AND order_id = @OrderId
+          AND course_schedule_id = @CourseScheduleId
+          AND is_cancelled IS NOT TRUE
+        LIMIT 1;";
+
+            const string insertSql = @"
+        INSERT INTO bagile.enrolments
+            (student_id, order_id, course_schedule_id, status)
+        VALUES
+            (@StudentId, @OrderId, @CourseScheduleId, @Status);";
+
+            const string updateSql = @"
+        UPDATE bagile.enrolments
+        SET status = @Status,
+            updated_at = NOW()
+        WHERE id = @Id;";
 
             await using var conn = new NpgsqlConnection(_conn);
-            await conn.ExecuteAsync(sql, enrolment);
+
+            var existingId = await conn.ExecuteScalarAsync<long?>(selectSql, enrolment);
+
+            if (existingId.HasValue)
+            {
+                // Update existing row unless transferred
+                enrolment.Id = existingId.Value;
+
+                await conn.ExecuteAsync(updateSql, new
+                {
+                    Id = existingId.Value,
+                    enrolment.Status
+                });
+            }
+            else
+            {
+                // Insert new normal enrolment
+                await conn.ExecuteAsync(insertSql, enrolment);
+            }
         }
+
+
 
         public async Task<int> CountByOrderIdAsync(long orderId)
         {
@@ -136,8 +172,9 @@ namespace Bagile.Infrastructure.Repositories
                 WHERE e.student_id = @studentId
                   AND e.status = 'active'
                   AND cs.sku ILIKE @skuPattern
-                  AND COALESCE(o.billing_company, '') NOT IN ('b-agile', 'bagile', 'b agile')
-                ORDER BY e.created_at DESC;";
+                  --AND e.is_cancelled IS NOT TRUE         -- ignore cancelled
+                ORDER BY e.created_at DESC
+                LIMIT 1;";
 
             await using var conn = new NpgsqlConnection(_conn);
             var results = (await conn.QueryAsync<Enrolment>(
@@ -150,5 +187,44 @@ namespace Bagile.Infrastructure.Repositories
 
             return null;
         }
+
+        public async Task CancelEnrolmentAsync(long enrolmentId, string? reason = null)
+        {
+            const string sql = @"
+        UPDATE bagile.enrolments
+        SET is_cancelled = TRUE,
+            status = 'cancelled',
+            cancelled_at = NOW(),
+            updated_at = NOW()
+        WHERE id = @id;";
+
+            await using var conn = new NpgsqlConnection(_conn);
+            await conn.ExecuteAsync(sql, new { id = enrolmentId });
+        }
+
+        // public async Task<Enrolment?> FindHeuristicTransferSourceByPrefixAsync(string courseFamilyPrefix)
+        // {
+        //     const string sql = @"
+        // SELECT e.*
+        // FROM bagile.enrolments e
+        // JOIN bagile.course_schedules cs ON cs.id = e.course_schedule_id
+        // JOIN bagile.orders o ON o.id = e.order_id
+        // WHERE e.student_id = @studentId
+        //   AND e.status = 'active'
+        //   AND cs.sku ILIKE @skuPattern
+        //   AND e.order_id <> @currentOrderId      -- avoid matching same order
+        //   AND e.is_cancelled IS NOT TRUE         -- ignore cancelled
+        // ORDER BY e.created_at DESC
+        // LIMIT 1;";
+        //
+        //     await using var conn = new NpgsqlConnection(_conn);
+        //
+        //     return await conn.QueryFirstOrDefaultAsync<Enrolment>(
+        //         sql,
+        //         new { skuPattern = courseFamilyPrefix + "%" }
+        //     );
+        // }
+
+
     }
 }

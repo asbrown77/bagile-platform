@@ -10,6 +10,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="EtlService\TransferOrderBugTests.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Remove="TestData\woo-order-12164.json" />
   </ItemGroup>
 

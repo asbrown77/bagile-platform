@@ -28,7 +28,7 @@ public class FooEventsTicketsClient : IFooEventsTicketsClient
     }
 
     public async Task<IReadOnlyList<FooEventTicketDto>> FetchTicketsForOrderAsync(
-        string orderId,
+        int orderId,
         CancellationToken ct = default)
     {
         var url = $"/wp-json/bagile/v1/orders/{orderId}/tickets";

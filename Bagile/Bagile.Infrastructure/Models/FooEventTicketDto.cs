@@ -33,4 +33,7 @@ public class FooEventTicketDto
 
     [JsonPropertyName("meta")]
     public object? Meta { get; set; }
+
+    [JsonPropertyName("product_id")]
+    public int ProductId { get; set; }
 }

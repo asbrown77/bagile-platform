@@ -16,5 +16,9 @@ public class Order
     public decimal TotalAmount { get; set; }
     public string? Status { get; set; }
     public DateTime? OrderDate { get; set; }
-
+    public decimal? PaymentTotal { get; set; }      
+    public decimal RefundTotal { get; set; }        
+    public decimal NetTotal { get; set; }           // PaymentTotal - RefundTotal
+    public string LifecycleStatus { get; set; } = "pending"; // pending, completed, partially_refunded, fully_refunded, cancelled
+    public string Currency { get; set; } = "GBP";
 }

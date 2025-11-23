@@ -22,4 +22,7 @@ public interface IEnrolmentRepository
     Task<Enrolment?> FindHeuristicTransferSourceAsync(long studentId, string courseFamilyPrefix);
     Task MarkTransferredAsync(long enrolmentId, long transferredToEnrolmentId);
     Task<Enrolment?> FindActiveByStudentEmailAsync(string email);
+    Task CancelEnrolmentAsync(long enrolmentId, string? reason = null);
+    Task<IEnumerable<Enrolment>> GetByOrderIdAsync(long orderId);
+
 }

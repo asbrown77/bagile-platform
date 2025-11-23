@@ -74,7 +74,7 @@ public class FooEventsTicketsClientTests
             });
 
         // Act
-        var tickets = await _client.FetchTicketsForOrderAsync("12345");
+        var tickets = await _client.FetchTicketsForOrderAsync(12345);
 
         // Assert
         tickets.Should().HaveCount(1);
@@ -99,7 +99,7 @@ public class FooEventsTicketsClientTests
             });
 
         // Act
-        var tickets = await _client.FetchTicketsForOrderAsync("99999");
+        var tickets = await _client.FetchTicketsForOrderAsync(99999);
 
         // Assert
         tickets.Should().BeEmpty();
@@ -128,7 +128,7 @@ public class FooEventsTicketsClientTests
             });
 
         // Act
-        var tickets = await _client.FetchTicketsForOrderAsync("12345");
+        var tickets = await _client.FetchTicketsForOrderAsync(12345);
 
         // Assert
         tickets.Should().BeEmpty();

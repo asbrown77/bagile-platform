@@ -10,5 +10,6 @@ namespace Bagile.Domain.Repositories
     public interface IStudentRepository
     {
         Task<long> UpsertAsync(Student student);
+        Task<Student?> GetByIdAsync(long id);
     }
 }

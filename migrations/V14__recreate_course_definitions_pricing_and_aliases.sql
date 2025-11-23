@@ -110,3 +110,4 @@ VALUES
     ('PSPOII', 'PSPOA')
 ON CONFLICT (alias) DO NOTHING;
 
+DROP INDEX IF EXISTS bagile.enrolments_unique_student_order_course;

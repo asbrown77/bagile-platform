@@ -5,6 +5,6 @@ namespace Bagile.Infrastructure.Clients;
 public interface IFooEventsTicketsClient
 {
     Task<IReadOnlyList<FooEventTicketDto>> FetchTicketsForOrderAsync(
-        string orderId,
+        int orderId,
         CancellationToken ct = default);
 }

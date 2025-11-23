@@ -14,6 +14,8 @@
         public string? TransferReason { get; set; }
         public string? TransferNotes { get; set; }
         public bool? RefundEligible { get; set; }
+        public bool IsCancelled { get; set; }
+        public DateTime? CancelledAt { get; set; }
 
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
@@ -22,5 +24,6 @@
         public bool IsTransferred => Status == "transferred";
         public bool IsTransfer => !string.IsNullOrWhiteSpace(OriginalSku);
         public bool WasCourseCancelled => TransferReason == "course_cancelled";
+
     }
 }
