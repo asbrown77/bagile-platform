@@ -197,6 +197,18 @@ namespace Bagile.EtlService.Services
                 if (oldEnrol == null)
                     continue;
 
+                // check if the new enrolment already exists
+                var existing = await _enrolmentRepo.FindAsync(studentId, dto.OrderId, schedule.Id);
+                if (existing != null)
+                {
+                    _logger.LogWarning("Transfer already exists. Skipping duplicate. Student {StudentId}, Order {OrderId}, Schedule {ScheduleId}",
+                        studentId, dto.OrderId, schedule.Id);
+
+                    await _enrolmentRepo.MarkTransferredAsync(oldEnrol.Id, existing.Id);
+                    moved = true;
+                    continue;
+                }
+
                 var newEnrol = new Enrolment
                 {
                     StudentId = studentId,

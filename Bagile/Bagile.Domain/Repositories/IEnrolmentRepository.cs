@@ -24,5 +24,5 @@ public interface IEnrolmentRepository
     Task<Enrolment?> FindActiveByStudentEmailAsync(string email);
     Task CancelEnrolmentAsync(long enrolmentId, string? reason = null);
     Task<IEnumerable<Enrolment>> GetByOrderIdAsync(long orderId);
-
+    Task<Enrolment?> FindAsync(long studentId, long orderId, long courseScheduleId);
 }

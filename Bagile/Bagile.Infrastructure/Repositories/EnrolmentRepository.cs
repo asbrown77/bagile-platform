@@ -202,28 +202,23 @@ namespace Bagile.Infrastructure.Repositories
             await conn.ExecuteAsync(sql, new { id = enrolmentId });
         }
 
-        // public async Task<Enrolment?> FindHeuristicTransferSourceByPrefixAsync(string courseFamilyPrefix)
-        // {
-        //     const string sql = @"
-        // SELECT e.*
-        // FROM bagile.enrolments e
-        // JOIN bagile.course_schedules cs ON cs.id = e.course_schedule_id
-        // JOIN bagile.orders o ON o.id = e.order_id
-        // WHERE e.student_id = @studentId
-        //   AND e.status = 'active'
-        //   AND cs.sku ILIKE @skuPattern
-        //   AND e.order_id <> @currentOrderId      -- avoid matching same order
-        //   AND e.is_cancelled IS NOT TRUE         -- ignore cancelled
-        // ORDER BY e.created_at DESC
-        // LIMIT 1;";
-        //
-        //     await using var conn = new NpgsqlConnection(_conn);
-        //
-        //     return await conn.QueryFirstOrDefaultAsync<Enrolment>(
-        //         sql,
-        //         new { skuPattern = courseFamilyPrefix + "%" }
-        //     );
-        // }
+        public async Task<Enrolment?> FindAsync(long studentId, long orderId, long courseScheduleId)
+        {
+            const string sql = @"
+        SELECT *
+        FROM bagile.enrolments
+        WHERE student_id = @studentId
+          AND order_id = @orderId
+          AND course_schedule_id = @courseScheduleId
+        LIMIT 1;";
+
+            await using var conn = new NpgsqlConnection(_conn);
+
+            return await conn.QueryFirstOrDefaultAsync<Enrolment>(
+                sql,
+                new { studentId, orderId, courseScheduleId }
+            );
+        }
 
 
     }
