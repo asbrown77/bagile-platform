@@ -19,6 +19,7 @@
 | No write endpoints | High | Can't create leads, update enrolments, or cancel courses via API |
 | ~~No MCP server~~ | ~~High~~ | **RESOLVED** — bagile-mcp-server/ with 16 tools, configured in .claude/settings.local.json |
 | ~~Production API key unknown~~ | ~~Critical~~ | **RESOLVED** — key found and configured in MCP server |
+| APS-SD SKU parser bug | Low | ExtractBaseCourseCode returns "APS" not "APS-SD" — "SD" mis-identified as trainer initials. Minimum is still correct (APS is also interactive). Fix: allowlist multi-segment codes or require trainer suffix to be ≥3 chars. GetCourseMonitoringQueryHandler.cs:94-96 |
 | No leads table | High | CRM data not in golden source |
 | Organisations table is virtual/derived | Medium | No persistent enrichment (discount rate, partner type) |
 

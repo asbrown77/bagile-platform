@@ -101,7 +101,35 @@
 ---
 
 ## Sprint Queue
-_Next: Sprint 2 — Re-enable Xero Collector (1.3), Leads Table (2.1)_
+
+### Sprint 2: Course Monitoring & Cancellation (NOW)
+> **Goal:** Claude can monitor course health daily and recommend/execute cancellations.
+> **Why first:** 27 of 68 courses have zero enrolment. Daily go/cancel decisions are the #1 operational pain.
+
+- [ ] **3.1 Course Monitoring Endpoint** — `GET /api/course-schedules/monitoring`
+  - Enrollment vs minimums (standard=3, interactive=4)
+  - Decision deadline (Mon/Tue → prev Fri, Wed-Fri → 2 days before)
+  - Status: healthy / at_risk / critical / cancelled
+  - Sorted by urgency
+- [ ] **2.3a Cancel Course Endpoint** — `POST /api/course-schedules/{id}/cancel`
+  - First write endpoint on the platform
+  - Idempotent, with reason field
+- [ ] **MCP: monitoring + cancel tools** — rebuild MCP server with new tools
+- [ ] **Deploy + verify** — tag, push, confirm Claude can use it
+
+### Sprint 3: Payment Visibility (Xero + Stripe)
+- [ ] 1.3 Re-enable Xero Collector
+- [ ] 3.2 Stripe payment status on orders
+
+### Sprint 4: Lead Pipeline (CRM in golden source)
+- [ ] 2.1 Leads table + CRUD endpoints
+- [ ] 2.2 Organisation enrichment
+- [ ] MCP write tools for leads
+
+### Sprint 5+: Outreach & Automation
+- [ ] 4.1 MailChimp integration
+- [ ] 3.3 Communication log
+- [ ] 4.2 Scrum.org sync
 
 ## Completed
 

@@ -2,7 +2,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { apiGet } from "./api-client.js";
+import { apiGet, apiPost } from "./api-client.js";
 import { formatResult } from "./utils.js";
 
 const server = new McpServer({
@@ -241,6 +241,35 @@ server.tool(
   },
   async ({ scheduleId }) => {
     const result = await apiGet(`/api/transfers/by-course/${scheduleId}`);
+    return { content: [{ type: "text" as const, text: formatResult(result) }] };
+  }
+);
+
+// ============================================================
+// COURSE MONITORING
+// ============================================================
+
+server.tool(
+  "get_course_monitoring",
+  "Get course monitoring data — enrolment vs minimums, decision deadlines, recommended actions for upcoming courses. Returns courses sorted by urgency (most urgent first).",
+  {
+    daysAhead: z.number().min(1).max(90).optional().describe("Number of days ahead to monitor (default 30)"),
+  },
+  async (params) => {
+    const result = await apiGet("/api/course-schedules/monitoring", params);
+    return { content: [{ type: "text" as const, text: formatResult(result) }] };
+  }
+);
+
+server.tool(
+  "cancel_course",
+  "Cancel a course schedule. Idempotent — cancelling an already-cancelled course returns its current state.",
+  {
+    id: z.number().describe("Course schedule ID to cancel"),
+    reason: z.string().optional().describe("Reason for cancellation"),
+  },
+  async ({ id, reason }) => {
+    const result = await apiPost(`/api/course-schedules/${id}/cancel`, { reason: reason || "" });
     return { content: [{ type: "text" as const, text: formatResult(result) }] };
   }
 );

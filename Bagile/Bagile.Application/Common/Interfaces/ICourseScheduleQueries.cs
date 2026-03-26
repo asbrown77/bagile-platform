@@ -43,4 +43,11 @@ public interface ICourseScheduleQueries
     Task<IEnumerable<CourseAttendeeDto>> GetCourseAttendeesAsync(
         long scheduleId,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Get raw course data for monitoring (upcoming courses with enrolment counts)
+    /// </summary>
+    Task<IEnumerable<CourseMonitoringRawDto>> GetCourseMonitoringDataAsync(
+        int daysAhead,
+        CancellationToken ct = default);
 }

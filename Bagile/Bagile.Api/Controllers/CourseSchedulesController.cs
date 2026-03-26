@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Bagile.Application.CourseSchedules.Queries.GetCourseSchedules;
 using Bagile.Application.CourseSchedules.Queries.GetCourseScheduleById;
 using Bagile.Application.CourseSchedules.Queries.GetCourseAttendees;
+using Bagile.Application.CourseSchedules.Queries.GetCourseMonitoring;
+using Bagile.Application.CourseSchedules.Commands.CancelCourse;
 
 namespace Bagile.Api.Controllers;
 
@@ -76,4 +78,38 @@ public class CourseSchedulesController : ControllerBase
         var result = await _mediator.Send(query);
         return Ok(result);
     }
+
+    /// <summary>
+    /// Get course monitoring data — enrolment vs minimums, decision deadlines, recommended actions
+    /// </summary>
+    [HttpGet("monitoring")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetCourseMonitoring([FromQuery] int daysAhead = 30)
+    {
+        var query = new GetCourseMonitoringQuery { DaysAhead = daysAhead };
+        var result = await _mediator.Send(query);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Cancel a course schedule
+    /// </summary>
+    [HttpPost("{id}/cancel")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> CancelCourse(long id, [FromBody] CancelCourseRequest? request = null)
+    {
+        var command = new CancelCourseCommand { CourseScheduleId = id, Reason = request?.Reason ?? "" };
+        var result = await _mediator.Send(command);
+
+        if (result == null)
+            return NotFound(new { error = $"Course schedule {id} not found" });
+
+        return Ok(result);
+    }
+}
+
+public record CancelCourseRequest
+{
+    public string Reason { get; init; } = "";
 }

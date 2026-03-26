@@ -42,6 +42,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Bagile.Domain\Bagile.Domain.csproj" />
     <ProjectReference Include="..\..\Bagile.EtlService\Bagile.EtlService.csproj" />
+    <ProjectReference Include="..\..\Bagile.Application\Bagile.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>

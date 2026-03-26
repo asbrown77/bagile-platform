@@ -131,6 +131,17 @@ public class CourseScheduleRepository : ICourseScheduleRepository
             "SELECT * FROM bagile.course_schedules ORDER BY start_date DESC;");
     }
 
+    public async Task UpdateStatusAsync(long scheduleId, string status)
+    {
+        const string sql = @"
+            UPDATE bagile.course_schedules
+            SET status = @status, last_synced = now()
+            WHERE id = @scheduleId;";
+
+        await using var conn = new NpgsqlConnection(_connStr);
+        await conn.ExecuteAsync(sql, new { scheduleId, status });
+    }
+
     public async Task<long?> GetIdBySkuAsync(string sku)
     {
         if (string.IsNullOrWhiteSpace(sku))

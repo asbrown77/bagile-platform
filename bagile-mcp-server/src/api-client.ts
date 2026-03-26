@@ -17,6 +17,45 @@ export interface ApiResponse<T> {
   error?: string;
 }
 
+export async function apiPost<T = unknown>(
+  path: string,
+  body?: Record<string, unknown>
+): Promise<ApiResponse<T>> {
+  const url = new URL(path, API_URL);
+
+  try {
+    const response = await fetch(url.toString(), {
+      method: "POST",
+      headers: {
+        "X-Api-Key": API_KEY,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+
+    if (!response.ok) {
+      return {
+        ok: false,
+        status: response.status,
+        error: `HTTP ${response.status}: ${response.statusText}`,
+      };
+    }
+
+    const contentType = response.headers.get("content-type") || "";
+    const data = contentType.includes("application/json")
+      ? ((await response.json()) as T)
+      : ((await response.text()) as unknown as T);
+    return { ok: true, status: response.status, data };
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
+
 export async function apiGet<T = unknown>(
   path: string,
   params?: Record<string, string | number | undefined>

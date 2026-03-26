@@ -18,7 +18,7 @@ process.env.BAGILE_API_URL = "https://test.bagile.co.uk";
 process.env.BAGILE_API_KEY = "test-api-key";
 
 // Dynamic import so the mock above is in place when the module initialises
-const { apiGet } = await import("../api-client.js");
+const { apiGet, apiPost } = await import("../api-client.js");
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -27,13 +27,18 @@ const { apiGet } = await import("../api-client.js");
 function makeResponse(
   status: number,
   body: unknown,
-  statusText = "OK"
+  statusText = "OK",
+  contentType = "application/json"
 ): Response {
   return {
     ok: status >= 200 && status < 300,
     status,
     statusText,
     json: async () => body,
+    text: async () => (typeof body === "string" ? body : JSON.stringify(body)),
+    headers: {
+      get: (name: string) => (name.toLowerCase() === "content-type" ? contentType : null),
+    },
   } as unknown as Response;
 }
 
