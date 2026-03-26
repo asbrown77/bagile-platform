@@ -102,38 +102,38 @@
 
 ## Sprint Queue
 
-### Sprint 2: Course Monitoring & Cancellation (NOW)
-> **Goal:** Claude can monitor course health daily and recommend/execute cancellations.
-> **Why first:** 27 of 68 courses have zero enrolment. Daily go/cancel decisions are the #1 operational pain.
+### Sprint 4: Xero Investigation
+> Understand what's broken before trying to fix it
+- [ ] Review XeroApiClient.cs — map OAuth flow, token refresh, rate limiting
+- [ ] Check Xero collector logs from last time it was enabled
+- [ ] Spike: single invoice query without the collector
+- [ ] Decision gate: fix collector OR simpler Xero read-only approach
 
-- [ ] **3.1 Course Monitoring Endpoint** — `GET /api/course-schedules/monitoring`
-  - Enrollment vs minimums (standard=3, interactive=4)
-  - Decision deadline (Mon/Tue → prev Fri, Wed-Fri → 2 days before)
-  - Status: healthy / at_risk / critical / cancelled
-  - Sorted by urgency
-- [ ] **2.3a Cancel Course Endpoint** — `POST /api/course-schedules/{id}/cancel`
-  - First write endpoint on the platform
-  - Idempotent, with reason field
-- [ ] **MCP: monitoring + cancel tools** — rebuild MCP server with new tools
-- [ ] **Deploy + verify** — tag, push, confirm Claude can use it
+### Sprint 5+: Future
+- [ ] Stripe payment status on orders
+- [ ] Organisation enrichment (partner_type, discount_rate)
+- [ ] MailChimp integration
+- [ ] Scrum.org sync
 
-### Sprint 3: Payment Visibility (Xero + Stripe)
-- [ ] 1.3 Re-enable Xero Collector
-- [ ] 3.2 Stripe payment status on orders
-
-### Sprint 4: Lead Pipeline (CRM in golden source)
-- [ ] 2.1 Leads table + CRUD endpoints
-- [ ] 2.2 Organisation enrichment
-- [ ] MCP write tools for leads
-
-### Sprint 5+: Outreach & Automation
-- [ ] 4.1 MailChimp integration
-- [ ] 3.3 Communication log
-- [ ] 4.2 Scrum.org sync
+### Deferred (decision pending)
+- **Leads table** — deferred until CRM tool decision (HubSpot Free vs custom). Trello works for now.
+- **Communication log** — evaluate as part of CRM decision
 
 ## Completed
 
+### Sprint 3 (26 Mar 2026)
+- [x] **Fix APS-SD SKU parser** — multi-segment course codes now parsed correctly
+- [x] **Fix CI** — exclude acceptance tests (need running DB, always fail in CI)
+- [x] **GHCR auth** — identified expired PAT, SSH deploy works as fallback
+- [x] **Separation** — Trello/agent tools moved to agent folder, platform repo stays focused
+
+### Sprint 2 (26 Mar 2026)
+- [x] **Course Monitoring Endpoint** — `GET /api/course-schedules/monitoring` with enrolment vs minimums, decision deadlines, urgency ranking. 33 unit tests.
+- [x] **Cancel Course Endpoint** — `POST /api/course-schedules/{id}/cancel` — first write endpoint. Idempotent.
+- [x] **MCP tools** — `get_course_monitoring` + `cancel_course` added. `apiPost` for write operations.
+- [x] **Deployed** via SSH to Hetzner. Monitoring returning live data.
+
 ### Sprint 1 (26 Mar 2026)
 - [x] **1.4 Fix ETL Double Delay** — Removed duplicate Task.Delay in EtlWorker.cs. Added regression test.
-- [x] **1.2 MCP Server for BAgile API** — TypeScript MCP server (bagile-mcp-server/) with 16 tools wrapping all API endpoints. Configured in .claude/settings.local.json. 24 unit tests.
-- [x] **1.1 Production API Key** — Found and configured (BAGILE_API_KEY in .credentials/.env)
+- [x] **1.2 MCP Server for BAgile API** — TypeScript MCP server (bagile-mcp-server/) with 18 tools wrapping all API endpoints. 24 unit tests.
+- [x] **1.1 Production API Key** — Found and configured

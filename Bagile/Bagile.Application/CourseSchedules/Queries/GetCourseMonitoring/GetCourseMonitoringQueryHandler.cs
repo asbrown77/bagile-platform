@@ -83,8 +83,8 @@ public class GetCourseMonitoringQueryHandler
     {
         if (string.IsNullOrWhiteSpace(sku)) return "";
 
-        // SKU format: COURSECODE-DDMMYY-TRAINER (e.g. PSPO-280526-CB, PSM-A-230426-AB)
-        // Split by '-' and reassemble until we hit a date segment (6 digits)
+        // SKU format: COURSECODE-DDMMYY-TRAINER (e.g. PSPO-280526-CB, APS-SD-100926-AB)
+        // Strategy: find the date segment (6 digits), everything before it is the course code
         var parts = sku.Split('-');
         var codeParts = new List<string>();
 
@@ -92,9 +92,17 @@ public class GetCourseMonitoringQueryHandler
         {
             if (part.Length == 6 && part.All(char.IsDigit))
                 break;
-            if (part.Length == 2 && part.All(char.IsUpper) && codeParts.Count > 0)
-                break; // Trainer initials
             codeParts.Add(part);
+        }
+
+        // Remove trailing trainer initials if present (2 chars, all uppercase, after course code)
+        // This handles edge cases where there's no date segment
+        if (codeParts.Count > 1
+            && codeParts[^1].Length == 2
+            && codeParts[^1].All(char.IsUpper)
+            && parts.Length == codeParts.Count)
+        {
+            codeParts.RemoveAt(codeParts.Count - 1);
         }
 
         return string.Join("-", codeParts);

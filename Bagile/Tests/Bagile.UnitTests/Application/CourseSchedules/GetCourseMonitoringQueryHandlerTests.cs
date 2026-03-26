@@ -41,16 +41,13 @@ public class GetCourseMonitoringQueryHandlerTests
     /// Known limitation: "APS-SD-100926-AB" returns "APS" rather than "APS-SD" because
     /// the parser's trainer-initials heuristic (2 uppercase chars) incorrectly treats "SD"
     /// as a trainer suffix. APS-SD enrolments still get minimum=4 because "APS" is also
-    /// in the InteractiveCourses set. See PROGRESS.md for remediation.
+    /// in the InteractiveCourses set. Fixed — parser now only strips trainer initials after date segment.
     /// </summary>
     [Test]
-    public void ExtractBaseCourseCode_APS_SD_Returns_APS_Due_To_Known_Parser_Limitation()
+    public void ExtractBaseCourseCode_APS_SD_Returns_APS_SD()
     {
-        // Actual behaviour: "SD" is misidentified as trainer initials and the loop breaks early.
-        // Desired behaviour would be "APS-SD", but that requires a longer trainer-suffix
-        // minimum or an allowlist of multi-segment course codes.
         var result = GetCourseMonitoringQueryHandler.ExtractBaseCourseCode("APS-SD-100926-AB");
-        result.Should().Be("APS", because: "SD is misidentified as trainer initials — known parser limitation");
+        result.Should().Be("APS-SD");
     }
 
     [Test]
