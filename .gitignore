@@ -368,3 +368,12 @@ Archive/dev-reset-db.ps1
 Archive/production/db-deploy-prod.ps1
 Archive/production/db-reset-prod.ps1
 Archive/seeds/999_drop_all.sql
+
+# Claude Code local settings (contains API keys)
+.claude/settings.local.json
+.mcp.json
+
+# MCP server build artifacts and env
+bagile-mcp-server/node_modules/
+bagile-mcp-server/dist/
+bagile-mcp-server/.env

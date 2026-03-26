@@ -44,7 +44,6 @@ namespace Bagile.EtlService.Services
 
                 _logger.LogInformation("ETL cycle complete, sleeping for 5 minutes...");
                 await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
-                await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
             }
         }
     }
