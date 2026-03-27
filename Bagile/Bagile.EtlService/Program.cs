@@ -18,6 +18,9 @@ Console.WriteLine("=== ETL Program started ===");
 
 var builder = Host.CreateApplicationBuilder(args);
 
+builder.Services.Configure<EtlOptions>(
+    builder.Configuration.GetSection(EtlOptions.SectionName));
+
 ConfigureLogging(builder);
 ConfigureDatabase(builder);
 ConfigureHttpClients(builder);

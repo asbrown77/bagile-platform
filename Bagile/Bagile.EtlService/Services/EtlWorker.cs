@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Bagile.EtlService.Models;
+using Microsoft.Extensions.Options;
 
 namespace Bagile.EtlService.Services
 {
@@ -10,11 +7,16 @@ namespace Bagile.EtlService.Services
     {
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<EtlWorker> _logger;
+        private readonly EtlOptions _options;
 
-        public EtlWorker(IServiceScopeFactory scopeFactory, ILogger<EtlWorker> logger)
+        public EtlWorker(
+            IServiceScopeFactory scopeFactory,
+            ILogger<EtlWorker> logger,
+            IOptions<EtlOptions> options)
         {
             _scopeFactory = scopeFactory;
             _logger = logger;
+            _options = options.Value;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -42,8 +44,8 @@ namespace Bagile.EtlService.Services
                     _logger.LogError(ex, "ETL cycle failed");
                 }
 
-                _logger.LogInformation("ETL cycle complete, sleeping for 5 minutes...");
-                await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
+                _logger.LogInformation("ETL cycle complete, sleeping for {Minutes} minutes...", _options.IntervalMinutes);
+                await Task.Delay(TimeSpan.FromMinutes(_options.IntervalMinutes), stoppingToken);
             }
         }
     }

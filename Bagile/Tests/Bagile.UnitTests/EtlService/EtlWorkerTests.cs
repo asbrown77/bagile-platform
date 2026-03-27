@@ -1,7 +1,9 @@
+using Bagile.EtlService.Models;
 using Bagile.EtlService.Services;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using NUnit.Framework;
 using System.Reflection;
@@ -53,6 +55,32 @@ public class EtlWorkerTests
     }
 
     [Test]
+    public void EtlOptions_Default_Interval_Is_Five_Minutes()
+    {
+        var options = new EtlOptions();
+        options.IntervalMinutes.Should().Be(5, "default ETL interval should be 5 minutes");
+    }
+
+    [Test]
+    public void EtlWorker_Source_Uses_Options_IntervalMinutes()
+    {
+        var sourceDir = FindSourceDirectory();
+        var sourceFile = Path.Combine(sourceDir, "Bagile.EtlService", "Services", "EtlWorker.cs");
+
+        if (!File.Exists(sourceFile))
+        {
+            Assert.Pass("Source file not found at test time — skipping source-level check.");
+            return;
+        }
+
+        var source = File.ReadAllText(sourceFile);
+        source.Should().Contain("_options.IntervalMinutes",
+            "EtlWorker should use configurable interval from EtlOptions, not a hardcoded value");
+        source.Should().NotContain("FromMinutes(5)",
+            "EtlWorker should not have hardcoded 5-minute interval");
+    }
+
+    [Test]
     public async Task ExecuteAsync_Should_Continue_After_Exception_In_Cycle()
     {
         // Set up scope factory that throws on service resolution
@@ -64,7 +92,7 @@ public class EtlWorkerTests
         scope.Setup(s => s.ServiceProvider).Returns(mockSp.Object);
         scopeFactory.Setup(f => f.CreateScope()).Returns(scope.Object);
 
-        var worker = new EtlWorker(scopeFactory.Object, NullLogger<EtlWorker>.Instance);
+        var worker = new EtlWorker(scopeFactory.Object, NullLogger<EtlWorker>.Instance, Options.Create(new EtlOptions()));
 
         using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
 

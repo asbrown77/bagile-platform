@@ -45,7 +45,7 @@ jobs:
         run: dotnet build Bagile/Bagile.sln -c Release --no-restore
 
       - name: Test
-        run: dotnet test Bagile/Bagile.sln -c Release --no-build --filter "FullyQualifiedName!~AcceptanceTests"
+        run: dotnet test Bagile/Bagile.sln -c Release --no-build
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
