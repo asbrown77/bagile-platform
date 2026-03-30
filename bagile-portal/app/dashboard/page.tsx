@@ -3,29 +3,28 @@
 import { useEffect, useState } from "react";
 import { MonitoringCourse, getMonitoring, getOrders } from "@/lib/api";
 
+const API_KEY = process.env.NEXT_PUBLIC_BAGILE_API_KEY || "";
+
 export default function Dashboard() {
   const [courses, setCourses] = useState<MonitoringCourse[]>([]);
   const [orderCount, setOrderCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [user, setUser] = useState<{ email: string; name: string } | null>(null);
 
   useEffect(() => {
-    const apiKey = localStorage.getItem("bagile_api_key");
-    if (!apiKey) {
-      window.location.replace("/login");
+    if (!API_KEY) {
+      setError("API key not configured");
+      setLoading(false);
       return;
     }
-    const savedUser = localStorage.getItem("bagile_portal_user");
-    if (savedUser) setUser(JSON.parse(savedUser));
-    loadData(apiKey);
+    loadData();
   }, []);
 
-  async function loadData(key: string) {
+  async function loadData() {
     try {
       const [monitoring, orders] = await Promise.all([
-        getMonitoring(key, 60),
-        getOrders(key, { status: "completed", pageSize: 1 }),
+        getMonitoring(API_KEY, 60),
+        getOrders(API_KEY, { status: "completed", pageSize: 1 }),
       ]);
       setCourses(monitoring);
       setOrderCount(orders.totalCount);
@@ -36,11 +35,6 @@ export default function Dashboard() {
     }
   }
 
-  function handleSignOut() {
-    localStorage.clear();
-    window.location.replace("/login");
-  }
-
   const atRisk = courses.filter((c) => c.monitoringStatus !== "healthy" && c.monitoringStatus !== "cancelled");
   const upcoming = courses.filter((c) => c.monitoringStatus !== "cancelled");
 
@@ -48,12 +42,6 @@ export default function Dashboard() {
     <div className="max-w-6xl mx-auto py-8 px-4">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">BAgile</h1>
-        <div className="flex gap-4 items-center text-sm">
-          <span className="font-medium border-b-2 border-blue-600 pb-0.5">Dashboard</span>
-          <a href="/settings" className="text-blue-600 hover:text-blue-800">Settings</a>
-          <span className="text-gray-400">{user?.email}</span>
-          <button onClick={handleSignOut} className="text-gray-500 hover:text-gray-700">Sign out</button>
-        </div>
       </div>
 
       {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">{error}</div>}
@@ -127,8 +115,7 @@ export default function Dashboard() {
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         c.monitoringStatus === "healthy" ? "bg-green-100 text-green-700" :
                         c.monitoringStatus === "warning" ? "bg-amber-100 text-amber-700" :
-                        c.monitoringStatus === "critical" ? "bg-red-100 text-red-700" :
-                        "bg-gray-100 text-gray-600"
+                        "bg-red-100 text-red-700"
                       }`}>
                         {c.monitoringStatus}
                       </span>
@@ -144,7 +131,7 @@ export default function Dashboard() {
         </>
       )}
 
-      <p className="text-center text-xs text-gray-400 mt-8">v2.0.1</p>
+      <p className="text-center text-xs text-gray-400 mt-8">v2.1.0</p>
     </div>
   );
 }
