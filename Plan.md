@@ -1,16 +1,30 @@
 # BAgile Platform — Plan
 
-> **Vision:** The golden source for BAgile Ltd's training business — all course, student, enrolment, order, organisation, and payment data in one place, queryable and actionable by Claude via MCP.
+> **Vision:** The golden source for BAgile Ltd's training business — all course, student, enrolment, order, organisation, and payment data in one place, queryable and actionable by Claude via MCP and the BAgile Dashboard.
+
+---
+
+## Sprint Queue
+
+### Sprint 7: ETL Transfer Heuristic Fix
+**Goal:** Every course shows the correct attendees — no false transfers, no missing people.
+**We'll know it worked when:** All upcoming courses match their WooCommerce FooEvents export.
+
+### Sprint 8: Scrum.org Export with Country Code
+**Goal:** Trainers can export attendees for Scrum.org registration in one click.
+**We'll know it worked when:** CSV downloads with Name, Surname, Email, Country in the correct format.
+
+### Sprint 9: Cancel + Transfer Workflow
+**Goal:** Cancel a course from the dashboard and manage each attendee (refund or transfer).
+**We'll know it worked when:** Cancel a course, mark attendees, see pending transfers dashboard-wide.
+
+### Sprint 10: Revenue Summary
+**Goal:** Dashboard shows accurate monthly/yearly revenue from the true source.
+**We'll know it worked when:** Revenue cards show correct totals matching completed orders.
 
 ---
 
 ## Pull Backlog
-
-Items below are prioritised but unrefined. Refine before pulling into a sprint.
-
-### P1 — Trust the Data (Complete)
-
-All P1 items done across Sprints 4-6. Data is trustworthy, orders sync, multi-ticket enrolments work.
 
 ### P2 — Complete the Picture
 
@@ -25,7 +39,6 @@ All P1 items done across Sprints 4-6. Data is trustworthy, orders sync, multi-ti
 
 | ID | Item | Who Needs It | Status |
 |----|------|-------------|--------|
-| W1 | POST /api/enrolments/{id}/transfer | Course management | Ready to refine |
 | W2 | PUT /api/organisations/{name} — enrichment updates | Org data | Ready to refine |
 | A1 | GET /api/course-schedules/summary — dashboard stats | Quick visibility | Ready to refine |
 | A2 | GET /api/analytics/fill-rates — historical by course type | Scheduling decisions | Ready to refine |
@@ -44,45 +57,30 @@ All P1 items done across Sprints 4-6. Data is trustworthy, orders sync, multi-ti
 |----|------|--------|
 | M1 | MailChimp integration | Deferred |
 | SC1 | Scrum.org sync (Playwright) | Deferred |
-| UI1 | Dashboard/Frontend (may not need — MCP sufficient) | Deferred |
 
-### Deferred (decision pending)
+### Deferred
 
 - **Leads table** — deferred until CRM tool decision (HubSpot Free vs custom). Trello works for now.
 - **Communication log** — evaluate as part of CRM decision.
 
 ---
 
-## Sprint Queue
-
----
-
 ## Completed
 
 ### Sprint 6 (30 Mar 2026)
-- [x] **Multi-ticket enrolments** — student per ticket, not per order. V27 migration re-processed existing orders. Order 12902 now shows all 5 attendees.
-- [x] **cancel_course 500** — was already fixed in Sprint 4 (DI registration). Verified working in prod.
+- [x] Multi-ticket enrolments, cancel_course verified, portal + dashboard MVP, API key management, MCP standalone repo
 
 ### Sprint 5 (30 Mar 2026)
-- [x] **D5: Order lookup by WooCommerce ID** — queries by both internal ID and external_id. MCP `get_order` works with Woo order numbers.
-- [x] **D6: ETL order status sync** — `modified_after` + `date_modified` from payload + 30-day lookback. All 28 orders verified matching WooCommerce.
+- [x] D5: Order lookup by WooCommerce ID. D6: ETL order status sync.
 
 ### Sprint 4 (27 Mar 2026)
-- [x] **D1-D4:** Deduplication fix, data cleanup migration, dead test removal, ETL interval to config
+- [x] D1-D4: Deduplication, data cleanup, dead tests, ETL interval config
 
 ### Sprint 3 (26 Mar 2026)
-- [x] **Fix APS-SD SKU parser** — multi-segment course codes now parsed correctly
-- [x] **Fix CI** — exclude acceptance tests (need running DB, always fail in CI)
-- [x] **GHCR auth** — identified expired PAT, fixed with new PAT
-- [x] **Separation** — Trello/agent tools moved to agent folder, platform repo stays focused
+- [x] APS-SD parser fix, CI fix, GHCR auth, repo separation
 
 ### Sprint 2 (26 Mar 2026)
-- [x] **Course Monitoring Endpoint** — `GET /api/course-schedules/monitoring` with enrolment vs minimums, decision deadlines, urgency ranking. 33 unit tests.
-- [x] **Cancel Course Endpoint** — `POST /api/course-schedules/{id}/cancel` — first write endpoint. Idempotent.
-- [x] **MCP tools** — `get_course_monitoring` + `cancel_course` added. `apiPost` for write operations.
-- [x] **Deployed** via SSH to Hetzner. Monitoring returning live data.
+- [x] Course monitoring endpoint, cancel course endpoint, MCP tools, deployed
 
 ### Sprint 1 (26 Mar 2026)
-- [x] **Fix ETL Double Delay** — Removed duplicate Task.Delay in EtlWorker.cs. Regression test added.
-- [x] **MCP Server for BAgile API** — TypeScript MCP server with 18 tools. 24 unit tests.
-- [x] **Production API Key** — Found and configured.
+- [x] ETL double delay fix, MCP server, production API key
