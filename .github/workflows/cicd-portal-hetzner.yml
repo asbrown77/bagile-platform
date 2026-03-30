@@ -94,15 +94,10 @@ jobs:
 
             cp -f docker-compose.prod.yml docker-compose.yml
 
-            # Diagnose and fix reverse proxy
-            echo "=== Docker networks ==="
-            docker network ls
-            echo "=== Running containers ==="
-            docker ps --format '{{.Names}} {{.Ports}} {{.Networks}}'
-            echo "=== Proxy config ==="
-            cat /etc/caddy/Caddyfile 2>/dev/null || cat /etc/nginx/sites-enabled/* 2>/dev/null || echo "No proxy config found"
-            echo "=== Docker compose config ==="
-            cat docker-compose.yml
+            echo "=== Caddy config ==="
+            docker exec gateway cat /etc/caddy/Caddyfile 2>/dev/null || echo "No Caddyfile in container"
+            ls -la /opt/caddy/ 2>/dev/null || echo "No /opt/caddy"
+            find / -name "Caddyfile" -maxdepth 4 2>/dev/null || echo "No Caddyfile found"
 
             docker pull ghcr.io/asbrown77/bagile-portal:latest
             docker compose up -d bagile-portal
