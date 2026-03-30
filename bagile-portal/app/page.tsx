@@ -282,7 +282,7 @@ export default function Home() {
         <ul className="text-sm text-amber-700 list-disc list-inside space-y-1">
           <li>API keys are shown <strong>once</strong> at creation — they cannot be recovered</li>
           <li><strong>Never</strong> share keys in chat, email, Slack, or any message</li>
-          <li>Only paste keys into local config files on your own machine</li>
+          <li>Only paste keys into the <code className="bg-amber-100 px-1 rounded">.env</code> file in your MCP server folder</li>
           <li>If a key is compromised, revoke it immediately and create a new one</li>
         </ul>
       </div>
@@ -297,54 +297,56 @@ export default function Home() {
         </p>
         <div className="space-y-3">
           <div>
-            <p className="text-sm font-medium text-gray-700 mb-1">1. Clone and build the MCP server:</p>
+            <p className="text-sm font-medium text-gray-700 mb-1">1. Clone and build:</p>
             <pre className="bg-gray-900 text-gray-100 rounded p-3 text-xs overflow-x-auto">
 {`git clone https://github.com/asbrown77/bagile-mcp.git
 cd bagile-mcp
-npm install && npm run build`}
+npm install
+npm run build`}
             </pre>
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-700 mb-2">2. Add to Claude (choose your setup):</p>
+            <p className="text-sm font-medium text-gray-700 mb-1">2. Add your API key:</p>
+            <pre className="bg-gray-900 text-gray-100 rounded p-3 text-xs overflow-x-auto">
+{`cp .env.example .env`}
+            </pre>
+            <p className="text-xs text-gray-500 mt-1">Edit <code className="bg-gray-100 px-1 rounded">.env</code> and paste your API key. This file is gitignored — your key stays on your machine and is never committed.</p>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-700 mb-1">3. Connect to Claude:</p>
             <div className="bg-blue-50 border border-blue-200 rounded p-3 mb-2">
-              <p className="text-xs font-semibold text-blue-800 mb-1">Claude Code (CLI) — one command:</p>
+              <p className="text-xs font-semibold text-blue-800 mb-1">Claude Code (CLI):</p>
               <pre className="bg-gray-900 text-gray-100 rounded p-2 text-xs overflow-x-auto">
-{`claude mcp add bagile \\
-  -e BAGILE_API_URL=https://api.bagile.co.uk \\
-  -e BAGILE_API_KEY=your-key \\
-  -- node /full/path/to/bagile-mcp/dist/index.js`}
+{`claude mcp add bagile -- node /full/path/to/bagile-mcp/dist/index.js`}
               </pre>
             </div>
             <div className="bg-purple-50 border border-purple-200 rounded p-3">
-              <p className="text-xs font-semibold text-purple-800 mb-1">Claude Desktop (app) — add to config file:</p>
+              <p className="text-xs font-semibold text-purple-800 mb-1">Claude Desktop (app):</p>
               <p className="text-xs text-purple-600 mb-1">
-                <strong>Mac/Linux:</strong> ~/.claude/claude_desktop_config.json | <strong>Windows:</strong> %USERPROFILE%\.claude\claude_desktop_config.json
+                Add to <code className="bg-purple-100 px-1 rounded">~/.claude/claude_desktop_config.json</code>
               </p>
               <pre className="bg-gray-900 text-gray-100 rounded p-2 text-xs overflow-x-auto">
 {`{
   "mcpServers": {
     "bagile": {
       "command": "node",
-      "args": ["/full/path/to/bagile-mcp/dist/index.js"],
-      "env": {
-        "BAGILE_API_URL": "https://api.bagile.co.uk",
-        "BAGILE_API_KEY": "paste-key-into-this-file-only"
-      }
+      "args": ["/full/path/to/bagile-mcp/dist/index.js"]
     }
   }
 }`}
               </pre>
             </div>
+            <p className="text-xs text-gray-500 mt-1">No API key in the config — it reads from the <code className="bg-gray-100 px-1 rounded">.env</code> file automatically.</p>
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-700 mb-1">3. Restart Claude</p>
-            <p className="text-xs text-gray-500">You can now query orders, courses, monitoring, and more. Try: &quot;Show me the course monitoring&quot;</p>
+            <p className="text-sm font-medium text-gray-700 mb-1">4. Restart Claude and test:</p>
+            <p className="text-xs text-gray-500">Try: &quot;Show me the course monitoring&quot;</p>
           </div>
         </div>
       </div>
 
       {/* Version */}
-      <p className="text-center text-xs text-gray-400 mt-8">BAgile Portal v1.3.0</p>
+      <p className="text-center text-xs text-gray-400 mt-8">BAgile Portal v1.4.0</p>
     </div>
   );
 }
