@@ -4,15 +4,61 @@
 
 ---
 
+## Product Goals
+
+### Current: Run Courses Confidently
+_"I open the dashboard, see my courses, know who's coming, export for Scrum.org, and handle cancellations — all from one place."_
+
+### Next: Know Your Business
+_"I can see revenue, partner value, course demand, and make scheduling decisions with data, not gut feel."_
+
+---
+
 ## Sprint Queue
 
-*No active sprints — all caught up.*
+### Sprint 11: Course Management Hub
+**Goal:** The course detail page is a trainer's daily tool — everything needed to run a course in one place.
+**We'll know it worked when:** A trainer can click a course, see attendees, export for Scrum.org with country codes, and manage cancellations/transfers from the dashboard.
+
+| # | Item | Size |
+|---|------|------|
+| 1 | Cancel course button on course detail page | S |
+| 2 | Per-attendee refund/transfer actions on course detail | M |
+| 3 | Pending transfers view (dashboard-wide) | S |
+| 4 | Country code populated from ETL + editable per attendee | M |
+| 5 | Scrum.org export button with correct filename | S |
+
+### Sprint 12: Partner & Organisation Analytics
+**Goal:** Know which companies book most, which partners are at which tier, and flag when a partner should be upgraded.
+**We'll know it worked when:** Dashboard shows top companies by bookings/spend, partner tier status, and alerts for missing PTN coupons.
+
+| # | Item | Size |
+|---|------|------|
+| 1 | Organisation enrichment: partner_type, discount_rate, PTN tier (V31 migration) | M |
+| 2 | Seed known partners from PTN list | S |
+| 3 | Company analytics endpoint: bookings, spend, courses by org | M |
+| 4 | Fuzzy company name matching | M |
+| 5 | Partner dashboard page: tier status, annual bookings, missing coupon alerts | L |
+| 6 | MCP tools for org/partner queries | S |
+
+### Sprint 13: Course Demand & Scheduling Analytics
+**Goal:** See which courses sell and which don't, so scheduling decisions are data-driven.
+**We'll know it worked when:** Dashboard shows bookings per course type over time, fill rates, and booking lead times.
+
+| # | Item | Size |
+|---|------|------|
+| 1 | Bookings per course type endpoint (PSM, PSPO, etc.) | M |
+| 2 | Historical fill rates by course type | M |
+| 3 | Booking lead times (how far ahead do people book?) | M |
+| 4 | Dashboard analytics page with charts | L |
 
 ---
 
 ## Pull Backlog
 
-### P2 — Complete the Picture
+Items below are prioritised but not yet scheduled. Refine before pulling into a sprint.
+
+### P2 — Payment Visibility
 
 | ID | Item | Who Needs It | Status |
 |----|------|-------------|--------|
@@ -21,33 +67,19 @@
 | X3 | Add payment_status to orders | Daily operations | Blocked by X2 |
 | S1 | Stripe payment check endpoint (both accounts) | Daily operations | Ready to refine |
 
-### P3 — Make It Actionable
+### P3 — Automation & Outreach
 
 | ID | Item | Who Needs It | Status |
 |----|------|-------------|--------|
-| W2 | PUT /api/organisations/{name} — enrichment updates | Org data | Ready to refine |
-| A1 | GET /api/course-schedules/summary — dashboard stats | Quick visibility | Ready to refine |
-| A2 | GET /api/analytics/fill-rates — historical by course type | Scheduling decisions | Ready to refine |
-| A3 | GET /api/analytics/booking-lead-times | Cancellation timing | Ready to refine |
-
-### P4 — Enrich & Extend
-
-| ID | Item | Who Needs It | Status |
-|----|------|-------------|--------|
-| O1 | Organisation enrichment migration (partner_type, discount_rate) | Pricing queries | Ready to refine |
-| O2 | Seed known partner data (QA=PTN33, etc.) | Immediate value | Blocked by O1 |
-
-### P5 — Future
-
-| ID | Item | Status |
-|----|------|--------|
-| M1 | MailChimp integration | Deferred |
-| SC1 | Scrum.org sync (Playwright) | Deferred |
+| M1 | MailChimp integration — sync past students | Marketing | Deferred |
+| SC1 | Scrum.org sync (Playwright) — course listings, assessments | Course admin | Deferred |
+| N1 | n8n automation — PTN coupon validation on QA orders | Revenue protection | Ready to refine |
 
 ### Deferred
 
 - **Leads table** — deferred until CRM tool decision (HubSpot Free vs custom). Trello works for now.
 - **Communication log** — evaluate as part of CRM decision.
+- **Zoom integration** — need to investigate where Zoom details are stored (WooCommerce product meta?)
 
 ---
 
@@ -58,33 +90,28 @@
 
 ### Sprint 9 (31 Mar 2026)
 - [x] Cancel + transfer workflow API: mark refund, mark transfer, transfer to course, cancel with actions
-- [x] MCP tools for transfers
-- [x] V30 migration: cancellation_reason, pending_transfer index
+- [x] MCP tools for transfers. V30 migration.
 
 ### Sprint 8 (31 Mar 2026)
-- [x] Scrum.org CSV export (First Name, Last Name, Email, Country)
-- [x] V29 migration: country column on students
-- [x] ETL extracts billing_country from WooCommerce
-- [x] Filename format: PSPO-Students-300326.csv
+- [x] Scrum.org CSV export (First Name, Last Name, Email, Country). V29 migration. ETL billing_country.
 
 ### Sprint 7 (30 Mar 2026)
-- [x] Removed automatic transfer heuristic — transfers now explicit via dashboard/MCP
-- [x] Fixed PSPO 30-31 Mar: 8 correct attendees verified against WooCommerce export
+- [x] Removed automatic transfer heuristic. Fixed PSPO 30-31 Mar: 8 correct attendees.
 
 ### Sprint 6 (30 Mar 2026)
-- [x] Multi-ticket enrolments, cancel_course verified, portal + dashboard MVP, API key management, MCP standalone repo
+- [x] Multi-ticket enrolments, portal + dashboard MVP, API key management, MCP standalone repo.
 
 ### Sprint 5 (30 Mar 2026)
 - [x] D5: Order lookup by WooCommerce ID. D6: ETL order status sync.
 
 ### Sprint 4 (27 Mar 2026)
-- [x] D1-D4: Deduplication, data cleanup, dead tests, ETL interval config
+- [x] D1-D4: Deduplication, data cleanup, dead tests, ETL interval config.
 
 ### Sprint 3 (26 Mar 2026)
-- [x] APS-SD parser fix, CI fix, GHCR auth, repo separation
+- [x] APS-SD parser fix, CI fix, GHCR auth, repo separation.
 
 ### Sprint 2 (26 Mar 2026)
-- [x] Course monitoring endpoint, cancel course endpoint, MCP tools, deployed
+- [x] Course monitoring endpoint, cancel course endpoint, MCP tools, deployed.
 
 ### Sprint 1 (26 Mar 2026)
-- [x] ETL double delay fix, MCP server, production API key
+- [x] ETL double delay fix, MCP server, production API key.
