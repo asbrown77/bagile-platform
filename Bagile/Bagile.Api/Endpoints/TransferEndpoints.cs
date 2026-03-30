@@ -10,7 +10,7 @@ public static class TransferEndpoints
         app.MapPost("/api/enrolments/{id}/mark-refund", MarkRefund);
         app.MapPost("/api/enrolments/{id}/mark-transfer", MarkPendingTransfer);
         app.MapPost("/api/enrolments/{id}/transfer-to/{courseId}", TransferTo);
-        app.MapGet("/api/transfers/pending", ListPendingTransfers);
+        // GET /api/transfers/pending already exists in TransfersController
         app.MapPost("/api/course-schedules/{id}/cancel-with-actions", CancelWithActions);
     }
 

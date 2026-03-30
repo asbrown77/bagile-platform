@@ -26,14 +26,17 @@ export default function Dashboard() {
 
   async function loadData() {
     try {
-      const [monitoring, rev, pending] = await Promise.all([
+      const [monitoring, rev] = await Promise.all([
         getMonitoring(API_KEY, 60),
         getRevenue(API_KEY),
-        getPendingTransfers(API_KEY),
       ]);
       setCourses(monitoring);
       setRevenue(rev);
-      setPendingTransferCount(Array.isArray(pending) ? pending.length : 0);
+      // Pending transfers — don't break dashboard if this fails
+      try {
+        const pending = await getPendingTransfers(API_KEY);
+        setPendingTransferCount(Array.isArray(pending) ? pending.length : 0);
+      } catch { /* non-critical */ }
     } catch {
       setError("Failed to load data");
     } finally {
