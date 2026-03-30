@@ -76,20 +76,20 @@ export async function revokeKey(
 
 export interface MonitoringCourse {
   id: number;
-  name: string;
+  title: string;
   courseCode: string;
   startDate: string;
   endDate: string | null;
   trainerName: string | null;
-  status: string;
-  enrolledCount: number;
-  minimumAttendees: number;
-  guaranteedToRun: boolean;
+  location: string | null;
+  currentEnrolmentCount: number;
+  minimumRequired: number;
+  fillPercentage: number;
+  monitoringStatus: string;
   daysUntilStart: number;
+  daysUntilDecision: number;
   decisionDeadline: string | null;
-  urgency: string;
   recommendedAction: string;
-  needsAttention: boolean;
 }
 
 export interface CourseAttendee {

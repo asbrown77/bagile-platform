@@ -41,8 +41,8 @@ export default function Dashboard() {
     window.location.replace("/login");
   }
 
-  const atRisk = courses.filter((c) => c.needsAttention && c.status !== "cancelled");
-  const upcoming = courses.filter((c) => c.status !== "cancelled");
+  const atRisk = courses.filter((c) => c.monitoringStatus !== "healthy" && c.monitoringStatus !== "cancelled");
+  const upcoming = courses.filter((c) => c.monitoringStatus !== "cancelled");
 
   return (
     <div className="max-w-6xl mx-auto py-8 px-4">
@@ -66,7 +66,7 @@ export default function Dashboard() {
             <Card label="Upcoming Courses" value={upcoming.length} />
             <Card label="At Risk" value={atRisk.length} color={atRisk.length > 0 ? "red" : "green"} />
             <Card label="Completed Orders" value={orderCount} />
-            <Card label="Courses This Month" value={upcoming.filter((c) => new Date(c.startDate).getMonth() === new Date().getMonth()).length} />
+            <Card label="This Month" value={upcoming.filter((c) => new Date(c.startDate).getMonth() === new Date().getMonth()).length} />
           </div>
 
           {atRisk.length > 0 && (
@@ -77,14 +77,14 @@ export default function Dashboard() {
                   <a key={c.id} href={`/course/${c.id}`} className="block bg-red-50 border border-red-200 rounded-lg p-4 hover:bg-red-100">
                     <div className="flex justify-between items-center">
                       <div>
-                        <p className="font-medium text-gray-900">{c.name}</p>
+                        <p className="font-medium text-gray-900">{c.title}</p>
                         <p className="text-sm text-gray-600">
                           {new Date(c.startDate).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}
                           {c.trainerName && ` — ${c.trainerName}`}
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="text-lg font-bold text-red-700">{c.enrolledCount}/{c.minimumAttendees}</p>
+                        <p className="text-lg font-bold text-red-700">{c.currentEnrolmentCount}/{c.minimumRequired}</p>
                         <p className="text-xs text-red-600">{c.recommendedAction}</p>
                       </div>
                     </div>
@@ -110,7 +110,7 @@ export default function Dashboard() {
                 {upcoming.map((c) => (
                   <tr key={c.id} className="border-t hover:bg-gray-50 cursor-pointer" onClick={() => window.location.href = `/course/${c.id}`}>
                     <td className="px-4 py-3">
-                      <p className="font-medium text-gray-900">{c.name}</p>
+                      <p className="font-medium text-gray-900">{c.title}</p>
                       <p className="text-xs text-gray-500">{c.courseCode}</p>
                     </td>
                     <td className="px-4 py-3 text-gray-600">
@@ -118,18 +118,19 @@ export default function Dashboard() {
                     </td>
                     <td className="px-4 py-3 text-gray-600">{c.trainerName || "—"}</td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`font-bold ${c.enrolledCount >= c.minimumAttendees ? "text-green-600" : c.enrolledCount > 0 ? "text-amber-600" : "text-red-600"}`}>
-                        {c.enrolledCount}
+                      <span className={`font-bold ${c.currentEnrolmentCount >= c.minimumRequired ? "text-green-600" : c.currentEnrolmentCount > 0 ? "text-amber-600" : "text-red-600"}`}>
+                        {c.currentEnrolmentCount}
                       </span>
-                      <span className="text-gray-400">/{c.minimumAttendees}</span>
+                      <span className="text-gray-400">/{c.minimumRequired}</span>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        c.guaranteedToRun ? "bg-green-100 text-green-700" :
-                        c.needsAttention ? "bg-red-100 text-red-700" :
-                        "bg-blue-100 text-blue-700"
+                        c.monitoringStatus === "healthy" ? "bg-green-100 text-green-700" :
+                        c.monitoringStatus === "warning" ? "bg-amber-100 text-amber-700" :
+                        c.monitoringStatus === "critical" ? "bg-red-100 text-red-700" :
+                        "bg-gray-100 text-gray-600"
                       }`}>
-                        {c.guaranteedToRun ? "confirmed" : c.needsAttention ? "at risk" : "on track"}
+                        {c.monitoringStatus}
                       </span>
                     </td>
                   </tr>
@@ -143,7 +144,7 @@ export default function Dashboard() {
         </>
       )}
 
-      <p className="text-center text-xs text-gray-400 mt-8">v2.0.0</p>
+      <p className="text-center text-xs text-gray-400 mt-8">v2.0.1</p>
     </div>
   );
 }
