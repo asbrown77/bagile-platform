@@ -13,12 +13,13 @@ namespace Bagile.Infrastructure.Repositories
         public async Task<long> UpsertAsync(Student student)
         {
             const string sql = @"
-            INSERT INTO bagile.students (email, first_name, last_name, company)
-            VALUES (@Email, @FirstName, @LastName, @Company)
+            INSERT INTO bagile.students (email, first_name, last_name, company, country)
+            VALUES (@Email, @FirstName, @LastName, @Company, @Country)
             ON CONFLICT (email) DO UPDATE
             SET first_name = EXCLUDED.first_name,
                 last_name = EXCLUDED.last_name,
-                company = EXCLUDED.company
+                company = EXCLUDED.company,
+                country = COALESCE(EXCLUDED.country, bagile.students.country)
             RETURNING id;";
 
             await using var c = new NpgsqlConnection(_conn);

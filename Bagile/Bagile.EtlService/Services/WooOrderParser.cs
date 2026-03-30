@@ -40,6 +40,7 @@ namespace Bagile.EtlService.Services
             string billingFirst = SafeGet(billing, "first_name");
             string billingLast = SafeGet(billing, "last_name");
             string billingCompany = SafeGet(billing, "company");
+            string billingCountry = SafeGet(billing, "country");
 
             var pluginProductId = ExtractFooEventsProductId(root);
 
@@ -87,6 +88,7 @@ namespace Bagile.EtlService.Services
                 billingFirst,
                 billingLast,
                 billingCompany,
+                billingCountry,
                 hasFooEventsMetadata
             );
 
@@ -288,6 +290,7 @@ namespace Bagile.EtlService.Services
     string billingFirst,
     string billingLast,
     string billingCompany,
+    string billingCountry,
     bool hasFooEventsMetadata)
         {
             int totalQty = 0;
@@ -340,6 +343,7 @@ namespace Bagile.EtlService.Services
                 BillingEmail = billingEmail,
                 BillingName = $"{billingFirst} {billingLast}".Trim(),
                 BillingCompany = billingCompany,
+                BillingCountry = billingCountry,
 
                 TotalQuantity = totalQty,
                 SubTotal = subtotal,

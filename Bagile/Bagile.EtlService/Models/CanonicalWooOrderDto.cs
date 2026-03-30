@@ -10,6 +10,7 @@
         public string BillingEmail { get; init; } = "";
         public string BillingName { get; init; } = "";
         public string BillingCompany { get; init; } = "";
+        public string BillingCountry { get; init; } = "";
 
         public int TotalQuantity { get; init; }
         public decimal SubTotal { get; init; }

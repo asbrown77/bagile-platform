@@ -353,7 +353,8 @@ namespace Bagile.EtlService.Services
                     LastName = ticket.LastName,
                     Company = string.IsNullOrWhiteSpace(ticket.Company)
                         ? dto.BillingCompany
-                        : ticket.Company
+                        : ticket.Company,
+                    Country = dto.BillingCountry
                 };
             }
             else
@@ -363,7 +364,8 @@ namespace Bagile.EtlService.Services
                     Email = dto.BillingEmail?.ToLowerInvariant() ?? string.Empty,
                     FirstName = ExtractFirst(dto.BillingName),
                     LastName = ExtractLast(dto.BillingName),
-                    Company = dto.BillingCompany
+                    Company = dto.BillingCompany,
+                    Country = dto.BillingCountry
                 };
             }
 

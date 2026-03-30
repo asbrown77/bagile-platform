@@ -185,7 +185,8 @@ public class CourseScheduleQueries : ICourseScheduleQueries
                 s.company AS Organisation,
                 e.status AS Status,
                 cs.sku AS CourseCode,
-                cs.name AS CourseName
+                cs.name AS CourseName,
+                s.country AS Country
             FROM bagile.enrolments e
             JOIN bagile.students s ON e.student_id = s.id
             JOIN bagile.course_schedules cs ON e.course_schedule_id = cs.id

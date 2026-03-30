@@ -91,12 +91,15 @@ public class CourseSchedulesController : ControllerBase
         var attendees = (await _mediator.Send(query)).ToList();
 
         var sb = new StringBuilder();
-        sb.AppendLine("First Name,Last Name,Email,Organisation,Status,Course Code,Course Name");
+        sb.AppendLine("First Name,Last Name,Email,Country");
         foreach (var a in attendees)
-            sb.AppendLine($"{Csv(a.FirstName)},{Csv(a.LastName)},{Csv(a.Email)},{Csv(a.Organisation)},{Csv(a.Status)},{Csv(a.CourseCode)},{Csv(a.CourseName)}");
+            sb.AppendLine($"{Csv(a.FirstName)},{Csv(a.LastName)},{Csv(a.Email)},{Csv(a.Country)}");
 
+        // Filename: PSPO-Students-300326.csv
         var sku = attendees.FirstOrDefault()?.CourseCode ?? id.ToString();
-        return File(Encoding.UTF8.GetBytes(sb.ToString()), "text/csv", $"attendees-{sku}.csv");
+        var code = sku.Split('-')[0];
+        var datePart = sku.Contains('-') && sku.Split('-').Length > 1 ? sku.Split('-')[1] : id.ToString();
+        return File(Encoding.UTF8.GetBytes(sb.ToString()), "text/csv", $"{code}-Students-{datePart}.csv");
     }
 
     private static string Csv(string? v)

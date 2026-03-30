@@ -11,4 +11,5 @@ public record CourseAttendeeDto
     public string Status { get; init; } = "";
     public string? CourseCode { get; init; }
     public string? CourseName { get; init; }
+    public string? Country { get; init; }
 }
