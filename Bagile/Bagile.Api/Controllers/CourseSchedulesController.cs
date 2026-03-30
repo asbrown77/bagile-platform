@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿using System.Text;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Bagile.Application.CourseSchedules.Queries.GetCourseSchedules;
 using Bagile.Application.CourseSchedules.Queries.GetCourseScheduleById;
@@ -77,6 +78,58 @@ public class CourseSchedulesController : ControllerBase
         var query = new GetCourseAttendeesQuery(id);
         var result = await _mediator.Send(query);
         return Ok(result);
+    }
+
+    /// <summary>
+    /// Export attendees as CSV for Scrum.org registration or partner trainers
+    /// </summary>
+    [HttpGet("{id}/attendees/export")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ExportCourseAttendees(
+        long id,
+        [FromQuery] string format = "standard")
+    {
+        var query = new GetCourseAttendeesQuery(id);
+        var attendees = (await _mediator.Send(query)).ToList();
+
+        var sb = new StringBuilder();
+
+        if (format == "scrumorg")
+        {
+            sb.AppendLine("First Name,Last Name,Email,Course Code");
+            foreach (var a in attendees)
+            {
+                var courseCode = ExtractScrumOrgCourseCode(a.CourseCode);
+                sb.AppendLine($"{CsvEscape(a.FirstName)},{CsvEscape(a.LastName)},{CsvEscape(a.Email)},{CsvEscape(courseCode)}");
+            }
+        }
+        else
+        {
+            sb.AppendLine("First Name,Last Name,Email,Organisation,Status,Course Code,Course Name");
+            foreach (var a in attendees)
+                sb.AppendLine($"{CsvEscape(a.FirstName)},{CsvEscape(a.LastName)},{CsvEscape(a.Email)},{CsvEscape(a.Organisation)},{CsvEscape(a.Status)},{CsvEscape(a.CourseCode)},{CsvEscape(a.CourseName)}");
+        }
+
+        var filename = format == "scrumorg"
+            ? $"scrumorg-{attendees.FirstOrDefault()?.CourseCode ?? id.ToString()}.csv"
+            : $"attendees-{attendees.FirstOrDefault()?.CourseCode ?? id.ToString()}.csv";
+
+        return File(Encoding.UTF8.GetBytes(sb.ToString()), "text/csv", filename);
+    }
+
+    private static string ExtractScrumOrgCourseCode(string? sku)
+    {
+        if (string.IsNullOrWhiteSpace(sku)) return "";
+        var parts = sku.Split('-');
+        return parts.Length > 0 ? parts[0] : sku;
+    }
+
+    private static string CsvEscape(string? value)
+    {
+        if (string.IsNullOrEmpty(value)) return "";
+        if (value.Contains(',') || value.Contains('"') || value.Contains('\n'))
+            return $"\"{value.Replace("\"", "\"\"")}\"";
+        return value;
     }
 
     /// <summary>

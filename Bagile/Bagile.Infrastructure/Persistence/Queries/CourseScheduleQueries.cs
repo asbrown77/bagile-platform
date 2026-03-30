@@ -176,15 +176,21 @@ public class CourseScheduleQueries : ICourseScheduleQueries
         CancellationToken ct = default)
     {
         var sql = @"
-            SELECT 
+            SELECT
                 s.id AS StudentId,
+                s.first_name AS FirstName,
+                s.last_name AS LastName,
                 CONCAT(s.first_name, ' ', s.last_name) AS Name,
                 s.email AS Email,
                 s.company AS Organisation,
-                'Booked' AS Status
+                e.status AS Status,
+                cs.sku AS CourseCode,
+                cs.name AS CourseName
             FROM bagile.enrolments e
             JOIN bagile.students s ON e.student_id = s.id
+            JOIN bagile.course_schedules cs ON e.course_schedule_id = cs.id
             WHERE e.course_schedule_id = @scheduleId
+              AND e.status != 'cancelled'
             ORDER BY s.last_name, s.first_name;";
 
         await using var conn = new NpgsqlConnection(_connectionString);
