@@ -14,8 +14,8 @@ CREATE TABLE IF NOT EXISTS bagile.api_keys (
     revoked_at      TIMESTAMPTZ
 );
 
-CREATE INDEX idx_api_keys_hash_active ON bagile.api_keys (key_hash) WHERE is_active = TRUE;
-CREATE INDEX idx_api_keys_owner ON bagile.api_keys (owner_email);
+CREATE INDEX IF NOT EXISTS idx_api_keys_hash_active ON bagile.api_keys (key_hash) WHERE is_active = TRUE;
+CREATE INDEX IF NOT EXISTS idx_api_keys_owner ON bagile.api_keys (owner_email);
 
 -- Note: The existing API key continues to work via the legacy config fallback
 -- in ApiKeyAuthenticationMiddleware. New keys are created through the portal.
