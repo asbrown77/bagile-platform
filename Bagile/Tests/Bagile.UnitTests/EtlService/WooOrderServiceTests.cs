@@ -71,6 +71,60 @@ public class WooOrderServiceTests
     }
 
     [Test]
+    public async Task ProcessAsync_NewOrder_UpsertsCalled()
+    {
+        // Arrange — OrderId = 0 means new order, should trigger upsert
+        var dto = new CanonicalWooOrderDto
+        {
+            OrderId = 0,
+            ExternalId = "12912",
+            BillingEmail = "test@example.com",
+            BillingName = "Test User",
+            Status = "processing",
+            RawPayload = "{}"
+        };
+
+        _order.Setup(x => x.UpsertOrderAsync(It.IsAny<Order>())).ReturnsAsync(42);
+        _students.Setup(x => x.UpsertAsync(It.IsAny<Student>())).ReturnsAsync(1);
+
+        // Act
+        await _service.ProcessAsync(dto, CancellationToken.None);
+
+        // Assert — upsert called with initial status
+        _order.Verify(x => x.UpsertOrderAsync(It.Is<Order>(o =>
+            o.ExternalId == "12912" && o.Status == "processing"
+        )), Times.Once);
+    }
+
+    [Test]
+    public async Task ProcessAsync_ReprocessedOrder_StatusUpdatedViaUpsert()
+    {
+        // Arrange — OrderId = 0 (parser doesn't look up existing orders)
+        // but ExternalId matches an existing order. The ON CONFLICT upsert
+        // in OrderRepository will update the status.
+        var dto = new CanonicalWooOrderDto
+        {
+            OrderId = 0,
+            ExternalId = "12912",
+            BillingEmail = "test@example.com",
+            BillingName = "Test User",
+            Status = "completed",
+            RawPayload = "{}"
+        };
+
+        _order.Setup(x => x.UpsertOrderAsync(It.IsAny<Order>())).ReturnsAsync(42);
+        _students.Setup(x => x.UpsertAsync(It.IsAny<Student>())).ReturnsAsync(1);
+
+        // Act
+        await _service.ProcessAsync(dto, CancellationToken.None);
+
+        // Assert — upsert called with updated status (ON CONFLICT will handle the update)
+        _order.Verify(x => x.UpsertOrderAsync(It.Is<Order>(o =>
+            o.ExternalId == "12912" && o.Status == "completed"
+        )), Times.Once);
+    }
+
+    [Test]
     public async Task ProcessAsync_TicketProcessing_CreatesEnrolmentPerTicket()
     {
         var dto = new CanonicalWooOrderDto

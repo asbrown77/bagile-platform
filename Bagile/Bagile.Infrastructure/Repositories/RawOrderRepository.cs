@@ -130,7 +130,13 @@ namespace Bagile.Infrastructure.Repositories
                       AND payload ? 'UpdatedDateUTC';",
 
                 _ => @"
-                    SELECT MAX(created_at)
+                    SELECT MAX(
+                        CASE
+                            WHEN (payload->>'date_modified') IS NOT NULL
+                            THEN (payload->>'date_modified')::timestamp
+                            ELSE created_at
+                        END
+                    )
                     FROM bagile.raw_orders
                     WHERE source = @source;"
             };

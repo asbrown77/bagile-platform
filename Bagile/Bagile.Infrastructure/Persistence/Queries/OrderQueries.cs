@@ -85,8 +85,10 @@ public class OrderQueries : IOrderQueries
 
     public async Task<OrderDetailDto?> GetOrderByIdAsync(long orderId, CancellationToken ct = default)
     {
+        var externalIdStr = orderId.ToString();
+
         var sql = @"
-            SELECT 
+            SELECT
                 o.id AS Id,
                 o.source AS Source,
                 o.external_id AS ExternalId,
@@ -100,10 +102,12 @@ public class OrderQueries : IOrderQueries
                 r.payload::text AS RawPayload
             FROM bagile.orders o
             LEFT JOIN bagile.raw_orders r ON o.raw_order_id = r.id
-            WHERE o.id = @orderId;";
+            WHERE o.id = @orderId OR o.external_id = @externalIdStr
+            ORDER BY CASE WHEN o.id = @orderId THEN 0 ELSE 1 END
+            LIMIT 1;";
 
         await using var conn = new NpgsqlConnection(_connectionString);
-        var order = await conn.QueryFirstOrDefaultAsync<dynamic>(sql, new { orderId });
+        var order = await conn.QueryFirstOrDefaultAsync<dynamic>(sql, new { orderId, externalIdStr });
 
         if (order == null) return null;
 
@@ -126,7 +130,7 @@ public class OrderQueries : IOrderQueries
                 Email = order.customeremail,
                 Company = order.customercompany
             },
-            Enrolments = await GetEnrolmentsForOrderAsync(conn, orderId),
+            Enrolments = await GetEnrolmentsForOrderAsync(conn, (long)order.id),
             LineItems = ExtractLineItemsFromRawPayload(order.rawpayload)
         };
 

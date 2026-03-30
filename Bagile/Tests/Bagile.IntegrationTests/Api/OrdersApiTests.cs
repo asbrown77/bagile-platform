@@ -177,6 +177,55 @@ public class OrdersApiTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task GET_OrderById_Should_Return_Order_By_ExternalId()
+    {
+        // Arrange — insert order with known external_id (WooCommerce order number)
+        await _db.ExecuteAsync(@"
+            INSERT INTO bagile.orders (external_id, source, type, status, total_amount, order_date, contact_email)
+            VALUES ('12912', 'woo', 'public', 'completed', 1260, NOW(), 'test@example.com');
+        ");
+
+        // Act — query using the WooCommerce order number, not the internal DB id
+        var response = await _client.GetAsync("/api/orders/12912");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var order = await response.Content.ReadFromJsonAsync<OrderDetailDto>();
+        order.Should().NotBeNull();
+        order.ExternalId.Should().Be("12912");
+        order.Status.Should().Be("completed");
+    }
+
+    [Test]
+    public async Task GET_OrderById_Should_Prefer_InternalId_Over_ExternalId()
+    {
+        // Arrange — create two orders where one's internal id matches the other's external_id
+        var internalId = await _db.ExecuteScalarAsync<long>(@"
+            INSERT INTO bagile.orders (external_id, source, type, status, total_amount, order_date)
+            VALUES ('99998', 'woo', 'public', 'completed', 500, NOW())
+            RETURNING id;
+        ");
+
+        await _db.ExecuteAsync(@"
+            INSERT INTO bagile.orders (external_id, source, type, status, total_amount, order_date)
+            VALUES (@idStr, 'woo', 'public', 'processing', 700, NOW());
+        ", new { idStr = internalId.ToString() });
+
+        // Act — query by the internal id value
+        var response = await _client.GetAsync($"/api/orders/{internalId}");
+
+        // Assert — should return the order matched by internal id (completed), not external_id (processing)
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var order = await response.Content.ReadFromJsonAsync<OrderDetailDto>();
+        order.Should().NotBeNull();
+        order.Id.Should().Be(internalId);
+        order.ExternalId.Should().Be("99998");
+        order.Status.Should().Be("completed");
+    }
+
+    [Test]
     public async Task GET_OrderById_Should_Return_404_When_Not_Found()
     {
         // Act

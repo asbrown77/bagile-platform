@@ -42,7 +42,7 @@ public class WooApiClient : IWooApiClient
         var query = new StringBuilder($"/wp-json/wc/v3/orders?page={page}&per_page={perPage}");
 
         if (since != null)
-            query.Append($"&after={since.Value:yyyy-MM-ddTHH:mm:ss}Z");
+            query.Append($"&modified_after={since.Value:yyyy-MM-ddTHH:mm:ss}Z");
 
         var url = query.ToString();
         _logger.LogInformation("Fetching Woo orders: {Url}", url);

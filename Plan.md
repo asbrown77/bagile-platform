@@ -16,6 +16,8 @@ Items below are prioritised but unrefined. Refine before pulling into a sprint.
 | D2 | Data cleanup migration — nulls, empty SKUs, inconsistent codes | Monitoring accuracy | Ready to refine |
 | D3 | Delete or fix acceptance tests | CI integrity | Ready to refine |
 | D4 | ETL interval to config (appsettings) | Ops flexibility | Ready to refine |
+| D5 | ~~GET /orders/{id} returns 404 for WooCommerce order numbers~~ | MCP usability, daily ops | **Done — Sprint 5** |
+| D6 | ~~ETL not syncing order status updates~~ | Data accuracy, monitoring, revenue reporting | **Done — Sprint 5** |
 
 ### P2 — Complete the Picture
 
@@ -60,63 +62,32 @@ Items below are prioritised but unrefined. Refine before pulling into a sprint.
 
 ## Sprint Queue
 
-### Sprint 4: Data Integrity → Sprint 4
+### Sprint 5: Data Trust Bugs (30 Mar 2026)
 
-**Goal:** The monitoring endpoint returns trustworthy data — no duplicates, no wrong minimums, no ghost courses.
-**We'll know it worked when:** `get_course_monitoring` returns exactly the right number of unique courses for the next 14 days, each with correct SKU and minimum.
+**Goal:** Orders are queryable by WooCommerce order number and status changes sync automatically.
+**We'll know it worked when:** `get_order 12912` returns the order, and order status updates from WooCommerce appear within one ETL cycle.
 
-**Refined PBIs:**
+| # | Item | Status |
+|---|------|--------|
+| 1 | D5: Fix order lookup by WooCommerce order number | Done |
+| 2 | D6: Fix ETL order status sync | Done |
 
-#### D1: Fix ETL Deduplication
-- **What:** Investigate and fix duplicate course schedules created by ETL (e.g. 3x PSMAI on 6 May)
-- **Who needs it:** Anyone using monitoring — duplicates inflate course counts and confuse cancel decisions
-- **Today:** ETL upsert may create duplicates when WooCommerce product IDs change or when SKU matching fails
-- **Should be:** One course schedule per unique course instance. Upsert on (source_system, source_product_id) is unique but same course can arrive with different product IDs
-- **Data source:** `bagile.course_schedules` table, ETL `CourseScheduleRepository.UpsertAsync`
-- **Files likely touched:** `CourseScheduleRepository.cs`, `WooProductParser.cs`, possibly V26 migration for cleanup
-- **Acceptance criteria:**
-  - [ ] Root cause identified for the 3 duplicate PSMAI entries
-  - [ ] Fix prevents future duplicates
-  - [ ] V26 migration cleans up existing duplicates
-  - [ ] Unit test for the dedup logic
+#### D5: Fix — Order lookup now supports WooCommerce order numbers
+- `OrderQueries.GetOrderByIdAsync` queries by both `o.id` and `o.external_id`, internal ID takes priority
+- Enrolment sub-query uses actual internal ID from result, not the passed-in parameter
+- 2 integration tests added (external ID lookup + internal ID priority)
 
-#### D2: Data Cleanup Migration
-- **What:** Fix null start dates, empty-string SKUs, inconsistent codes (APSSD vs APS-SD)
-- **Who needs it:** Monitoring endpoint — SKU parsing drives minimum calculation
-- **Today:** Some courses have `sku = ''` instead of NULL, `APSSD` instead of `APS-SD`
-- **Should be:** All courses have proper SKUs matching the pattern `COURSECODE-DDMMYY-TRAINER`
-- **Data source:** `bagile.course_schedules` table
-- **Files likely touched:** New migration V26 or V27, possibly `WooProductParser.cs`
-- **Acceptance criteria:**
-  - [ ] Empty-string SKUs set to NULL
-  - [ ] `APSSD` standardised to `APS-SD` pattern
-  - [ ] Courses with null start_date identified (report, don't delete)
-
-#### D3: Fix or Delete Acceptance Tests
-- **What:** The 9 acceptance tests always fail in CI (need running API+DB). Either wire them to a test container or delete them.
-- **Who needs it:** CI pipeline integrity — green pipeline should mean green
-- **Today:** Tests excluded via filter, dead code in repo
-- **Should be:** Either tests that run in CI (via docker-compose test setup) or removed entirely
-- **Files likely touched:** `Bagile.AcceptanceTests/`, possibly `docker-compose.test.yml`
-- **Acceptance criteria:**
-  - [ ] Decision: fix or delete
-  - [ ] If fix: tests pass in CI
-  - [ ] If delete: project removed, CI simplified
-
-#### D4: ETL Interval to Config
-- **What:** Move hardcoded 5-min delay to `appsettings.json`
-- **Who needs it:** Ops — different intervals for dev vs prod
-- **Today:** `TimeSpan.FromMinutes(5)` hardcoded in EtlWorker.cs:46
-- **Should be:** `_options.IntervalMinutes` from config
-- **Files likely touched:** `EtlWorker.cs`, `appsettings.json`, new `EtlOptions.cs`
-- **Acceptance criteria:**
-  - [ ] Interval read from config
-  - [ ] Default 5 min if not specified
-  - [ ] Existing regression test still passes
+#### D6: Fix — ETL now syncs order status updates (2 root causes)
+1. `RawOrderRepository.GetLastTimestampAsync` was returning `MAX(created_at)` (local DB timestamp) → now extracts `date_modified` from WooCommerce JSON payload
+2. `WooApiClient.FetchOrdersAsync` was using `after=` (filters by creation date) → now uses `modified_after=` (filters by modification date)
+- 2 unit tests added (new order upsert + re-processed order status update)
 
 ---
 
 ## Completed
+
+### Sprint 4 (27 Mar 2026)
+- [x] **D1-D4:** Deduplication fix, data cleanup migration, dead test removal, ETL interval to config
 
 ### Sprint 3 (26 Mar 2026)
 - [x] **Fix APS-SD SKU parser** — multi-segment course codes now parsed correctly
