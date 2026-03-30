@@ -94,10 +94,16 @@ jobs:
 
             cp -f docker-compose.prod.yml docker-compose.yml
 
-            echo "=== Gateway Caddyfile ==="
-            cat /opt/gateway/Caddyfile 2>/dev/null
-            echo "=== Gateway compose ==="
-            cat /opt/gateway/docker-compose.yml 2>/dev/null
+            # Add portal to Caddy if not present
+            if ! grep -q "portal.bagile.co.uk" /opt/gateway/Caddyfile 2>/dev/null; then
+              cat >> /opt/gateway/Caddyfile <<'CADDYEOF'
+
+portal.bagile.co.uk {
+	reverse_proxy bagile-portal:3000
+}
+CADDYEOF
+              docker exec gateway caddy reload --config /etc/caddy/Caddyfile 2>/dev/null || docker restart gateway
+            fi
 
             docker pull ghcr.io/asbrown77/bagile-portal:latest
             docker compose up -d bagile-portal
