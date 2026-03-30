@@ -10,6 +10,7 @@ services:
     networks:
       - default
       - shared
+      - bagile-net
 
   bagile-etl:
     container_name: bagile-etl
@@ -17,6 +18,9 @@ services:
     restart: unless-stopped
     env_file:
       - config/etl.env
+    networks:
+      - default
+      - bagile-net
 
   bagile-portal:
     container_name: bagile-portal
@@ -32,4 +36,6 @@ services:
 
 networks:
   shared:
+    external: true
+  bagile-net:
     external: true
