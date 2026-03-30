@@ -1,0 +1,116 @@
+name: CI/CD - Portal (Hetzner)
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'portal-v*'
+    paths:
+      - 'bagile-portal/**'
+      - '.github/workflows/cicd-portal-hetzner.yml'
+  workflow_dispatch:
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: vars
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+          else
+            TAG="portal-vdev-${GITHUB_SHA::7}"
+          fi
+          echo "version=${TAG}" >> $GITHUB_OUTPUT
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_PAT }}
+
+      - name: Build and Push Portal Image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./bagile-portal
+          file: bagile-portal/Dockerfile
+          push: true
+          build-args: |
+            NEXT_PUBLIC_GOOGLE_CLIENT_ID=${{ secrets.PORTAL_GOOGLE_CLIENT_ID }}
+            NEXT_PUBLIC_API_URL=https://api.bagile.co.uk
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/bagile-portal:latest
+            ghcr.io/${{ github.repository_owner }}/bagile-portal:${{ steps.vars.outputs.version }}
+
+  deploy-to-hetzner:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/portal-v') || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Deploy via SSH to Hetzner
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          PORTAL_GOOGLE_CLIENT_ID: ${{ secrets.PORTAL_GOOGLE_CLIENT_ID }}
+          PORTAL_JWT_SECRET: ${{ secrets.PORTAL_JWT_SECRET }}
+          PORTAL_ALLOWED_EMAILS: ${{ secrets.PORTAL_ALLOWED_EMAILS }}
+        with:
+          host: ${{ vars.HETZNER_HOST }}
+          username: root
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          envs: PORTAL_GOOGLE_CLIENT_ID,PORTAL_JWT_SECRET,PORTAL_ALLOWED_EMAILS
+          script: |
+            cd /opt/bagile
+
+            echo "Pulling latest repo..."
+            git pull origin main
+
+            echo "Writing portal env file..."
+            mkdir -p config
+            cat > config/portal.env <<PORTALEOF
+            NEXT_PUBLIC_GOOGLE_CLIENT_ID=${PORTAL_GOOGLE_CLIENT_ID}
+            NEXT_PUBLIC_API_URL=https://api.bagile.co.uk
+            PORTALEOF
+
+            echo "Adding portal config to API env..."
+            if ! grep -q "Portal__GoogleClientId" config/api.env 2>/dev/null; then
+              cat >> config/api.env <<APIEOF
+
+            Portal__GoogleClientId=${PORTAL_GOOGLE_CLIENT_ID}
+            Portal__JwtSecret=${PORTAL_JWT_SECRET}
+            Portal__AllowedEmails=${PORTAL_ALLOWED_EMAILS}
+            APIEOF
+            fi
+
+            echo "Adding portal service to docker-compose if needed..."
+            if ! grep -q "bagile-portal" docker-compose.yml 2>/dev/null; then
+              cat >> docker-compose.yml <<COMPEOF
+
+              bagile-portal:
+                container_name: bagile-portal
+                image: ghcr.io/asbrown77/bagile-portal:latest
+                restart: unless-stopped
+                ports:
+                  - "3000:3000"
+                env_file:
+                  - config/portal.env
+            COMPEOF
+            fi
+
+            echo "Pulling latest portal image..."
+            docker pull ghcr.io/asbrown77/bagile-portal:latest
+
+            echo "Starting portal..."
+            docker compose up -d bagile-portal
+
+            echo "Restarting API (to pick up portal config)..."
+            docker compose up -d bagile-api
+
+            echo "Cleaning unused images..."
+            docker system prune -f

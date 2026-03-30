@@ -1,0 +1,25 @@
+services:
+  bagile-api:
+    container_name: bagile-api
+    image: ghcr.io/asbrown77/bagile-api:latest
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file:
+      - config/api.env
+
+  bagile-etl:
+    container_name: bagile-etl
+    image: ghcr.io/asbrown77/bagile-etl:latest
+    restart: unless-stopped
+    env_file:
+      - config/etl.env
+
+  bagile-portal:
+    container_name: bagile-portal
+    image: ghcr.io/asbrown77/bagile-portal:latest
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - config/portal.env
