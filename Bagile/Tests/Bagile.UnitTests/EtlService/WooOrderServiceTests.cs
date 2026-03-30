@@ -161,4 +161,46 @@ public class WooOrderServiceTests
 
         _enrolments.Verify(x => x.UpsertAsync(It.IsAny<Enrolment>()), Times.Exactly(2));
     }
+
+    [Test]
+    public async Task ProcessAsync_MultiTicket_CreatesSeparateStudentPerTicket()
+    {
+        // Arrange — 2 tickets with different attendee emails
+        var dto = new CanonicalWooOrderDto
+        {
+            OrderId = 0,
+            ExternalId = "12874",
+            BillingEmail = "billing@company.com",
+            BillingName = "Billing User",
+            BillingCompany = "Test Corp",
+            Status = "completed",
+            RawPayload = "{}",
+            Tickets = new List<CanonicalTicketDto>
+            {
+                new() { Email = "attendee1@company.com", FirstName = "Alice", LastName = "One", Sku = "PSPO-300326-AB" },
+                new() { Email = "attendee2@company.com", FirstName = "Bob", LastName = "Two", Sku = "PSPO-300326-AB" }
+            }
+        };
+
+        _order.Setup(x => x.UpsertOrderAsync(It.IsAny<Order>())).ReturnsAsync(42);
+
+        var studentIdCounter = 100L;
+        _students.Setup(x => x.UpsertAsync(It.IsAny<Student>()))
+            .ReturnsAsync(() => ++studentIdCounter);
+
+        _courses.Setup(x => x.GetIdBySkuAsync("PSPO-300326-AB"))
+            .ReturnsAsync(77);
+
+        // Act
+        await _service.ProcessAsync(dto, CancellationToken.None);
+
+        // Assert — two different students created
+        _students.Verify(x => x.UpsertAsync(It.Is<Student>(s =>
+            s.Email == "attendee1@company.com")), Times.AtLeastOnce);
+        _students.Verify(x => x.UpsertAsync(It.Is<Student>(s =>
+            s.Email == "attendee2@company.com")), Times.Once);
+
+        // Assert — two enrolments with different student IDs
+        _enrolments.Verify(x => x.UpsertAsync(It.IsAny<Enrolment>()), Times.Exactly(2));
+    }
 }

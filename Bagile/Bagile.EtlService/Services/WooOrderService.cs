@@ -64,38 +64,12 @@ namespace Bagile.EtlService.Services
                 dto.OrderId = await _orderRepo.UpsertOrderAsync(order);
             }
 
-            // Create/update student
-            Student student;
-            var primary = dto.Tickets.FirstOrDefault();
-
-            if (primary != null && !string.IsNullOrWhiteSpace(primary.Email))
-            {
-                student = new Student
-                {
-                    Email = primary.Email.ToLowerInvariant(),
-                    FirstName = primary.FirstName,
-                    LastName = primary.LastName,
-                    Company = string.IsNullOrWhiteSpace(primary.Company)
-                        ? dto.BillingCompany
-                        : primary.Company
-                };
-            }
-            else
-            {
-                student = new Student
-                {
-                    Email = dto.BillingEmail?.ToLowerInvariant() ?? string.Empty,
-                    FirstName = ExtractFirst(dto.BillingName),
-                    LastName = ExtractLast(dto.BillingName),
-                    Company = dto.BillingCompany
-                };
-            }
-
-            var studentId = await _studentRepo.UpsertAsync(student);
+            // Create primary student from first ticket or billing info
+            var primaryStudentId = await CreateStudentFromTicketOrBillingAsync(
+                dto.Tickets.FirstOrDefault(), dto);
 
             // TRANSFER HANDLING
             bool shouldTryTransfer = false;
-
 
             if (dto.Tickets.Count > 0)
             {
@@ -103,7 +77,7 @@ namespace Bagile.EtlService.Services
 
                 if (!string.IsNullOrWhiteSpace(prefix))
                 {
-                    var previous = await _enrolmentRepo.FindHeuristicTransferSourceAsync(studentId, prefix);
+                    var previous = await _enrolmentRepo.FindHeuristicTransferSourceAsync(primaryStudentId, prefix);
 
                     if (previous != null)
                         shouldTryTransfer = true;
@@ -112,7 +86,7 @@ namespace Bagile.EtlService.Services
 
             if (shouldTryTransfer)
             {
-                var handled = await TryHandleInternalTransferAsync(dto, studentId, token);
+                var handled = await TryHandleInternalTransferAsync(dto, primaryStudentId, token);
                 if (handled)
                 {
                     _logger.LogInformation("Internal transfer handled for order {OrderId}", dto.OrderId);
@@ -125,42 +99,30 @@ namespace Bagile.EtlService.Services
 
             if (isCancelled)
             {
-                // Cancel any existing enrolments for this order
                 await HandleFullCancellationAsync(dto.OrderId);
             }
-
-            // REFUND / CANCELLATION
-            // if (dto.Status == "cancelled" ||
-            //     (dto.RefundTotal > 0 && dto.RefundTotal >= dto.PaymentTotal))
-            // {
-            //     if (dto.Status == "cancelled")
-            //     {
-            //         // Cancel any existing enrolments for this order
-            //         await HandleFullCancellationAsync(dto.OrderId);
-            //     }
-            // }
 
             // BILLING ONLY
             if (dto.Tickets.Count == 0)
             {
-                await CreateBillingOnlyEnrolmentAsync(dto, studentId, token);
+                await CreateBillingOnlyEnrolmentAsync(dto, primaryStudentId, token);
                 return;
             }
 
-            // NORMAL ENROLMENTS
+            // NORMAL ENROLMENTS — one student + enrolment per ticket
             foreach (var ticket in dto.Tickets)
             {
+                var studentId = await CreateStudentFromTicketOrBillingAsync(ticket, dto);
+
                 var scheduleId = await ResolveCourseScheduleAsync(ticket);
                 if (!scheduleId.HasValue)
                     continue;
-
-                var schedule = new CourseSchedule { Id = scheduleId.Value, Sku = ticket.Sku };
 
                 var enrol = new Enrolment
                 {
                     StudentId = studentId,
                     OrderId = dto.OrderId,
-                    CourseScheduleId = schedule.Id,
+                    CourseScheduleId = scheduleId.Value,
                     IsCancelled = isCancelled,
                     Status = isCancelled ? "cancelled" : "active"
                 };
@@ -394,6 +356,37 @@ namespace Bagile.EtlService.Services
             return (name, sku, startDate, endDate, price, currency);
         }
 
+
+        private async Task<long> CreateStudentFromTicketOrBillingAsync(
+            CanonicalTicketDto? ticket, CanonicalWooOrderDto dto)
+        {
+            Student student;
+
+            if (ticket != null && !string.IsNullOrWhiteSpace(ticket.Email))
+            {
+                student = new Student
+                {
+                    Email = ticket.Email.ToLowerInvariant(),
+                    FirstName = ticket.FirstName,
+                    LastName = ticket.LastName,
+                    Company = string.IsNullOrWhiteSpace(ticket.Company)
+                        ? dto.BillingCompany
+                        : ticket.Company
+                };
+            }
+            else
+            {
+                student = new Student
+                {
+                    Email = dto.BillingEmail?.ToLowerInvariant() ?? string.Empty,
+                    FirstName = ExtractFirst(dto.BillingName),
+                    LastName = ExtractLast(dto.BillingName),
+                    Company = dto.BillingCompany
+                };
+            }
+
+            return await _studentRepo.UpsertAsync(student);
+        }
 
         private string ExtractFirst(string name)
         {

@@ -84,6 +84,23 @@ Items below are prioritised but unrefined. Refine before pulling into a sprint.
 
 ---
 
+### Sprint 6: Multi-Ticket Enrolments (30 Mar 2026)
+
+**Goal:** Multi-ticket orders create one enrolment per attendee, not one per order.
+**We'll know it worked when:** Order 12874 shows 2 enrolments (Olorundurotimi + Maxwell) and order 12902 shows 5 enrolments.
+
+| # | Item | Status |
+|---|------|--------|
+| 1 | Fix WooOrderService to create student per ticket | Done |
+| 2 | Verify cancel_course 500 (was fixed Sprint 4) | Done — working in prod |
+
+#### Fix: Student creation moved inside enrolment loop
+- **Root cause:** `WooOrderService.ProcessAsync` created ONE student from the first ticket, then used the same `studentId` for all enrolments. Since `EnrolmentRepository.UpsertAsync` deduplicates on `(student_id, order_id, course_schedule_id)`, all tickets collapsed into 1 enrolment.
+- **Fix:** Extracted `CreateStudentFromTicketOrBillingAsync()` helper. Each ticket in the foreach loop now creates/upserts its own student before creating the enrolment.
+- **FooEvents API confirmed working** — returns correct attendee data for both orders.
+
+---
+
 ## Completed
 
 ### Sprint 4 (27 Mar 2026)
