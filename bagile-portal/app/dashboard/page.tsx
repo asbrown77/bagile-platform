@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MonitoringCourse, getMonitoring, getOrders } from "@/lib/api";
+import { MonitoringCourse, RevenueData, getMonitoring, getRevenue, getPendingTransfers } from "@/lib/api";
 
 const API_KEY = process.env.NEXT_PUBLIC_BAGILE_API_KEY || "";
 
 export default function Dashboard() {
   const [courses, setCourses] = useState<MonitoringCourse[]>([]);
-  const [orderCount, setOrderCount] = useState(0);
+  const [revenue, setRevenue] = useState<RevenueData | null>(null);
+  const [pendingTransferCount, setPendingTransferCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [trainerFilter, setTrainerFilter] = useState("all");
@@ -25,12 +26,14 @@ export default function Dashboard() {
 
   async function loadData() {
     try {
-      const [monitoring, orders] = await Promise.all([
+      const [monitoring, rev, pending] = await Promise.all([
         getMonitoring(API_KEY, 60),
-        getOrders(API_KEY, { status: "completed", pageSize: 1 }),
+        getRevenue(API_KEY),
+        getPendingTransfers(API_KEY),
       ]);
       setCourses(monitoring);
-      setOrderCount(orders.totalCount);
+      setRevenue(rev);
+      setPendingTransferCount(Array.isArray(pending) ? pending.length : 0);
     } catch {
       setError("Failed to load data");
     } finally {
@@ -75,9 +78,15 @@ export default function Dashboard() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <Card label="Upcoming Courses" value={courses.length} />
             <Card label="At Risk" value={atRiskCount} color={atRiskCount > 0 ? "red" : "green"} />
-            <Card label="Completed Orders" value={orderCount} />
-            <Card label="This Month" value={courses.filter((c) => new Date(c.startDate).getMonth() === new Date().getMonth()).length} />
+            <Card label="Revenue This Month" value={revenue ? `£${revenue.thisMonth.total.toLocaleString()}` : "—"} />
+            <Card label="Revenue This Year" value={revenue ? `£${revenue.thisYear.total.toLocaleString()}` : "—"} />
           </div>
+
+          {pendingTransferCount > 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6 text-sm text-amber-800">
+              <strong>{pendingTransferCount}</strong> attendee{pendingTransferCount !== 1 ? "s" : ""} pending transfer
+            </div>
+          )}
 
           {/* Filters */}
           <div className="flex gap-4 mb-4 items-center flex-wrap">

@@ -144,3 +144,17 @@ export async function getOrders(apiKey: string, params: { status?: string; from?
 export function getExportUrl(courseId: number, apiKey: string): string {
   return `${API_URL}/api/course-schedules/${courseId}/attendees/export`;
 }
+
+export interface RevenueData {
+  thisMonth: { total: number; orders: number };
+  thisYear: { total: number; orders: number };
+  monthlyBreakdown: Array<{ month: number; total: number; orders: number }>;
+}
+
+export async function getRevenue(apiKey: string): Promise<RevenueData> {
+  return apiCall("/api/analytics/revenue", apiKey);
+}
+
+export async function getPendingTransfers(apiKey: string): Promise<any[]> {
+  return apiCall("/api/transfers/pending", apiKey);
+}
