@@ -67,7 +67,7 @@ jobs:
           envs: PORTAL_GOOGLE_CLIENT_ID,PORTAL_JWT_SECRET,PORTAL_ALLOWED_EMAILS
           script: |
             cd /opt/bagile
-            git checkout -- docker-compose.yml 2>/dev/null || true
+            git reset --hard origin/main 2>/dev/null || true
             git pull origin main || true
             mkdir -p config
 
@@ -82,6 +82,7 @@ jobs:
             fi
 
             cp -f docker-compose.prod.yml docker-compose.yml
+            cat docker-compose.yml
 
             docker pull ghcr.io/asbrown77/bagile-portal:latest
             docker compose up -d bagile-portal
