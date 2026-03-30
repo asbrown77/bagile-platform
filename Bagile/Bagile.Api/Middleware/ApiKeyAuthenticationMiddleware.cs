@@ -81,6 +81,6 @@ public class ApiKeyAuthenticationMiddleware
                || path.StartsWith("/api/webhooks")
                || path.StartsWith("/xero")
                || path.StartsWith("/api/xero")
-               || path.StartsWith("/portal/auth");
+               || path.StartsWith("/portal");
     }
 }
