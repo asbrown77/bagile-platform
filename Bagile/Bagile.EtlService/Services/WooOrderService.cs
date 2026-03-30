@@ -69,6 +69,9 @@ namespace Bagile.EtlService.Services
                 dto.Tickets.FirstOrDefault(), dto);
 
             // TRANSFER HANDLING
+            // Only attempt transfer if the primary student has an active enrolment
+            // on a DIFFERENT course schedule with the same course type.
+            // Same course = new booking, not a transfer.
             bool shouldTryTransfer = false;
 
             if (dto.Tickets.Count > 0)
@@ -80,7 +83,14 @@ namespace Bagile.EtlService.Services
                     var previous = await _enrolmentRepo.FindHeuristicTransferSourceAsync(primaryStudentId, prefix);
 
                     if (previous != null)
-                        shouldTryTransfer = true;
+                    {
+                        // Only transfer if the old enrolment is on a different course schedule
+                        var newScheduleId = await ResolveCourseScheduleAsync(dto.Tickets[0]);
+                        if (newScheduleId.HasValue && previous.CourseScheduleId != newScheduleId.Value)
+                        {
+                            shouldTryTransfer = true;
+                        }
+                    }
                 }
             }
 
@@ -157,6 +167,10 @@ namespace Bagile.EtlService.Services
 
                 var oldEnrol = await _enrolmentRepo.FindHeuristicTransferSourceAsync(studentId, prefix);
                 if (oldEnrol == null)
+                    continue;
+
+                // Only transfer if moving to a DIFFERENT course schedule
+                if (oldEnrol.CourseScheduleId == scheduleId.Value)
                     continue;
 
                 // check if the new enrolment already exists
