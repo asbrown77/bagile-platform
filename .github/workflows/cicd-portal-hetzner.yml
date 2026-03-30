@@ -94,10 +94,10 @@ jobs:
 
             cp -f docker-compose.prod.yml docker-compose.yml
 
-            echo "=== Caddy config ==="
-            docker exec gateway cat /etc/caddy/Caddyfile 2>/dev/null || echo "No Caddyfile in container"
-            ls -la /opt/caddy/ 2>/dev/null || echo "No /opt/caddy"
-            find / -name "Caddyfile" -maxdepth 4 2>/dev/null || echo "No Caddyfile found"
+            echo "=== Gateway Caddyfile ==="
+            cat /opt/gateway/Caddyfile 2>/dev/null
+            echo "=== Gateway compose ==="
+            cat /opt/gateway/docker-compose.yml 2>/dev/null
 
             docker pull ghcr.io/asbrown77/bagile-portal:latest
             docker compose up -d bagile-portal
