@@ -182,7 +182,7 @@ function Nav({ user, onSignOut }: { user?: { email: string; name: string } | nul
       <h1 className="text-2xl font-bold text-gray-900">BAgile</h1>
       <div className="flex gap-4 items-center text-sm">
         <a href="/dashboard" className="text-blue-600 hover:text-blue-800">Dashboard</a>
-        <span className="font-medium border-b-2 border-blue-600 pb-0.5">Settings</span>
+        <span className="font-medium border-b-2 border-blue-600 pb-0.5">MCP Keys</span>
         {user && <span className="text-gray-400">{user.email}</span>}
         {onSignOut && <button onClick={onSignOut} className="text-gray-500 hover:text-gray-700">Sign out</button>}
       </div>

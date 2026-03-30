@@ -10,6 +10,7 @@ export default function Dashboard() {
   const [orderCount, setOrderCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [trainerFilter, setTrainerFilter] = useState("all");
 
   useEffect(() => {
     if (!API_KEY) {
@@ -35,8 +36,10 @@ export default function Dashboard() {
     }
   }
 
-  const atRisk = courses.filter((c) => c.monitoringStatus !== "healthy" && c.monitoringStatus !== "cancelled");
-  const upcoming = courses.filter((c) => c.monitoringStatus !== "cancelled");
+  const trainers = [...new Set(courses.map((c) => c.trainerName).filter(Boolean))] as string[];
+  const filtered = trainerFilter === "all" ? courses : courses.filter((c) => c.trainerName === trainerFilter);
+  const atRisk = filtered.filter((c) => c.monitoringStatus !== "healthy" && c.monitoringStatus !== "cancelled");
+  const upcoming = filtered.filter((c) => c.monitoringStatus !== "cancelled");
 
   return (
     <div className="max-w-6xl mx-auto py-8 px-4">
@@ -44,7 +47,7 @@ export default function Dashboard() {
         <h1 className="text-2xl font-bold text-gray-900">BAgile</h1>
         <div className="flex gap-4 items-center text-sm">
           <span className="font-medium border-b-2 border-blue-600 pb-0.5">Dashboard</span>
-          <a href="/settings" className="text-blue-600 hover:text-blue-800">Settings</a>
+          <a href="/settings" className="text-blue-600 hover:text-blue-800">MCP Keys</a>
         </div>
       </div>
 
@@ -60,6 +63,21 @@ export default function Dashboard() {
             <Card label="Completed Orders" value={orderCount} />
             <Card label="This Month" value={upcoming.filter((c) => new Date(c.startDate).getMonth() === new Date().getMonth()).length} />
           </div>
+
+          {/* Trainer filter */}
+          {trainers.length > 1 && (
+            <div className="mb-6 flex gap-2 items-center">
+              <span className="text-sm text-gray-600">Trainer:</span>
+              <select
+                value={trainerFilter}
+                onChange={(e) => setTrainerFilter(e.target.value)}
+                className="border rounded px-3 py-1.5 text-sm bg-white"
+              >
+                <option value="all">All trainers</option>
+                {trainers.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+          )}
 
           {atRisk.length > 0 && (
             <div className="mb-8">
