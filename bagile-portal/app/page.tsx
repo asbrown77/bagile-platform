@@ -305,11 +305,22 @@ npm install && npm run build`}
             </pre>
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-700 mb-1">2. Add to your Claude Desktop config:</p>
-            <p className="text-xs text-gray-500 mb-1">
-              File location: <code className="bg-gray-100 px-1 rounded">~/.claude/claude_desktop_config.json</code>
-            </p>
-            <pre className="bg-gray-900 text-gray-100 rounded p-3 text-xs overflow-x-auto">
+            <p className="text-sm font-medium text-gray-700 mb-2">2. Add to Claude (choose your setup):</p>
+            <div className="bg-blue-50 border border-blue-200 rounded p-3 mb-2">
+              <p className="text-xs font-semibold text-blue-800 mb-1">Claude Code (CLI) — one command:</p>
+              <pre className="bg-gray-900 text-gray-100 rounded p-2 text-xs overflow-x-auto">
+{`claude mcp add bagile \\
+  -e BAGILE_API_URL=https://api.bagile.co.uk \\
+  -e BAGILE_API_KEY=your-key \\
+  -- node /full/path/to/bagile-mcp/dist/index.js`}
+              </pre>
+            </div>
+            <div className="bg-purple-50 border border-purple-200 rounded p-3">
+              <p className="text-xs font-semibold text-purple-800 mb-1">Claude Desktop (app) — add to config file:</p>
+              <p className="text-xs text-purple-600 mb-1">
+                <strong>Mac/Linux:</strong> ~/.claude/claude_desktop_config.json | <strong>Windows:</strong> %USERPROFILE%\.claude\claude_desktop_config.json
+              </p>
+              <pre className="bg-gray-900 text-gray-100 rounded p-2 text-xs overflow-x-auto">
 {`{
   "mcpServers": {
     "bagile": {
@@ -322,17 +333,18 @@ npm install && npm run build`}
     }
   }
 }`}
-            </pre>
+              </pre>
+            </div>
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-700 mb-1">3. Restart Claude Desktop</p>
-            <p className="text-xs text-gray-500">You can now query orders, courses, monitoring, and more via Claude.</p>
+            <p className="text-sm font-medium text-gray-700 mb-1">3. Restart Claude</p>
+            <p className="text-xs text-gray-500">You can now query orders, courses, monitoring, and more. Try: &quot;Show me the course monitoring&quot;</p>
           </div>
         </div>
       </div>
 
       {/* Version */}
-      <p className="text-center text-xs text-gray-400 mt-8">BAgile Portal v1.2.1</p>
+      <p className="text-center text-xs text-gray-400 mt-8">BAgile Portal v1.3.0</p>
     </div>
   );
 }
