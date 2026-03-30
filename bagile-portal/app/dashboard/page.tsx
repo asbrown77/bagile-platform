@@ -11,6 +11,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [trainerFilter, setTrainerFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   useEffect(() => {
     if (!API_KEY) {
@@ -37,9 +38,15 @@ export default function Dashboard() {
   }
 
   const trainers = [...new Set(courses.map((c) => c.trainerName).filter(Boolean))] as string[];
-  const filtered = trainerFilter === "all" ? courses : courses.filter((c) => c.trainerName === trainerFilter);
-  const atRisk = filtered.filter((c) => c.monitoringStatus !== "healthy" && c.monitoringStatus !== "cancelled");
-  const upcoming = filtered.filter((c) => c.monitoringStatus !== "cancelled");
+
+  const filtered = courses.filter((c) => {
+    if (trainerFilter !== "all" && c.trainerName !== trainerFilter) return false;
+    if (statusFilter === "at-risk" && c.monitoringStatus === "healthy") return false;
+    if (statusFilter === "healthy" && c.monitoringStatus !== "healthy") return false;
+    return true;
+  });
+
+  const atRiskCount = courses.filter((c) => c.monitoringStatus !== "healthy" && c.monitoringStatus !== "cancelled").length;
 
   return (
     <div className="max-w-6xl mx-auto py-8 px-4">
@@ -57,54 +64,36 @@ export default function Dashboard() {
         <p className="text-gray-500">Loading...</p>
       ) : (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <Card label="Upcoming Courses" value={upcoming.length} />
-            <Card label="At Risk" value={atRisk.length} color={atRisk.length > 0 ? "red" : "green"} />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <Card label="Upcoming Courses" value={courses.length} />
+            <Card label="At Risk" value={atRiskCount} color={atRiskCount > 0 ? "red" : "green"} />
             <Card label="Completed Orders" value={orderCount} />
-            <Card label="This Month" value={upcoming.filter((c) => new Date(c.startDate).getMonth() === new Date().getMonth()).length} />
+            <Card label="This Month" value={courses.filter((c) => new Date(c.startDate).getMonth() === new Date().getMonth()).length} />
           </div>
 
-          {/* Trainer filter */}
-          {trainers.length > 1 && (
-            <div className="mb-6 flex gap-2 items-center">
-              <span className="text-sm text-gray-600">Trainer:</span>
-              <select
-                value={trainerFilter}
-                onChange={(e) => setTrainerFilter(e.target.value)}
-                className="border rounded px-3 py-1.5 text-sm bg-white"
-              >
-                <option value="all">All trainers</option>
-                {trainers.map((t) => <option key={t} value={t}>{t}</option>)}
+          {/* Filters */}
+          <div className="flex gap-4 mb-4 items-center flex-wrap">
+            {trainers.length > 1 && (
+              <div className="flex gap-2 items-center">
+                <span className="text-sm text-gray-600">Trainer:</span>
+                <select value={trainerFilter} onChange={(e) => setTrainerFilter(e.target.value)} className="border rounded px-3 py-1.5 text-sm bg-white">
+                  <option value="all">All</option>
+                  {trainers.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+            )}
+            <div className="flex gap-2 items-center">
+              <span className="text-sm text-gray-600">Status:</span>
+              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="border rounded px-3 py-1.5 text-sm bg-white">
+                <option value="all">All</option>
+                <option value="at-risk">At Risk</option>
+                <option value="healthy">Healthy</option>
               </select>
             </div>
-          )}
+            <span className="text-sm text-gray-400">{filtered.length} course{filtered.length !== 1 ? "s" : ""}</span>
+          </div>
 
-          {atRisk.length > 0 && (
-            <div className="mb-8">
-              <h2 className="font-semibold text-red-700 mb-3">Needs Attention</h2>
-              <div className="space-y-2">
-                {atRisk.map((c) => (
-                  <a key={c.id} href={`/course/${c.id}`} className="block bg-red-50 border border-red-200 rounded-lg p-4 hover:bg-red-100">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="font-medium text-gray-900">{c.title}</p>
-                        <p className="text-sm text-gray-600">
-                          {new Date(c.startDate).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}
-                          {c.trainerName && ` — ${c.trainerName}`}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-lg font-bold text-red-700">{c.currentEnrolmentCount}/{c.minimumRequired}</p>
-                        <p className="text-xs text-red-600">{c.recommendedAction}</p>
-                      </div>
-                    </div>
-                  </a>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <h2 className="font-semibold text-gray-900 mb-3">Upcoming Courses</h2>
+          {/* Course table */}
           <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-gray-50">
@@ -114,17 +103,22 @@ export default function Dashboard() {
                   <th className="text-left px-4 py-2 font-medium text-gray-600">Trainer</th>
                   <th className="text-center px-4 py-2 font-medium text-gray-600">Enrolled</th>
                   <th className="text-center px-4 py-2 font-medium text-gray-600">Status</th>
+                  <th className="text-left px-4 py-2 font-medium text-gray-600">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {upcoming.map((c) => (
-                  <tr key={c.id} className="border-t hover:bg-gray-50 cursor-pointer" onClick={() => window.location.href = `/course/${c.id}`}>
+                {filtered.map((c) => (
+                  <tr key={c.id}
+                    className={`border-t hover:bg-gray-50 cursor-pointer ${c.monitoringStatus !== "healthy" ? "bg-red-50/50" : ""}`}
+                    onClick={() => window.location.href = `/course/${c.id}`}
+                  >
                     <td className="px-4 py-3">
                       <p className="font-medium text-gray-900">{c.title}</p>
                       <p className="text-xs text-gray-500">{c.courseCode}</p>
                     </td>
                     <td className="px-4 py-3 text-gray-600">
-                      {new Date(c.startDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                      {new Date(c.startDate).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}
+                      <p className="text-xs text-gray-400">{c.daysUntilStart}d away</p>
                     </td>
                     <td className="px-4 py-3 text-gray-600">{c.trainerName || "—"}</td>
                     <td className="px-4 py-3 text-center">
@@ -142,10 +136,11 @@ export default function Dashboard() {
                         {c.monitoringStatus}
                       </span>
                     </td>
+                    <td className="px-4 py-3 text-xs text-gray-600">{c.recommendedAction}</td>
                   </tr>
                 ))}
-                {upcoming.length === 0 && (
-                  <tr><td colSpan={5} className="p-6 text-gray-500 text-center">No upcoming courses</td></tr>
+                {filtered.length === 0 && (
+                  <tr><td colSpan={6} className="p-6 text-gray-500 text-center">No courses match filters</td></tr>
                 )}
               </tbody>
             </table>
@@ -153,7 +148,7 @@ export default function Dashboard() {
         </>
       )}
 
-      <p className="text-center text-xs text-gray-400 mt-8">v2.1.0</p>
+      <p className="text-center text-xs text-gray-400 mt-8">v2.2.0</p>
     </div>
   );
 }
