@@ -45,6 +45,17 @@ builder.Services.AddInfrastructureServices(connectionString);  // Registers IOrd
 // API key validation (DB-backed, with config fallback)
 builder.Services.AddSingleton(_ => new ApiKeyValidator(connectionString));
 
+// CORS for portal
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Portal", policy =>
+    {
+        policy.WithOrigins("https://portal.bagile.co.uk", "http://localhost:3000")
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
 // Framework services
 builder.Services.AddControllers();
 builder.Services.AddHealthChecks();
@@ -75,7 +86,10 @@ app.Map("/error", () =>
 app.UseSwagger();
 app.UseSwaggerUI();
 
-// API Key Authentication 
+// CORS must be before auth
+app.UseCors("Portal");
+
+// API Key Authentication
 app.UseMiddleware<Bagile.Api.Middleware.ApiKeyAuthenticationMiddleware>();
 
 // Console logging for test visibility
