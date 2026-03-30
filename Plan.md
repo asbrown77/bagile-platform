@@ -6,21 +6,7 @@
 
 ## Sprint Queue
 
-### Sprint 7: ETL Transfer Heuristic Fix
-**Goal:** Every course shows the correct attendees — no false transfers, no missing people.
-**We'll know it worked when:** All upcoming courses match their WooCommerce FooEvents export.
-
-### Sprint 8: Scrum.org Export with Country Code
-**Goal:** Trainers can export attendees for Scrum.org registration in one click.
-**We'll know it worked when:** CSV downloads with Name, Surname, Email, Country in the correct format.
-
-### Sprint 9: Cancel + Transfer Workflow
-**Goal:** Cancel a course from the dashboard and manage each attendee (refund or transfer).
-**We'll know it worked when:** Cancel a course, mark attendees, see pending transfers dashboard-wide.
-
-### Sprint 10: Revenue Summary
-**Goal:** Dashboard shows accurate monthly/yearly revenue from the true source.
-**We'll know it worked when:** Revenue cards show correct totals matching completed orders.
+*No active sprints — all caught up.*
 
 ---
 
@@ -66,6 +52,24 @@
 ---
 
 ## Completed
+
+### Sprint 10 (31 Mar 2026)
+- [x] Revenue summary endpoint + dashboard cards (£ this month, £ this year, monthly breakdown)
+
+### Sprint 9 (31 Mar 2026)
+- [x] Cancel + transfer workflow API: mark refund, mark transfer, transfer to course, cancel with actions
+- [x] MCP tools for transfers
+- [x] V30 migration: cancellation_reason, pending_transfer index
+
+### Sprint 8 (31 Mar 2026)
+- [x] Scrum.org CSV export (First Name, Last Name, Email, Country)
+- [x] V29 migration: country column on students
+- [x] ETL extracts billing_country from WooCommerce
+- [x] Filename format: PSPO-Students-300326.csv
+
+### Sprint 7 (30 Mar 2026)
+- [x] Removed automatic transfer heuristic — transfers now explicit via dashboard/MCP
+- [x] Fixed PSPO 30-31 Mar: 8 correct attendees verified against WooCommerce export
 
 ### Sprint 6 (30 Mar 2026)
 - [x] Multi-ticket enrolments, cancel_course verified, portal + dashboard MVP, API key management, MCP standalone repo
