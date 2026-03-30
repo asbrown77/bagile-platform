@@ -42,6 +42,9 @@ builder.Services.AddSingleton<WebhookHandler>();
 builder.Services.AddApplicationServices();        // Registers MediatR
 builder.Services.AddInfrastructureServices(connectionString);  // Registers IOrderQueries
 
+// API key validation (DB-backed, with config fallback)
+builder.Services.AddSingleton(_ => new ApiKeyValidator(connectionString));
+
 // Framework services
 builder.Services.AddControllers();
 builder.Services.AddHealthChecks();
@@ -109,6 +112,7 @@ app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
 app.MapWebhookEndpoints();
 app.MapDiagnosticEndpoints();
 app.MapXeroOAuthEndpoints();
+app.MapPortalEndpoints();
 
 app.Run();
 

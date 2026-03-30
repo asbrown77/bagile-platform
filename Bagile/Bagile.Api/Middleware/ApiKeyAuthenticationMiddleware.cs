@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Bagile.Api.Services;
 using Microsoft.Extensions.Configuration;
 
 namespace Bagile.Api.Middleware;
@@ -13,37 +13,19 @@ public class ApiKeyAuthenticationMiddleware
         _next = next;
     }
 
-    public async Task InvokeAsync(HttpContext context, IConfiguration config)
+    public async Task InvokeAsync(HttpContext context, IConfiguration config, ApiKeyValidator validator)
     {
         var path = context.Request.Path.Value ?? string.Empty;
 
-        // 1. Allow some paths without authentication
         if (IsExcludedFromAuth(path))
         {
             await _next(context);
             return;
         }
 
-        // 2. Get configured API key from config / env
-        var configuredKey = config["ApiKey"];
-        if (string.IsNullOrWhiteSpace(configuredKey))
-        {
-            // Config issue, not client's fault
-            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-            context.Response.ContentType = "application/json";
-            await context.Response.WriteAsJsonAsync(new
-            {
-                Code = "ConfigurationError",
-                Message = "API key is not configured on server",
-                Status = 500
-            });
-            return;
-        }
-
         if (!context.Request.Headers.TryGetValue(API_KEY_HEADER, out var providedKey))
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            context.Response.ContentType = "application/json";
             await context.Response.WriteAsJsonAsync(new
             {
                 Code = "AuthenticationFailed",
@@ -53,21 +35,36 @@ public class ApiKeyAuthenticationMiddleware
             return;
         }
 
-        if (!string.Equals(configuredKey, providedKey.ToString(), StringComparison.Ordinal))
+        var rawKey = providedKey.ToString();
+
+        // Try database-backed keys first
+        var keyInfo = await validator.ValidateAsync(rawKey);
+        if (keyInfo != null)
         {
-            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            context.Response.ContentType = "application/json";
-            await context.Response.WriteAsJsonAsync(new
-            {
-                Code = "AuthenticationFailed",
-                Message = "Invalid API key provided.",
-                Status = 401
-            });
+            context.Items["ApiKeyOwner"] = keyInfo.OwnerEmail;
+            context.Items["ApiKeyId"] = keyInfo.Id;
+            _ = Task.Run(() => validator.RecordUsageAsync(keyInfo.Id));
+            await _next(context);
             return;
         }
 
-        // 5. All good, continue down the pipeline
-        await _next(context);
+        // Fallback: legacy config key (remove after all keys migrated to DB)
+        var configuredKey = config["ApiKey"];
+        if (!string.IsNullOrWhiteSpace(configuredKey) &&
+            string.Equals(configuredKey, rawKey, StringComparison.Ordinal))
+        {
+            context.Items["ApiKeyOwner"] = "legacy-config";
+            await _next(context);
+            return;
+        }
+
+        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        await context.Response.WriteAsJsonAsync(new
+        {
+            Code = "AuthenticationFailed",
+            Message = "Invalid API key provided.",
+            Status = 401
+        });
     }
 
     private static bool IsExcludedFromAuth(string path)
@@ -83,6 +80,7 @@ public class ApiKeyAuthenticationMiddleware
         return path.StartsWith("/webhooks")
                || path.StartsWith("/api/webhooks")
                || path.StartsWith("/xero")
-               || path.StartsWith("/api/xero");
+               || path.StartsWith("/api/xero")
+               || path.StartsWith("/portal/auth");
     }
 }
