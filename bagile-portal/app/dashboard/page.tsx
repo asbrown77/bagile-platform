@@ -12,6 +12,7 @@ export default function Dashboard() {
   const [error, setError] = useState("");
   const [trainerFilter, setTrainerFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [courseTypeFilter, setCourseTypeFilter] = useState("all");
 
   useEffect(() => {
     if (!API_KEY) {
@@ -38,11 +39,16 @@ export default function Dashboard() {
   }
 
   const trainers = [...new Set(courses.map((c) => c.trainerName).filter(Boolean))] as string[];
+  const courseTypes = [...new Set(courses.map((c) => {
+    const code = c.courseCode?.split("-")[0] || "";
+    return code;
+  }).filter(Boolean))].sort();
 
   const isAtRisk = (c: MonitoringCourse) => c.currentEnrolmentCount <= 2 && c.daysUntilStart <= 7;
 
   const filtered = courses.filter((c) => {
     if (trainerFilter !== "all" && c.trainerName !== trainerFilter) return false;
+    if (courseTypeFilter !== "all" && !c.courseCode?.startsWith(courseTypeFilter)) return false;
     if (statusFilter === "at-risk" && !isAtRisk(c)) return false;
     if (statusFilter === "healthy" && isAtRisk(c)) return false;
     return true;
@@ -81,6 +87,15 @@ export default function Dashboard() {
                 <select value={trainerFilter} onChange={(e) => setTrainerFilter(e.target.value)} className="border rounded px-3 py-1.5 text-sm bg-white">
                   <option value="all">All</option>
                   {trainers.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+            )}
+            {courseTypes.length > 1 && (
+              <div className="flex gap-2 items-center">
+                <span className="text-sm text-gray-600">Course:</span>
+                <select value={courseTypeFilter} onChange={(e) => setCourseTypeFilter(e.target.value)} className="border rounded px-3 py-1.5 text-sm bg-white">
+                  <option value="all">All</option>
+                  {courseTypes.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
             )}
