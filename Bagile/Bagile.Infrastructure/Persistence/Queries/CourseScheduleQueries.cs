@@ -44,7 +44,7 @@ public class CourseScheduleQueries : ICourseScheduleQueries
                     ELSE false 
                 END AS NeedsAttention
             FROM bagile.course_schedules cs
-            LEFT JOIN bagile.enrolments e ON e.course_schedule_id = cs.id
+            LEFT JOIN bagile.enrolments e ON e.course_schedule_id = cs.id AND e.status NOT IN ('cancelled', 'transferred')
             WHERE 1=1
             " + (from != null ? " AND cs.start_date >= @from" : "") + @"
             " + (to != null ? " AND cs.start_date <= @to" : "") + @"
@@ -133,7 +133,7 @@ public class CourseScheduleQueries : ICourseScheduleQueries
                     ELSE false 
                 END AS NeedsAttention
             FROM bagile.course_schedules cs
-            LEFT JOIN bagile.enrolments e ON e.course_schedule_id = cs.id
+            LEFT JOIN bagile.enrolments e ON e.course_schedule_id = cs.id AND e.status NOT IN ('cancelled', 'transferred')
             WHERE cs.id = @scheduleId
             GROUP BY cs.id, cs.sku, cs.name, cs.start_date, cs.end_date, cs.format_type, 
                      cs.is_public, cs.status, cs.capacity, cs.price, cs.trainer_name, 
@@ -159,7 +159,7 @@ public class CourseScheduleQueries : ICourseScheduleQueries
                 cs.status AS Status,
                 COUNT(e.id) AS CurrentEnrolmentCount
             FROM bagile.course_schedules cs
-            LEFT JOIN bagile.enrolments e ON e.course_schedule_id = cs.id
+            LEFT JOIN bagile.enrolments e ON e.course_schedule_id = cs.id AND e.status NOT IN ('cancelled', 'transferred')
             WHERE cs.start_date >= CURRENT_DATE
               AND cs.start_date <= CURRENT_DATE + @daysAhead * INTERVAL '1 day'
               AND cs.is_public = true
