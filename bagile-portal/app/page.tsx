@@ -19,7 +19,18 @@ export default function Home() {
   const [newKey, setNewKey] = useState<CreateKeyResponse | null>(null);
   const [label, setLabel] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Restore session from localStorage
+  useEffect(() => {
+    const savedToken = localStorage.getItem("bagile_portal_token");
+    const savedUser = localStorage.getItem("bagile_portal_user");
+    if (savedToken && savedUser) {
+      setToken(savedToken);
+      setUser(JSON.parse(savedUser));
+    }
+    setLoading(false);
+  }, []);
 
   const refreshKeys = useCallback(async () => {
     if (!token) return;
@@ -64,6 +75,8 @@ export default function Home() {
       const data = await loginWithGoogle(response.credential);
       setToken(data.token);
       setUser({ email: data.email, name: data.name });
+      localStorage.setItem("bagile_portal_token", data.token);
+      localStorage.setItem("bagile_portal_user", JSON.stringify({ email: data.email, name: data.name }));
     } catch (err: any) {
       setError(err.message || "Login failed");
     } finally {
@@ -142,6 +155,8 @@ export default function Home() {
               setToken(null);
               setUser(null);
               setKeys([]);
+              localStorage.removeItem("bagile_portal_token");
+              localStorage.removeItem("bagile_portal_user");
             }}
             className="text-sm text-gray-500 hover:text-gray-700"
           >
