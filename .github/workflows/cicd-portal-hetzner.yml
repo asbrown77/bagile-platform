@@ -66,9 +66,20 @@ jobs:
           key: ${{ secrets.HETZNER_SSH_KEY }}
           envs: PORTAL_GOOGLE_CLIENT_ID,PORTAL_JWT_SECRET,PORTAL_ALLOWED_EMAILS
           script: |
+            # Restore git repo if corrupted
             cd /opt/bagile
-            git reset --hard origin/main 2>/dev/null || true
-            git pull origin main || true
+            if [ ! -d .git ]; then
+              echo "Git repo missing — restoring..."
+              cd /opt
+              mv bagile bagile-backup 2>/dev/null || true
+              git clone https://github.com/asbrown77/bagile-platform.git bagile
+              cd bagile
+              cp -r ../bagile-backup/config ./config 2>/dev/null || true
+              rm -rf ../bagile-backup
+            else
+              git fetch origin
+              git reset --hard origin/main
+            fi
             mkdir -p config
 
             echo "NEXT_PUBLIC_GOOGLE_CLIENT_ID=${PORTAL_GOOGLE_CLIENT_ID}" > config/portal.env
