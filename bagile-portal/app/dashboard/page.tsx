@@ -42,6 +42,10 @@ export default function Dashboard() {
     <div className="max-w-6xl mx-auto py-8 px-4">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">BAgile</h1>
+        <div className="flex gap-4 items-center text-sm">
+          <span className="font-medium border-b-2 border-blue-600 pb-0.5">Dashboard</span>
+          <a href="/settings" className="text-blue-600 hover:text-blue-800">Settings</a>
+        </div>
       </div>
 
       {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">{error}</div>}
