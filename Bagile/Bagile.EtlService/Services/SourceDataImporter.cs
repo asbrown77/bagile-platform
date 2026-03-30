@@ -44,6 +44,13 @@ public class SourceDataImporter
             _logger.LogInformation("Collecting orders from {Source}", source);
 
             var modifiedSince = await _rawOrderRepository.GetLastTimestampAsync(source);
+
+            // Look back 7 days to catch status changes on older orders.
+            // InsertIfChangedAsync deduplicates by payload hash, so re-fetching
+            // unchanged orders is harmless — only genuinely changed orders get inserted.
+            if (modifiedSince.HasValue)
+                modifiedSince = modifiedSince.Value.AddDays(-7);
+
             var payloads = await collector.CollectOrdersAsync(modifiedSince, ct);
 
             foreach (var raw in payloads)
