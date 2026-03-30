@@ -127,6 +127,7 @@ app.MapWebhookEndpoints();
 app.MapDiagnosticEndpoints();
 app.MapXeroOAuthEndpoints();
 app.MapPortalEndpoints();
+app.MapTransferEndpoints();
 
 app.Run();
 
