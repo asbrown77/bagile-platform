@@ -96,12 +96,7 @@ jobs:
 
             # Add portal to Caddy if not present
             if ! grep -q "portal.bagile.co.uk" /opt/gateway/Caddyfile 2>/dev/null; then
-              cat >> /opt/gateway/Caddyfile <<'CADDYEOF'
-
-portal.bagile.co.uk {
-	reverse_proxy bagile-portal:3000
-}
-CADDYEOF
+              printf '\nportal.bagile.co.uk {\n\treverse_proxy bagile-portal:3000\n}\n' >> /opt/gateway/Caddyfile
               docker exec gateway caddy reload --config /etc/caddy/Caddyfile 2>/dev/null || docker restart gateway
             fi
 
