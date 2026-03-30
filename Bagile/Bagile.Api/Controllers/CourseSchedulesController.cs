@@ -81,55 +81,29 @@ public class CourseSchedulesController : ControllerBase
     }
 
     /// <summary>
-    /// Export attendees as CSV for Scrum.org registration or partner trainers
+    /// Export attendees as CSV
     /// </summary>
     [HttpGet("{id}/attendees/export")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> ExportCourseAttendees(
-        long id,
-        [FromQuery] string format = "standard")
+    public async Task<IActionResult> ExportCourseAttendees(long id)
     {
         var query = new GetCourseAttendeesQuery(id);
         var attendees = (await _mediator.Send(query)).ToList();
 
         var sb = new StringBuilder();
+        sb.AppendLine("First Name,Last Name,Email,Organisation,Status,Course Code,Course Name");
+        foreach (var a in attendees)
+            sb.AppendLine($"{Csv(a.FirstName)},{Csv(a.LastName)},{Csv(a.Email)},{Csv(a.Organisation)},{Csv(a.Status)},{Csv(a.CourseCode)},{Csv(a.CourseName)}");
 
-        if (format == "scrumorg")
-        {
-            sb.AppendLine("First Name,Last Name,Email,Course Code");
-            foreach (var a in attendees)
-            {
-                var courseCode = ExtractScrumOrgCourseCode(a.CourseCode);
-                sb.AppendLine($"{CsvEscape(a.FirstName)},{CsvEscape(a.LastName)},{CsvEscape(a.Email)},{CsvEscape(courseCode)}");
-            }
-        }
-        else
-        {
-            sb.AppendLine("First Name,Last Name,Email,Organisation,Status,Course Code,Course Name");
-            foreach (var a in attendees)
-                sb.AppendLine($"{CsvEscape(a.FirstName)},{CsvEscape(a.LastName)},{CsvEscape(a.Email)},{CsvEscape(a.Organisation)},{CsvEscape(a.Status)},{CsvEscape(a.CourseCode)},{CsvEscape(a.CourseName)}");
-        }
-
-        var filename = format == "scrumorg"
-            ? $"scrumorg-{attendees.FirstOrDefault()?.CourseCode ?? id.ToString()}.csv"
-            : $"attendees-{attendees.FirstOrDefault()?.CourseCode ?? id.ToString()}.csv";
-
-        return File(Encoding.UTF8.GetBytes(sb.ToString()), "text/csv", filename);
+        var sku = attendees.FirstOrDefault()?.CourseCode ?? id.ToString();
+        return File(Encoding.UTF8.GetBytes(sb.ToString()), "text/csv", $"attendees-{sku}.csv");
     }
 
-    private static string ExtractScrumOrgCourseCode(string? sku)
+    private static string Csv(string? v)
     {
-        if (string.IsNullOrWhiteSpace(sku)) return "";
-        var parts = sku.Split('-');
-        return parts.Length > 0 ? parts[0] : sku;
-    }
-
-    private static string CsvEscape(string? value)
-    {
-        if (string.IsNullOrEmpty(value)) return "";
-        if (value.Contains(',') || value.Contains('"') || value.Contains('\n'))
-            return $"\"{value.Replace("\"", "\"\"")}\"";
-        return value;
+        if (string.IsNullOrEmpty(v)) return "";
+        return v.Contains(',') || v.Contains('"') || v.Contains('\n')
+            ? $"\"{v.Replace("\"", "\"\"")}\"" : v;
     }
 
     /// <summary>
