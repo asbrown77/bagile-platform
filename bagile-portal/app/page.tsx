@@ -156,8 +156,11 @@ export default function Home() {
       {/* New key created banner */}
       {newKey && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-          <p className="font-semibold text-green-800 mb-2">
+          <p className="font-semibold text-green-800 mb-1">
             Key created — save it now, you won't see it again!
+          </p>
+          <p className="text-sm text-green-700 mb-2">
+            Paste it directly into your config file. Never share it in chat, email, or Slack.
           </p>
           <div className="flex items-center gap-2">
             <code className="bg-white border px-3 py-2 rounded text-sm flex-1 font-mono break-all">
@@ -273,31 +276,63 @@ export default function Home() {
         )}
       </div>
 
+      {/* Security notice */}
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mt-6">
+        <h2 className="font-semibold text-amber-800 mb-1">Security</h2>
+        <ul className="text-sm text-amber-700 list-disc list-inside space-y-1">
+          <li>API keys are shown <strong>once</strong> at creation — they cannot be recovered</li>
+          <li><strong>Never</strong> share keys in chat, email, Slack, or any message</li>
+          <li>Only paste keys into local config files on your own machine</li>
+          <li>If a key is compromised, revoke it immediately and create a new one</li>
+        </ul>
+      </div>
+
       {/* MCP setup instructions */}
       <div className="bg-white rounded-lg shadow-sm border p-4 mt-6">
         <h2 className="font-semibold text-gray-900 mb-2">
           MCP Server Setup
         </h2>
         <p className="text-sm text-gray-600 mb-3">
-          After creating a key, configure your Claude Desktop or Claude Code
-          to use the BAgile MCP server:
+          After creating a key, set up the BAgile MCP server:
         </p>
-        <pre className="bg-gray-900 text-gray-100 rounded p-3 text-xs overflow-x-auto">
-{`// Claude Desktop: ~/.claude/claude_desktop_config.json
-{
+        <div className="space-y-3">
+          <div>
+            <p className="text-sm font-medium text-gray-700 mb-1">1. Clone and build the MCP server:</p>
+            <pre className="bg-gray-900 text-gray-100 rounded p-3 text-xs overflow-x-auto">
+{`git clone https://github.com/asbrown77/bagile-platform.git
+cd bagile-platform/bagile-mcp-server
+npm install && npm run build`}
+            </pre>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-700 mb-1">2. Add to your Claude Desktop config:</p>
+            <p className="text-xs text-gray-500 mb-1">
+              File location: <code className="bg-gray-100 px-1 rounded">~/.claude/claude_desktop_config.json</code>
+            </p>
+            <pre className="bg-gray-900 text-gray-100 rounded p-3 text-xs overflow-x-auto">
+{`{
   "mcpServers": {
     "bagile": {
       "command": "node",
-      "args": ["/path/to/bagile-mcp-server/dist/index.js"],
+      "args": ["/full/path/to/bagile-mcp-server/dist/index.js"],
       "env": {
         "BAGILE_API_URL": "https://api.bagile.co.uk",
-        "BAGILE_API_KEY": "your-key-here"
+        "BAGILE_API_KEY": "paste-key-into-this-file-only"
       }
     }
   }
 }`}
-        </pre>
+            </pre>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-700 mb-1">3. Restart Claude Desktop</p>
+            <p className="text-xs text-gray-500">You can now query orders, courses, monitoring, and more via Claude.</p>
+          </div>
+        </div>
       </div>
+
+      {/* Version */}
+      <p className="text-center text-xs text-gray-400 mt-8">BAgile Portal v1.2.0</p>
     </div>
   );
 }
