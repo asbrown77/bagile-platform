@@ -67,50 +67,26 @@ jobs:
           envs: PORTAL_GOOGLE_CLIENT_ID,PORTAL_JWT_SECRET,PORTAL_ALLOWED_EMAILS
           script: |
             cd /opt/bagile
-
-            echo "Pulling latest repo..."
             git pull origin main
-
-            echo "Writing portal env file..."
             mkdir -p config
-            cat > config/portal.env <<PORTALEOF
-            NEXT_PUBLIC_GOOGLE_CLIENT_ID=${PORTAL_GOOGLE_CLIENT_ID}
-            NEXT_PUBLIC_API_URL=https://api.bagile.co.uk
-            PORTALEOF
 
-            echo "Adding portal config to API env..."
+            echo "NEXT_PUBLIC_GOOGLE_CLIENT_ID=${PORTAL_GOOGLE_CLIENT_ID}" > config/portal.env
+            echo "NEXT_PUBLIC_API_URL=https://api.bagile.co.uk" >> config/portal.env
+
             if ! grep -q "Portal__GoogleClientId" config/api.env 2>/dev/null; then
-              cat >> config/api.env <<APIEOF
-
-            Portal__GoogleClientId=${PORTAL_GOOGLE_CLIENT_ID}
-            Portal__JwtSecret=${PORTAL_JWT_SECRET}
-            Portal__AllowedEmails=${PORTAL_ALLOWED_EMAILS}
-            APIEOF
+              echo "" >> config/api.env
+              echo "Portal__GoogleClientId=${PORTAL_GOOGLE_CLIENT_ID}" >> config/api.env
+              echo "Portal__JwtSecret=${PORTAL_JWT_SECRET}" >> config/api.env
+              echo "Portal__AllowedEmails=${PORTAL_ALLOWED_EMAILS}" >> config/api.env
             fi
 
-            echo "Adding portal service to docker-compose if needed..."
+            # Fix corrupted docker-compose: remove bad portal entry, add clean one
+            sed -i '/bagile-portal/,/env_file/{/bagile-portal/d;/container_name.*portal/d;/bagile-portal/d;/3100/d;/portal\.env/d;/env_file/d}' docker-compose.yml 2>/dev/null
             if ! grep -q "bagile-portal" docker-compose.yml 2>/dev/null; then
-              cat >> docker-compose.yml <<COMPEOF
-
-              bagile-portal:
-                container_name: bagile-portal
-                image: ghcr.io/asbrown77/bagile-portal:latest
-                restart: unless-stopped
-                ports:
-                  - "3100:3000"
-                env_file:
-                  - config/portal.env
-            COMPEOF
+              sed -i '/^services:/a\  bagile-portal:\n    container_name: bagile-portal\n    image: ghcr.io/asbrown77/bagile-portal:latest\n    restart: unless-stopped\n    ports:\n      - "3100:3000"\n    env_file:\n      - config/portal.env' docker-compose.yml
             fi
 
-            echo "Pulling latest portal image..."
             docker pull ghcr.io/asbrown77/bagile-portal:latest
-
-            echo "Starting portal..."
             docker compose up -d bagile-portal
-
-            echo "Restarting API (to pick up portal config)..."
             docker compose up -d bagile-api
-
-            echo "Cleaning unused images..."
             docker system prune -f
