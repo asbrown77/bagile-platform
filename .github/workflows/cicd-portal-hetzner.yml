@@ -80,7 +80,8 @@ jobs:
               echo "Portal__AllowedEmails=${PORTAL_ALLOWED_EMAILS}" >> config/api.env
             fi
 
-            # Use the production compose file from the repo (clean, known-good)
+            # Replace compose with clean version from repo
+            rm -f docker-compose.yml docker-compose.override.yml
             cp docker-compose.prod.yml docker-compose.yml
 
             docker pull ghcr.io/asbrown77/bagile-portal:latest
