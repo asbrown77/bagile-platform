@@ -49,7 +49,7 @@ public class SourceDataImporter
             // InsertIfChangedAsync deduplicates by payload hash, so re-fetching
             // unchanged orders is harmless — only genuinely changed orders get inserted.
             if (modifiedSince.HasValue)
-                modifiedSince = modifiedSince.Value.AddDays(-7);
+                modifiedSince = modifiedSince.Value.AddDays(-30);
 
             var payloads = await collector.CollectOrdersAsync(modifiedSince, ct);
 
