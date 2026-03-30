@@ -205,45 +205,11 @@ public class WooOrderServiceTests
     }
 
     [Test]
-    public async Task ProcessAsync_SameCourseNewBooking_DoesNotTriggerTransfer()
+    public async Task ProcessAsync_NoAutoTransfer_AlwaysCreatesNormalEnrolment()
     {
-        // Arrange — student already has active enrolment on PSPO course schedule 77
-        // New order for the SAME course schedule 77 (not a transfer)
-        var dto = new CanonicalWooOrderDto
-        {
-            OrderId = 0,
-            ExternalId = "12890",
-            BillingEmail = "mateja@test.com",
-            BillingName = "Mateja Macuh",
-            Status = "completed",
-            RawPayload = "{}",
-            Tickets = new List<CanonicalTicketDto>
-            {
-                new() { Email = "mateja@test.com", FirstName = "Mateja", LastName = "Macuh", Sku = "PSPO-300326-AB" }
-            }
-        };
-
-        _order.Setup(x => x.UpsertOrderAsync(It.IsAny<Order>())).ReturnsAsync(42);
-        _students.Setup(x => x.UpsertAsync(It.IsAny<Student>())).ReturnsAsync(50);
-        _courses.Setup(x => x.GetIdBySkuAsync("PSPO-300326-AB")).ReturnsAsync(77);
-
-        // Student already has an active enrolment on this SAME course (schedule 77)
-        _enrolments.Setup(x => x.FindHeuristicTransferSourceAsync(50, "PSPO"))
-            .ReturnsAsync(new Enrolment { Id = 999, CourseScheduleId = 77, Status = "active" });
-
-        // Act
-        await _service.ProcessAsync(dto, CancellationToken.None);
-
-        // Assert — should create normal enrolment, NOT mark as transfer
-        _enrolments.Verify(x => x.UpsertAsync(It.IsAny<Enrolment>()), Times.Once);
-        _enrolments.Verify(x => x.MarkTransferredAsync(It.IsAny<long>(), It.IsAny<long>()), Times.Never);
-    }
-
-    [Test]
-    public async Task ProcessAsync_DifferentCourseDate_TriggersTransfer()
-    {
-        // Arrange — student has active enrolment on OLD PSPO course (schedule 50)
-        // New order for DIFFERENT PSPO course (schedule 77) — this IS a transfer
+        // Arrange — student already has active enrolment on a different PSPO course
+        // The ETL should NOT auto-transfer — just create a new enrolment
+        // Transfers are now explicit (via dashboard/MCP)
         var dto = new CanonicalWooOrderDto
         {
             OrderId = 0,
@@ -262,21 +228,12 @@ public class WooOrderServiceTests
         _students.Setup(x => x.UpsertAsync(It.IsAny<Student>())).ReturnsAsync(50);
         _courses.Setup(x => x.GetIdBySkuAsync("PSPO-300326-AB")).ReturnsAsync(77);
 
-        // Student has active enrolment on DIFFERENT course schedule (50, not 77)
-        _enrolments.Setup(x => x.FindHeuristicTransferSourceAsync(50, "PSPO"))
-            .ReturnsAsync(new Enrolment { Id = 999, CourseScheduleId = 50, Status = "active" });
-
-        // Existing enrolment check
-        _enrolments.Setup(x => x.FindAsync(50, 42, 77))
-            .ReturnsAsync((Enrolment?)null);
-
-        _enrolments.Setup(x => x.InsertAsync(It.IsAny<Enrolment>()))
-            .ReturnsAsync(1000);
-
         // Act
         await _service.ProcessAsync(dto, CancellationToken.None);
 
-        // Assert — should trigger transfer
-        _enrolments.Verify(x => x.MarkTransferredAsync(999, 1000), Times.Once);
+        // Assert — normal enrolment created, no transfer
+        _enrolments.Verify(x => x.UpsertAsync(It.IsAny<Enrolment>()), Times.Once);
+        _enrolments.Verify(x => x.MarkTransferredAsync(It.IsAny<long>(), It.IsAny<long>()), Times.Never);
+        _enrolments.Verify(x => x.FindHeuristicTransferSourceAsync(It.IsAny<long>(), It.IsAny<string>()), Times.Never);
     }
 }

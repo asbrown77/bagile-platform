@@ -68,41 +68,9 @@ namespace Bagile.EtlService.Services
             var primaryStudentId = await CreateStudentFromTicketOrBillingAsync(
                 dto.Tickets.FirstOrDefault(), dto);
 
-            // TRANSFER HANDLING
-            // Only attempt transfer if the primary student has an active enrolment
-            // on a DIFFERENT course schedule with the same course type.
-            // Same course = new booking, not a transfer.
-            bool shouldTryTransfer = false;
-
-            if (dto.Tickets.Count > 0)
-            {
-                var prefix = ExtractCoursePrefix(dto.Tickets[0].Sku);
-
-                if (!string.IsNullOrWhiteSpace(prefix))
-                {
-                    var previous = await _enrolmentRepo.FindHeuristicTransferSourceAsync(primaryStudentId, prefix);
-
-                    if (previous != null)
-                    {
-                        // Only transfer if the old enrolment is on a different course schedule
-                        var newScheduleId = await ResolveCourseScheduleAsync(dto.Tickets[0]);
-                        if (newScheduleId.HasValue && previous.CourseScheduleId != newScheduleId.Value)
-                        {
-                            shouldTryTransfer = true;
-                        }
-                    }
-                }
-            }
-
-            if (shouldTryTransfer)
-            {
-                var handled = await TryHandleInternalTransferAsync(dto, primaryStudentId, token);
-                if (handled)
-                {
-                    _logger.LogInformation("Internal transfer handled for order {OrderId}", dto.OrderId);
-                    return;
-                }
-            }
+            // NOTE: Automatic transfer heuristic removed (Sprint 7).
+            // It caused false matches — new bookings were incorrectly marked as transfers.
+            // Transfers are now managed explicitly via the dashboard or MCP.
 
             bool isCancelled = dto.Status == "cancelled"
                                || (dto.RefundTotal > 0 && dto.RefundTotal >= dto.PaymentTotal);
