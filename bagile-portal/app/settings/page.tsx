@@ -152,14 +152,12 @@ export default function Settings() {
 function Nav({ user, onSignOut }: { user: { email: string; name: string } | null; onSignOut: () => void }) {
   return (
     <div className="flex items-center justify-between mb-8">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-600 text-sm">{user?.email}</p>
-      </div>
-      <div className="flex gap-4 items-center">
-        <a href="/dashboard" className="text-sm text-blue-600 hover:text-blue-800 font-medium">Dashboard</a>
-        <span className="text-sm text-gray-900 font-medium border-b-2 border-blue-600 pb-0.5">Settings</span>
-        <button onClick={onSignOut} className="text-sm text-gray-500 hover:text-gray-700">Sign out</button>
+      <h1 className="text-2xl font-bold text-gray-900">BAgile</h1>
+      <div className="flex gap-4 items-center text-sm">
+        <a href="/dashboard" className="text-blue-600 hover:text-blue-800">Dashboard</a>
+        <span className="font-medium border-b-2 border-blue-600 pb-0.5">Settings</span>
+        <span className="text-gray-400">{user?.email}</span>
+        <button onClick={onSignOut} className="text-gray-500 hover:text-gray-700">Sign out</button>
       </div>
     </div>
   );

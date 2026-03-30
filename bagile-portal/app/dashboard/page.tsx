@@ -5,57 +5,40 @@ import { MonitoringCourse, getMonitoring, getOrders } from "@/lib/api";
 
 export default function Dashboard() {
   const [courses, setCourses] = useState<MonitoringCourse[]>([]);
-  const [revenue, setRevenue] = useState<{ month: number; year: number }>({ month: 0, year: 0 });
+  const [orderCount, setOrderCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [user, setUser] = useState<{ email: string } | null>(null);
+  const [user, setUser] = useState<{ email: string; name: string } | null>(null);
 
   useEffect(() => {
     const apiKey = localStorage.getItem("bagile_api_key");
-    const savedUser = localStorage.getItem("bagile_portal_user");
-
     if (!apiKey) {
-      // No API key — send to settings to create one
-      window.location.href = "/settings";
+      window.location.replace("/login");
       return;
     }
-
+    const savedUser = localStorage.getItem("bagile_portal_user");
     if (savedUser) setUser(JSON.parse(savedUser));
     loadData(apiKey);
   }, []);
 
   async function loadData(key: string) {
-    setLoading(true);
-    setError("");
     try {
-      const monitoring = await getMonitoring(key, 60);
-      setCourses(monitoring);
-
-      const now = new Date();
-      const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
-      const yearStart = `${now.getFullYear()}-01-01`;
-
-      const [monthOrders, yearOrders] = await Promise.all([
-        getOrders(key, { status: "completed", from: monthStart, pageSize: 1 }),
-        getOrders(key, { status: "completed", from: yearStart, pageSize: 1 }),
+      const [monitoring, orders] = await Promise.all([
+        getMonitoring(key, 60),
+        getOrders(key, { status: "completed", pageSize: 1 }),
       ]);
-
-      setRevenue({
-        month: monthOrders.items.reduce((sum, o) => sum + o.totalAmount, 0),
-        year: yearOrders.items.reduce((sum, o) => sum + o.totalAmount, 0),
-      });
+      setCourses(monitoring);
+      setOrderCount(orders.totalCount);
     } catch {
-      setError("Failed to load data. Your API key may have been revoked.");
+      setError("Failed to load data");
     } finally {
       setLoading(false);
     }
   }
 
   function handleSignOut() {
-    localStorage.removeItem("bagile_portal_token");
-    localStorage.removeItem("bagile_portal_user");
-    localStorage.removeItem("bagile_api_key");
-    window.location.href = "/login";
+    localStorage.clear();
+    window.location.replace("/login");
   }
 
   const atRisk = courses.filter((c) => c.needsAttention && c.status !== "cancelled");
@@ -63,36 +46,29 @@ export default function Dashboard() {
 
   return (
     <div className="max-w-6xl mx-auto py-8 px-4">
-      {/* Nav */}
       <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-500 text-sm">Live data from the platform</p>
-        </div>
-        <div className="flex gap-4 items-center">
-          <span className="text-sm text-gray-900 font-medium border-b-2 border-blue-600 pb-0.5">Dashboard</span>
-          <a href="/settings" className="text-sm text-blue-600 hover:text-blue-800 font-medium">Settings</a>
-          <button onClick={handleSignOut} className="text-sm text-gray-500 hover:text-gray-700">Sign out</button>
+        <h1 className="text-2xl font-bold text-gray-900">BAgile</h1>
+        <div className="flex gap-4 items-center text-sm">
+          <span className="font-medium border-b-2 border-blue-600 pb-0.5">Dashboard</span>
+          <a href="/settings" className="text-blue-600 hover:text-blue-800">Settings</a>
+          <span className="text-gray-400">{user?.email}</span>
+          <button onClick={handleSignOut} className="text-gray-500 hover:text-gray-700">Sign out</button>
         </div>
       </div>
 
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">{error}</div>
-      )}
+      {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">{error}</div>}
 
       {loading ? (
         <p className="text-gray-500">Loading...</p>
       ) : (
         <>
-          {/* Summary cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             <Card label="Upcoming Courses" value={upcoming.length} />
             <Card label="At Risk" value={atRisk.length} color={atRisk.length > 0 ? "red" : "green"} />
-            <Card label="Revenue This Month" value={`£${revenue.month.toLocaleString()}`} />
-            <Card label="Revenue This Year" value={`£${revenue.year.toLocaleString()}`} />
+            <Card label="Completed Orders" value={orderCount} />
+            <Card label="Courses This Month" value={upcoming.filter((c) => new Date(c.startDate).getMonth() === new Date().getMonth()).length} />
           </div>
 
-          {/* At risk courses */}
           {atRisk.length > 0 && (
             <div className="mb-8">
               <h2 className="font-semibold text-red-700 mb-3">Needs Attention</h2>
@@ -118,80 +94,68 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* All upcoming courses */}
-          <div>
-            <h2 className="font-semibold text-gray-900 mb-3">Upcoming Courses</h2>
-            <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="text-left px-4 py-2 font-medium text-gray-600">Course</th>
-                    <th className="text-left px-4 py-2 font-medium text-gray-600">Date</th>
-                    <th className="text-left px-4 py-2 font-medium text-gray-600">Trainer</th>
-                    <th className="text-center px-4 py-2 font-medium text-gray-600">Enrolled</th>
-                    <th className="text-center px-4 py-2 font-medium text-gray-600">Status</th>
+          <h2 className="font-semibold text-gray-900 mb-3">Upcoming Courses</h2>
+          <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="text-left px-4 py-2 font-medium text-gray-600">Course</th>
+                  <th className="text-left px-4 py-2 font-medium text-gray-600">Date</th>
+                  <th className="text-left px-4 py-2 font-medium text-gray-600">Trainer</th>
+                  <th className="text-center px-4 py-2 font-medium text-gray-600">Enrolled</th>
+                  <th className="text-center px-4 py-2 font-medium text-gray-600">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {upcoming.map((c) => (
+                  <tr key={c.id} className="border-t hover:bg-gray-50 cursor-pointer" onClick={() => window.location.href = `/course/${c.id}`}>
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-gray-900">{c.name}</p>
+                      <p className="text-xs text-gray-500">{c.courseCode}</p>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {new Date(c.startDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">{c.trainerName || "—"}</td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={`font-bold ${c.enrolledCount >= c.minimumAttendees ? "text-green-600" : c.enrolledCount > 0 ? "text-amber-600" : "text-red-600"}`}>
+                        {c.enrolledCount}
+                      </span>
+                      <span className="text-gray-400">/{c.minimumAttendees}</span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        c.guaranteedToRun ? "bg-green-100 text-green-700" :
+                        c.needsAttention ? "bg-red-100 text-red-700" :
+                        "bg-blue-100 text-blue-700"
+                      }`}>
+                        {c.guaranteedToRun ? "confirmed" : c.needsAttention ? "at risk" : "on track"}
+                      </span>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {upcoming.map((c) => (
-                    <tr key={c.id} className="border-t hover:bg-gray-50 cursor-pointer" onClick={() => window.location.href = `/course/${c.id}`}>
-                      <td className="px-4 py-3">
-                        <p className="font-medium text-gray-900">{c.name}</p>
-                        <p className="text-xs text-gray-500">{c.courseCode}</p>
-                      </td>
-                      <td className="px-4 py-3 text-gray-600">
-                        {new Date(c.startDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
-                      </td>
-                      <td className="px-4 py-3 text-gray-600">{c.trainerName || "—"}</td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`font-bold ${c.enrolledCount >= c.minimumAttendees ? "text-green-600" : c.enrolledCount > 0 ? "text-amber-600" : "text-red-600"}`}>
-                          {c.enrolledCount}
-                        </span>
-                        <span className="text-gray-400">/{c.minimumAttendees}</span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <StatusBadge status={c.guaranteedToRun ? "confirmed" : c.needsAttention ? "at-risk" : "on-track"} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {upcoming.length === 0 && (
-                <p className="p-6 text-gray-500 text-center">No upcoming courses. Data may still be importing.</p>
-              )}
-            </div>
+                ))}
+                {upcoming.length === 0 && (
+                  <tr><td colSpan={5} className="p-6 text-gray-500 text-center">No upcoming courses</td></tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </>
       )}
 
-      <p className="text-center text-xs text-gray-400 mt-8">BAgile Portal v1.5.0</p>
+      <p className="text-center text-xs text-gray-400 mt-8">v2.0.0</p>
     </div>
   );
 }
 
 function Card({ label, value, color }: { label: string; value: string | number; color?: string }) {
-  const colors = {
-    red: "bg-red-50 border-red-200 text-red-700",
-    green: "bg-green-50 border-green-200 text-green-700",
-    default: "bg-white border-gray-200 text-gray-900",
-  };
+  const c = color === "red" ? "bg-red-50 border-red-200 text-red-700"
+    : color === "green" ? "bg-green-50 border-green-200 text-green-700"
+    : "bg-white border-gray-200 text-gray-900";
   return (
-    <div className={`rounded-lg border p-4 ${colors[color as keyof typeof colors] || colors.default}`}>
+    <div className={`rounded-lg border p-4 ${c}`}>
       <p className="text-xs text-gray-500 mb-1">{label}</p>
       <p className="text-xl font-bold">{value}</p>
     </div>
-  );
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    confirmed: "bg-green-100 text-green-700",
-    "on-track": "bg-blue-100 text-blue-700",
-    "at-risk": "bg-red-100 text-red-700",
-  };
-  return (
-    <span className={`px-2 py-1 rounded-full text-xs font-medium ${styles[status] || "bg-gray-100 text-gray-600"}`}>
-      {status.replace("-", " ")}
-    </span>
   );
 }

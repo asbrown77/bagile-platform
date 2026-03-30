@@ -14,7 +14,7 @@ export default function CourseDetail() {
   useEffect(() => {
     const key = localStorage.getItem("bagile_api_key");
     if (!key) {
-      window.location.href = "/dashboard";
+      window.location.replace("/login");
       return;
     }
     loadAttendees(key);

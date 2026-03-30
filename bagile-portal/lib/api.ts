@@ -22,7 +22,7 @@ export interface CreateKeyResponse {
 
 export async function loginWithGoogle(
   idToken: string
-): Promise<{ token: string; email: string; name: string }> {
+): Promise<{ token: string; email: string; name: string; apiKey?: string }> {
   const res = await fetch(`${API_URL}/portal/auth/google`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
