@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { CourseAttendee, getCourseAttendees } from "@/lib/api";
 
+const API_KEY = process.env.NEXT_PUBLIC_BAGILE_API_KEY || "";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.bagile.co.uk";
+
 export default function CourseDetail() {
   const params = useParams();
   const courseId = Number(params.id);
@@ -12,19 +15,13 @@ export default function CourseDetail() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const key = localStorage.getItem("bagile_api_key");
-    if (!key) {
-      window.location.replace("/login");
-      return;
-    }
-    loadAttendees(key);
+    if (!API_KEY) { setError("API key not configured"); setLoading(false); return; }
+    loadAttendees();
   }, [courseId]);
 
-  async function loadAttendees(key: string) {
-    setLoading(true);
+  async function loadAttendees() {
     try {
-      const data = await getCourseAttendees(key, courseId);
-      setAttendees(data);
+      setAttendees(await getCourseAttendees(API_KEY, courseId));
     } catch {
       setError("Failed to load attendees");
     } finally {
@@ -33,57 +30,66 @@ export default function CourseDetail() {
   }
 
   function downloadCsv() {
-    const key = localStorage.getItem("bagile_api_key");
-    if (!key) return;
-    const url = `${process.env.NEXT_PUBLIC_API_URL || "https://api.bagile.co.uk"}/api/course-schedules/${courseId}/attendees/export`;
-    fetch(url, { headers: { "X-Api-Key": key } })
+    fetch(`${API_URL}/api/course-schedules/${courseId}/attendees/export`, { headers: { "X-Api-Key": API_KEY } })
       .then((r) => r.blob())
       .then((blob) => {
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = `attendees-${attendees[0]?.courseCode || courseId}.csv`;
+        const code = courseCode.split("-")[0] || "course";
+        const dateStr = startDate ? new Date(startDate).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "2-digit" }).replace(/\//g, "") : courseId.toString();
+        a.download = `${code}-Students-${dateStr}.csv`;
         a.click();
       });
   }
 
+  function emailAll() {
+    const emails = activeAttendees.map((a) => a.email).join(",");
+    window.open(`mailto:${emails}?subject=${encodeURIComponent(courseName)}`);
+  }
+
+  function emailOne(email: string, name: string) {
+    window.open(`mailto:${email}?subject=${encodeURIComponent(courseName)}`);
+  }
+
   const courseName = attendees[0]?.courseName || `Course ${courseId}`;
   const courseCode = attendees[0]?.courseCode || "";
+  const startDate = attendees[0]?.courseName?.match(/\d{1,2}[-\s]\w{3}\s\d{2}/)?.[0] || "";
   const activeAttendees = attendees.filter((a) => a.status !== "cancelled" && a.status !== "transferred");
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4">
-      {/* Header */}
-      <div className="mb-6">
-        <a href="/dashboard" className="text-sm text-blue-600 hover:underline mb-2 inline-block">&larr; Back to Dashboard</a>
-        <h1 className="text-2xl font-bold text-gray-900">{courseName}</h1>
-        {courseCode && <p className="text-gray-500 text-sm">{courseCode}</p>}
+    <div className="max-w-5xl mx-auto py-8 px-4">
+      {/* Nav */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <a href="/dashboard" className="text-sm text-blue-600 hover:underline mb-1 inline-block">&larr; Dashboard</a>
+          <h1 className="text-2xl font-bold text-gray-900">{courseName}</h1>
+          {courseCode && <p className="text-gray-500 text-sm">{courseCode}</p>}
+        </div>
+        <div className="flex gap-2">
+          {activeAttendees.length > 0 && (
+            <>
+              <button onClick={downloadCsv} className="bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700">
+                Export CSV
+              </button>
+              <button onClick={emailAll} className="bg-gray-600 text-white px-3 py-2 rounded text-sm hover:bg-gray-700">
+                Email All
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">{error}</div>
-      )}
+      {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">{error}</div>}
 
       {loading ? (
         <p className="text-gray-500">Loading attendees...</p>
       ) : (
         <>
-          {/* Summary + export */}
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-gray-700 font-medium">{activeAttendees.length} attendee{activeAttendees.length !== 1 ? "s" : ""}</p>
-            {activeAttendees.length > 0 && (
-              <button
-                onClick={downloadCsv}
-                className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
-              >
-                Download CSV
-              </button>
-            )}
-          </div>
+          <p className="text-gray-600 text-sm mb-4">{activeAttendees.length} attendee{activeAttendees.length !== 1 ? "s" : ""}</p>
 
-          {/* Attendee table */}
           <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
             {activeAttendees.length === 0 ? (
-              <p className="p-6 text-gray-500 text-center">No attendees yet. Data may still be importing.</p>
+              <p className="p-6 text-gray-500 text-center">No attendees yet.</p>
             ) : (
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
@@ -91,19 +97,23 @@ export default function CourseDetail() {
                     <th className="text-left px-4 py-2 font-medium text-gray-600">Name</th>
                     <th className="text-left px-4 py-2 font-medium text-gray-600">Email</th>
                     <th className="text-left px-4 py-2 font-medium text-gray-600">Organisation</th>
-                    <th className="text-left px-4 py-2 font-medium text-gray-600">Status</th>
+                    <th className="text-left px-4 py-2 font-medium text-gray-600">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {activeAttendees.map((a) => (
-                    <tr key={a.studentId} className="border-t">
+                    <tr key={a.studentId} className="border-t hover:bg-gray-50">
                       <td className="px-4 py-3 font-medium text-gray-900">{a.firstName} {a.lastName}</td>
-                      <td className="px-4 py-3 text-gray-600">{a.email}</td>
+                      <td className="px-4 py-3">
+                        <a href={`mailto:${a.email}?subject=${encodeURIComponent(courseName)}`} className="text-blue-600 hover:underline">
+                          {a.email}
+                        </a>
+                      </td>
                       <td className="px-4 py-3 text-gray-600">{a.organisation || "—"}</td>
                       <td className="px-4 py-3">
-                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                          {a.status}
-                        </span>
+                        <button onClick={() => emailOne(a.email, `${a.firstName} ${a.lastName}`)} className="text-blue-600 hover:text-blue-800 text-xs mr-3">
+                          Email
+                        </button>
                       </td>
                     </tr>
                   ))}
