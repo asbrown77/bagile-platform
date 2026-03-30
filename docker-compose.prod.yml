@@ -20,6 +20,6 @@ services:
     image: ghcr.io/asbrown77/bagile-portal:latest
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "3100:3000"
     env_file:
       - config/portal.env
