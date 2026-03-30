@@ -299,8 +299,8 @@ export default function Home() {
           <div>
             <p className="text-sm font-medium text-gray-700 mb-1">1. Clone and build the MCP server:</p>
             <pre className="bg-gray-900 text-gray-100 rounded p-3 text-xs overflow-x-auto">
-{`git clone https://github.com/asbrown77/bagile-platform.git
-cd bagile-platform/bagile-mcp-server
+{`git clone https://github.com/asbrown77/bagile-mcp.git
+cd bagile-mcp
 npm install && npm run build`}
             </pre>
           </div>
@@ -314,7 +314,7 @@ npm install && npm run build`}
   "mcpServers": {
     "bagile": {
       "command": "node",
-      "args": ["/full/path/to/bagile-mcp-server/dist/index.js"],
+      "args": ["/full/path/to/bagile-mcp/dist/index.js"],
       "env": {
         "BAGILE_API_URL": "https://api.bagile.co.uk",
         "BAGILE_API_KEY": "paste-key-into-this-file-only"
@@ -332,7 +332,7 @@ npm install && npm run build`}
       </div>
 
       {/* Version */}
-      <p className="text-center text-xs text-gray-400 mt-8">BAgile Portal v1.2.0</p>
+      <p className="text-center text-xs text-gray-400 mt-8">BAgile Portal v1.2.1</p>
     </div>
   );
 }
