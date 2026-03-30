@@ -1,7 +1,7 @@
 -- V28: API key management — supports multiple named keys per user
 -- Keys are stored as SHA-256 hashes; raw key shown only at creation time.
 
-CREATE TABLE bagile.api_keys (
+CREATE TABLE IF NOT EXISTS bagile.api_keys (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     key_hash        TEXT NOT NULL UNIQUE,
     key_prefix      TEXT NOT NULL,              -- first 12 chars for display (e.g. "bgl_a1b2c3d4")
