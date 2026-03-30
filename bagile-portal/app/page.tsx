@@ -135,16 +135,19 @@ export default function Home() {
           <h1 className="text-2xl font-bold text-gray-900">BAgile Portal</h1>
           <p className="text-gray-600 text-sm">{user?.email}</p>
         </div>
-        <button
-          onClick={() => {
-            setToken(null);
-            setUser(null);
-            setKeys([]);
-          }}
-          className="text-sm text-gray-500 hover:text-gray-700"
-        >
-          Sign out
-        </button>
+        <div className="flex gap-3">
+          <a href="/dashboard" className="text-sm text-blue-600 hover:text-blue-800 font-medium">Dashboard</a>
+          <button
+            onClick={() => {
+              setToken(null);
+              setUser(null);
+              setKeys([]);
+            }}
+            className="text-sm text-gray-500 hover:text-gray-700"
+          >
+            Sign out
+          </button>
+        </div>
       </div>
 
       {error && (
