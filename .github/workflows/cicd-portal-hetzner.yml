@@ -80,11 +80,8 @@ jobs:
               echo "Portal__AllowedEmails=${PORTAL_ALLOWED_EMAILS}" >> config/api.env
             fi
 
-            # Fix corrupted docker-compose: remove bad portal entry, add clean one
-            sed -i '/bagile-portal/,/env_file/{/bagile-portal/d;/container_name.*portal/d;/bagile-portal/d;/3100/d;/portal\.env/d;/env_file/d}' docker-compose.yml 2>/dev/null
-            if ! grep -q "bagile-portal" docker-compose.yml 2>/dev/null; then
-              sed -i '/^services:/a\  bagile-portal:\n    container_name: bagile-portal\n    image: ghcr.io/asbrown77/bagile-portal:latest\n    restart: unless-stopped\n    ports:\n      - "3100:3000"\n    env_file:\n      - config/portal.env' docker-compose.yml
-            fi
+            # Use the production compose file from the repo (clean, known-good)
+            cp docker-compose.prod.yml docker-compose.yml
 
             docker pull ghcr.io/asbrown77/bagile-portal:latest
             docker compose up -d bagile-portal
