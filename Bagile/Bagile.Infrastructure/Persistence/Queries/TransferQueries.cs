@@ -164,7 +164,7 @@ public class TransferQueries : ITransferQueries
                     cs.sku AS course_code,
                     cs.name AS course_title,
                     cs.start_date AS original_start_date,
-                    cs.updated_at AS cancelled_date
+                    cs.last_synced AS cancelled_date
                 FROM bagile.enrolments e
                 JOIN bagile.course_schedules cs ON e.course_schedule_id = cs.id
                 WHERE cs.status = 'cancelled'
