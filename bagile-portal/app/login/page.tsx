@@ -20,7 +20,26 @@ export default function Login() {
       return;
     }
 
-    // Load Google script manually if not already present
+    // Use a global callback so it survives React re-renders
+    (window as any).__bagileGoogleCallback = async (response: any) => {
+      setError("");
+      setSigningIn(true);
+      try {
+        const data = await loginWithGoogle(response.credential);
+        localStorage.setItem("bagile_portal_token", data.token);
+        localStorage.setItem("bagile_portal_user", JSON.stringify({ email: data.email, name: data.name }));
+        if (data.apiKey) {
+          localStorage.setItem("bagile_api_key", data.apiKey);
+        }
+        window.location.replace("/dashboard");
+      } catch (err: any) {
+        console.error("Login error:", err);
+        setError(err.message || "Login failed");
+        setSigningIn(false);
+      }
+    };
+
+    // Load Google script
     let script = document.querySelector('script[src*="accounts.google.com/gsi/client"]') as HTMLScriptElement;
     if (!script) {
       script = document.createElement("script");
@@ -30,51 +49,29 @@ export default function Login() {
 
     function initButton() {
       const g = (window as any).google;
-      if (!g?.accounts?.id) {
-        return false;
-      }
+      if (!g?.accounts?.id || !btnRef.current) return false;
+
       g.accounts.id.initialize({
         client_id: clientId,
-        callback: handleLogin,
+        callback: (window as any).__bagileGoogleCallback,
       });
-      if (btnRef.current) {
-        btnRef.current.innerHTML = "";
-        g.accounts.id.renderButton(btnRef.current, {
-          theme: "outline",
-          size: "large",
-          text: "signin_with",
-          width: 300,
-        });
-      }
+      btnRef.current.innerHTML = "";
+      g.accounts.id.renderButton(btnRef.current, {
+        theme: "outline",
+        size: "large",
+        text: "signin_with",
+        width: 300,
+      });
       return true;
     }
 
-    // Try immediately, then poll until Google SDK loads
     if (!initButton()) {
       const interval = setInterval(() => {
         if (initButton()) clearInterval(interval);
       }, 300);
-      // Give up after 10 seconds
       setTimeout(() => clearInterval(interval), 10000);
     }
   }, []);
-
-  async function handleLogin(response: { credential: string }) {
-    setError("");
-    setSigningIn(true);
-    try {
-      const data = await loginWithGoogle(response.credential);
-      localStorage.setItem("bagile_portal_token", data.token);
-      localStorage.setItem("bagile_portal_user", JSON.stringify({ email: data.email, name: data.name }));
-      if (data.apiKey) {
-        localStorage.setItem("bagile_api_key", data.apiKey);
-      }
-      window.location.replace("/dashboard");
-    } catch (err: any) {
-      setError(err.message || "Login failed");
-      setSigningIn(false);
-    }
-  }
 
   return (
     <div className="flex items-center justify-center min-h-screen">
