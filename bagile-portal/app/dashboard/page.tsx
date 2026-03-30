@@ -39,14 +39,16 @@ export default function Dashboard() {
 
   const trainers = [...new Set(courses.map((c) => c.trainerName).filter(Boolean))] as string[];
 
+  const isAtRisk = (c: MonitoringCourse) => c.currentEnrolmentCount <= 2 && c.daysUntilStart <= 7;
+
   const filtered = courses.filter((c) => {
     if (trainerFilter !== "all" && c.trainerName !== trainerFilter) return false;
-    if (statusFilter === "at-risk" && c.monitoringStatus === "healthy") return false;
-    if (statusFilter === "healthy" && c.monitoringStatus !== "healthy") return false;
+    if (statusFilter === "at-risk" && !isAtRisk(c)) return false;
+    if (statusFilter === "healthy" && isAtRisk(c)) return false;
     return true;
   });
 
-  const atRiskCount = courses.filter((c) => c.monitoringStatus !== "healthy" && c.monitoringStatus !== "cancelled").length;
+  const atRiskCount = courses.filter(isAtRisk).length;
 
   return (
     <div className="max-w-6xl mx-auto py-8 px-4">
@@ -109,7 +111,7 @@ export default function Dashboard() {
               <tbody>
                 {filtered.map((c) => (
                   <tr key={c.id}
-                    className={`border-t hover:bg-gray-50 cursor-pointer ${c.monitoringStatus !== "healthy" ? "bg-red-50/50" : ""}`}
+                    className={`border-t hover:bg-gray-50 cursor-pointer ${isAtRisk(c) ? "bg-red-50/50" : ""}`}
                     onClick={() => window.location.href = `/course/${c.id}`}
                   >
                     <td className="px-4 py-3">
@@ -122,18 +124,15 @@ export default function Dashboard() {
                     </td>
                     <td className="px-4 py-3 text-gray-600">{c.trainerName || "—"}</td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`font-bold ${c.currentEnrolmentCount >= c.minimumRequired ? "text-green-600" : c.currentEnrolmentCount > 0 ? "text-amber-600" : "text-red-600"}`}>
+                      <span className={`font-bold ${isAtRisk(c) ? "text-red-600" : "text-green-600"}`}>
                         {c.currentEnrolmentCount}
                       </span>
-                      <span className="text-gray-400">/{c.minimumRequired}</span>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        c.monitoringStatus === "healthy" ? "bg-green-100 text-green-700" :
-                        c.monitoringStatus === "warning" ? "bg-amber-100 text-amber-700" :
-                        "bg-red-100 text-red-700"
+                        isAtRisk(c) ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"
                       }`}>
-                        {c.monitoringStatus}
+                        {isAtRisk(c) ? "at risk" : "healthy"}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-600">{c.recommendedAction}</td>
