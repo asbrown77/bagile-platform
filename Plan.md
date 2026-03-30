@@ -8,16 +8,9 @@
 
 Items below are prioritised but unrefined. Refine before pulling into a sprint.
 
-### P1 — Trust the Data
+### P1 — Trust the Data (Complete)
 
-| ID | Item | Who Needs It | Status |
-|----|------|-------------|--------|
-| D1 | ETL deduplication — duplicate course schedules | Platform reliability | Ready to refine |
-| D2 | Data cleanup migration — nulls, empty SKUs, inconsistent codes | Monitoring accuracy | Ready to refine |
-| D3 | Delete or fix acceptance tests | CI integrity | Ready to refine |
-| D4 | ETL interval to config (appsettings) | Ops flexibility | Ready to refine |
-| D5 | ~~GET /orders/{id} returns 404 for WooCommerce order numbers~~ | MCP usability, daily ops | **Done — Sprint 5** |
-| D6 | ~~ETL not syncing order status updates~~ | Data accuracy, monitoring, revenue reporting | **Done — Sprint 5** |
+All P1 items done across Sprints 4-6. Data is trustworthy, orders sync, multi-ticket enrolments work.
 
 ### P2 — Complete the Picture
 
@@ -62,46 +55,17 @@ Items below are prioritised but unrefined. Refine before pulling into a sprint.
 
 ## Sprint Queue
 
-### Sprint 5: Data Trust Bugs (30 Mar 2026)
-
-**Goal:** Orders are queryable by WooCommerce order number and status changes sync automatically.
-**We'll know it worked when:** `get_order 12912` returns the order, and order status updates from WooCommerce appear within one ETL cycle.
-
-| # | Item | Status |
-|---|------|--------|
-| 1 | D5: Fix order lookup by WooCommerce order number | Done |
-| 2 | D6: Fix ETL order status sync | Done |
-
-#### D5: Fix — Order lookup now supports WooCommerce order numbers
-- `OrderQueries.GetOrderByIdAsync` queries by both `o.id` and `o.external_id`, internal ID takes priority
-- Enrolment sub-query uses actual internal ID from result, not the passed-in parameter
-- 2 integration tests added (external ID lookup + internal ID priority)
-
-#### D6: Fix — ETL now syncs order status updates (2 root causes)
-1. `RawOrderRepository.GetLastTimestampAsync` was returning `MAX(created_at)` (local DB timestamp) → now extracts `date_modified` from WooCommerce JSON payload
-2. `WooApiClient.FetchOrdersAsync` was using `after=` (filters by creation date) → now uses `modified_after=` (filters by modification date)
-- 2 unit tests added (new order upsert + re-processed order status update)
-
----
-
-### Sprint 6: Multi-Ticket Enrolments (30 Mar 2026)
-
-**Goal:** Multi-ticket orders create one enrolment per attendee, not one per order.
-**We'll know it worked when:** Order 12874 shows 2 enrolments (Olorundurotimi + Maxwell) and order 12902 shows 5 enrolments.
-
-| # | Item | Status |
-|---|------|--------|
-| 1 | Fix WooOrderService to create student per ticket | Done |
-| 2 | Verify cancel_course 500 (was fixed Sprint 4) | Done — working in prod |
-
-#### Fix: Student creation moved inside enrolment loop
-- **Root cause:** `WooOrderService.ProcessAsync` created ONE student from the first ticket, then used the same `studentId` for all enrolments. Since `EnrolmentRepository.UpsertAsync` deduplicates on `(student_id, order_id, course_schedule_id)`, all tickets collapsed into 1 enrolment.
-- **Fix:** Extracted `CreateStudentFromTicketOrBillingAsync()` helper. Each ticket in the foreach loop now creates/upserts its own student before creating the enrolment.
-- **FooEvents API confirmed working** — returns correct attendee data for both orders.
-
 ---
 
 ## Completed
+
+### Sprint 6 (30 Mar 2026)
+- [x] **Multi-ticket enrolments** — student per ticket, not per order. V27 migration re-processed existing orders. Order 12902 now shows all 5 attendees.
+- [x] **cancel_course 500** — was already fixed in Sprint 4 (DI registration). Verified working in prod.
+
+### Sprint 5 (30 Mar 2026)
+- [x] **D5: Order lookup by WooCommerce ID** — queries by both internal ID and external_id. MCP `get_order` works with Woo order numbers.
+- [x] **D6: ETL order status sync** — `modified_after` + `date_modified` from payload + 30-day lookback. All 28 orders verified matching WooCommerce.
 
 ### Sprint 4 (27 Mar 2026)
 - [x] **D1-D4:** Deduplication fix, data cleanup migration, dead test removal, ETL interval to config
