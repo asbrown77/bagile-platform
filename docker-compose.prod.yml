@@ -7,6 +7,9 @@ services:
       - "8080:8080"
     env_file:
       - config/api.env
+    networks:
+      - default
+      - shared
 
   bagile-etl:
     container_name: bagile-etl
@@ -23,3 +26,10 @@ services:
       - "3100:3000"
     env_file:
       - config/portal.env
+    networks:
+      - default
+      - shared
+
+networks:
+  shared:
+    external: true
