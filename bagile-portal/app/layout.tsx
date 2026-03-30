@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "BAgile Portal",
-  description: "API key management for BAgile Platform",
+  description: "BAgile Platform Dashboard",
 };
 
 export default function RootLayout({

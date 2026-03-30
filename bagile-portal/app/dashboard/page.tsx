@@ -8,16 +8,20 @@ export default function Dashboard() {
   const [revenue, setRevenue] = useState<{ month: number; year: number }>({ month: 0, year: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [apiKey, setApiKey] = useState("");
+  const [user, setUser] = useState<{ email: string } | null>(null);
 
   useEffect(() => {
-    const key = localStorage.getItem("bagile_api_key");
-    if (key) {
-      setApiKey(key);
-      loadData(key);
-    } else {
-      setLoading(false);
+    const apiKey = localStorage.getItem("bagile_api_key");
+    const savedUser = localStorage.getItem("bagile_portal_user");
+
+    if (!apiKey) {
+      // No API key — send to settings to create one
+      window.location.href = "/settings";
+      return;
     }
+
+    if (savedUser) setUser(JSON.parse(savedUser));
+    loadData(apiKey);
   }, []);
 
   async function loadData(key: string) {
@@ -41,61 +45,34 @@ export default function Dashboard() {
         year: yearOrders.items.reduce((sum, o) => sum + o.totalAmount, 0),
       });
     } catch {
-      setError("Failed to load data. Check your API key.");
+      setError("Failed to load data. Your API key may have been revoked.");
     } finally {
       setLoading(false);
     }
   }
 
-  function handleKeySubmit(e: React.FormEvent) {
-    e.preventDefault();
-    localStorage.setItem("bagile_api_key", apiKey);
-    loadData(apiKey);
+  function handleSignOut() {
+    localStorage.removeItem("bagile_portal_token");
+    localStorage.removeItem("bagile_portal_user");
+    localStorage.removeItem("bagile_api_key");
+    window.location.href = "/login";
   }
 
   const atRisk = courses.filter((c) => c.needsAttention && c.status !== "cancelled");
   const upcoming = courses.filter((c) => c.status !== "cancelled");
 
-  if (!loading && !apiKey) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <form onSubmit={handleKeySubmit} className="bg-white rounded-lg shadow-md p-8 max-w-md w-full">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">BAgile Dashboard</h1>
-          <p className="text-gray-600 text-sm mb-4">
-            Enter your API key to access the dashboard.
-            Get one at <a href="/" className="text-blue-600 underline">portal.bagile.co.uk</a>
-          </p>
-          <input
-            type="password"
-            placeholder="Paste your API key"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            className="w-full border rounded px-3 py-2 text-sm mb-3"
-          />
-          <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 text-sm">
-            Connect
-          </button>
-        </form>
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-6xl mx-auto py-8 px-4">
-      {/* Header */}
+      {/* Nav */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">BAgile Dashboard</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
           <p className="text-gray-500 text-sm">Live data from the platform</p>
         </div>
-        <div className="flex gap-3">
-          <a href="/" className="text-sm text-gray-500 hover:text-gray-700">API Keys</a>
-          <button
-            onClick={() => { localStorage.removeItem("bagile_api_key"); setApiKey(""); setCourses([]); }}
-            className="text-sm text-gray-500 hover:text-gray-700"
-          >
-            Disconnect
-          </button>
+        <div className="flex gap-4 items-center">
+          <span className="text-sm text-gray-900 font-medium border-b-2 border-blue-600 pb-0.5">Dashboard</span>
+          <a href="/settings" className="text-sm text-blue-600 hover:text-blue-800 font-medium">Settings</a>
+          <button onClick={handleSignOut} className="text-sm text-gray-500 hover:text-gray-700">Sign out</button>
         </div>
       </div>
 
@@ -187,7 +164,7 @@ export default function Dashboard() {
         </>
       )}
 
-      <p className="text-center text-xs text-gray-400 mt-8">BAgile Dashboard v1.5.0</p>
+      <p className="text-center text-xs text-gray-400 mt-8">BAgile Portal v1.5.0</p>
     </div>
   );
 }
