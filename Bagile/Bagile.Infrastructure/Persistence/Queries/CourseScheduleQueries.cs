@@ -1,5 +1,6 @@
 ﻿using Bagile.Application.Common.Interfaces;
 using Bagile.Application.CourseSchedules.DTOs;
+using Bagile.Application.CourseSchedules.Queries.GetScheduleConflicts;
 using Dapper;
 using Npgsql;
 
@@ -191,7 +192,12 @@ public class CourseScheduleQueries : ICourseScheduleQueries
                 o.external_id AS OrderNumber,
                 o.total_amount AS OrderAmount,
                 o.status AS OrderStatus,
-                o.currency AS Currency
+                o.currency AS Currency,
+                o.billing_company AS BillingCompany,
+                o.contact_name AS BillingName,
+                o.contact_email AS BillingEmail,
+                COALESCE(o.payment_method_title, o.payment_method) AS PaymentMethod,
+                o.total_quantity AS OrderAttendeeCount
             FROM bagile.enrolments e
             JOIN bagile.students s ON e.student_id = s.id
             JOIN bagile.course_schedules cs ON e.course_schedule_id = cs.id
@@ -202,5 +208,46 @@ public class CourseScheduleQueries : ICourseScheduleQueries
 
         await using var conn = new NpgsqlConnection(_connectionString);
         return await conn.QueryAsync<CourseAttendeeDto>(sql, new { scheduleId });
+    }
+
+    public async Task<IEnumerable<ScheduleConflictDto>> GetScheduleConflictsAsync(
+        DateTime startDate,
+        DateTime endDate,
+        string? trainerName,
+        CancellationToken ct = default)
+    {
+        var sql = @"
+            SELECT
+                cs.id AS ConflictingCourseId,
+                cs.name AS CourseName,
+                COALESCE(cs.sku, '') AS CourseCode,
+                cs.start_date AS StartDate,
+                cs.end_date AS EndDate,
+                CASE WHEN cs.is_public THEN 'public' ELSE 'private' END AS Type,
+                cs.trainer_name AS TrainerName,
+                COUNT(e.id)::int AS EnrolmentCount,
+                CASE WHEN COUNT(e.id) >= 3 THEN true ELSE false END
+                    AS IsGuaranteedToRun,
+                CASE
+                    WHEN cs.trainer_name IS NOT NULL
+                         AND cs.trainer_name ILIKE @trainerPattern
+                    THEN 'trainer_clash'
+                    ELSE 'date_overlap'
+                END AS ConflictType
+            FROM bagile.course_schedules cs
+            LEFT JOIN bagile.enrolments e ON e.course_schedule_id = cs.id
+                AND e.status NOT IN ('cancelled', 'transferred')
+            WHERE cs.status NOT IN ('cancelled', 'completed')
+              AND cs.start_date <= @endDate
+              AND COALESCE(cs.end_date, cs.start_date) >= @startDate
+            GROUP BY cs.id
+            ORDER BY cs.start_date;";
+
+        var trainerPattern = string.IsNullOrWhiteSpace(trainerName)
+            ? "%" : $"%{trainerName}%";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        return await conn.QueryAsync<ScheduleConflictDto>(sql,
+            new { startDate, endDate, trainerPattern });
     }
 }

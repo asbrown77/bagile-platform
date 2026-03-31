@@ -20,6 +20,9 @@
         public decimal RefundTotal { get; init; }   // sum of refunds
         public string Currency { get; init; } = "GBP";
 
+        public string PaymentMethod { get; init; } = "";
+        public string PaymentMethodTitle { get; init; } = "";
+
         public string Status { get; init; } = "pending";
 
         public bool HasFooEventsMetadata { get; init; }

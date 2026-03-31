@@ -44,6 +44,8 @@ namespace Bagile.Infrastructure.Repositories
             status,
             lifecycle_status,
             currency,
+            payment_method,
+            payment_method_title,
             order_date
         )
         VALUES (
@@ -65,24 +67,28 @@ namespace Bagile.Infrastructure.Repositories
             @Status,
             @LifecycleStatus,
             @Currency,
+            @PaymentMethod,
+            @PaymentMethodTitle,
             @OrderDate
         )
         ON CONFLICT (source, external_id) DO UPDATE
         SET
-            billing_company   = EXCLUDED.billing_company,
-            contact_name      = EXCLUDED.contact_name,
-            contact_email     = EXCLUDED.contact_email,
-            total_quantity    = EXCLUDED.total_quantity,
-            sub_total         = EXCLUDED.sub_total,
-            total_tax         = EXCLUDED.total_tax,
-            total_amount      = EXCLUDED.total_amount,
-            payment_total     = EXCLUDED.payment_total,
-            refund_total      = EXCLUDED.refund_total,
-            net_total         = EXCLUDED.net_total,
-            status            = EXCLUDED.status,
-            lifecycle_status  = EXCLUDED.lifecycle_status,
-            currency          = EXCLUDED.currency,
-            order_date        = EXCLUDED.order_date
+            billing_company      = EXCLUDED.billing_company,
+            contact_name         = EXCLUDED.contact_name,
+            contact_email        = EXCLUDED.contact_email,
+            total_quantity       = EXCLUDED.total_quantity,
+            sub_total            = EXCLUDED.sub_total,
+            total_tax            = EXCLUDED.total_tax,
+            total_amount         = EXCLUDED.total_amount,
+            payment_total        = EXCLUDED.payment_total,
+            refund_total         = EXCLUDED.refund_total,
+            net_total            = EXCLUDED.net_total,
+            status               = EXCLUDED.status,
+            lifecycle_status     = EXCLUDED.lifecycle_status,
+            currency             = EXCLUDED.currency,
+            payment_method       = EXCLUDED.payment_method,
+            payment_method_title = EXCLUDED.payment_method_title,
+            order_date           = EXCLUDED.order_date
         RETURNING id;";
 
             await using var conn = new NpgsqlConnection(_conn);

@@ -58,6 +58,8 @@ namespace Bagile.EtlService.Services
                     Status = dto.Status,
                     LifecycleStatus = MapLifecycleStatus(dto.Status, dto.PaymentTotal, dto.RefundTotal),
                     Currency = dto.Currency,
+                    PaymentMethod = dto.PaymentMethod,
+                    PaymentMethodTitle = dto.PaymentMethodTitle,
                     OrderDate = dto.DateCreated ?? DateTime.UtcNow
                 };
 

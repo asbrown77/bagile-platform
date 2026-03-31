@@ -17,4 +17,9 @@ public record CourseAttendeeDto
     public decimal? OrderAmount { get; init; }
     public string? OrderStatus { get; init; }
     public string? Currency { get; init; }
+    public string? BillingCompany { get; init; }
+    public string? BillingName { get; init; }
+    public string? BillingEmail { get; init; }
+    public string? PaymentMethod { get; init; }
+    public int? OrderAttendeeCount { get; init; }
 }

@@ -335,6 +335,9 @@ namespace Bagile.EtlService.Services
 
             DateTime? dateCreated = TryGetDate(root, "date_created");
 
+            string paymentMethod = SafeGet(root, "payment_method");
+            string paymentMethodTitle = SafeGet(root, "payment_method_title");
+
             return new CanonicalWooOrderDto
             {
                 RawOrderId = raw.Id,
@@ -352,6 +355,9 @@ namespace Bagile.EtlService.Services
                 PaymentTotal = orderTotal,
                 RefundTotal = refundTotal,
                 Currency = currency,
+
+                PaymentMethod = paymentMethod,
+                PaymentMethodTitle = paymentMethodTitle,
 
                 Status = root.TryGetProperty("status", out var statusProp)
                     ? statusProp.GetString() ?? "pending"

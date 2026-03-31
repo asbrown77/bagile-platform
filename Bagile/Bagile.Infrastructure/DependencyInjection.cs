@@ -20,9 +20,13 @@ public static class DependencyInjection
         services.AddScoped<IStudentQueries>(_ => new StudentQueries(connectionString));
         services.AddScoped<IOrganisationQueries>(_ => new OrganisationQueries(connectionString));
         services.AddScoped<ITransferQueries>(_ => new TransferQueries(connectionString));
+        services.AddScoped<IRevenueQueries>(_ => new RevenueQueries(connectionString));
+        services.AddScoped<IAnalyticsQueries>(_ => new AnalyticsQueries(connectionString));
 
         // Register repositories (write path)
         services.AddScoped<ICourseScheduleRepository>(_ => new CourseScheduleRepository(connectionString));
+        services.AddScoped<IStudentRepository>(_ => new StudentRepository(connectionString));
+        services.AddScoped<IEnrolmentRepository>(_ => new EnrolmentRepository(connectionString));
 
         return services;
     }
