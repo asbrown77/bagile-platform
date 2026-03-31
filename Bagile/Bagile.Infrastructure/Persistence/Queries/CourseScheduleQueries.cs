@@ -160,7 +160,7 @@ public class CourseScheduleQueries : ICourseScheduleQueries
                 COUNT(e.id) AS CurrentEnrolmentCount
             FROM bagile.course_schedules cs
             LEFT JOIN bagile.enrolments e ON e.course_schedule_id = cs.id AND e.status NOT IN ('cancelled', 'transferred')
-            WHERE cs.start_date >= CURRENT_DATE
+            WHERE cs.start_date >= CURRENT_DATE - INTERVAL '2 days'
               AND cs.start_date <= CURRENT_DATE + @daysAhead * INTERVAL '1 day'
               AND cs.is_public = true
             GROUP BY cs.id, cs.sku, cs.name, cs.start_date, cs.end_date,
