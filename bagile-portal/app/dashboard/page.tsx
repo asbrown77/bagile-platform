@@ -50,10 +50,21 @@ export default function Dashboard() {
     return code;
   }).filter(Boolean))].sort();
 
-  const isAtRisk = (c: MonitoringCourse) => c.currentEnrolmentCount <= 2 && c.daysUntilStart <= 7 && c.daysUntilStart > 0;
-  const isPast = (c: MonitoringCourse) => c.daysUntilStart <= 0;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const isRunning = (c: MonitoringCourse) => {
+    const start = new Date(c.startDate); start.setHours(0,0,0,0);
+    const end = c.endDate ? new Date(c.endDate) : start; end.setHours(0,0,0,0);
+    return start <= today && today <= end;
+  };
+  const isCompleted = (c: MonitoringCourse) => {
+    const end = c.endDate ? new Date(c.endDate) : new Date(c.startDate);
+    end.setHours(0,0,0,0);
+    return today > end;
+  };
+  const isAtRisk = (c: MonitoringCourse) => !isRunning(c) && !isCompleted(c) && c.currentEnrolmentCount <= 2 && c.daysUntilStart <= 7;
   const getStatus = (c: MonitoringCourse) => {
-    if (isPast(c)) return c.daysUntilStart === 0 ? "running" : "completed";
+    if (isRunning(c)) return "running";
+    if (isCompleted(c)) return "completed";
     if (isAtRisk(c)) return "at risk";
     return "healthy";
   };
@@ -144,7 +155,7 @@ export default function Dashboard() {
               <tbody>
                 {filtered.map((c) => (
                   <tr key={c.id}
-                    className={`border-t hover:bg-gray-50 cursor-pointer ${isAtRisk(c) ? "bg-red-50/50" : isPast(c) ? "bg-gray-50/50" : ""}`}
+                    className={`border-t hover:bg-gray-50 cursor-pointer ${isAtRisk(c) ? "bg-red-50/50" : isCompleted(c) ? "bg-gray-50/50" : ""}`}
                     onClick={() => window.location.href = `/course/${c.id}`}
                   >
                     <td className="px-4 py-3">
