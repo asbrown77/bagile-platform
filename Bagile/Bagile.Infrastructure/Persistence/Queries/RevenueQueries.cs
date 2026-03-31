@@ -42,6 +42,21 @@ public class RevenueQueries : IRevenueQueries
         int year, CancellationToken ct = default)
     {
         var sql = @"
+            WITH enrolment_share AS (
+                SELECT
+                    e.id AS enrolment_id,
+                    e.order_id,
+                    e.course_schedule_id,
+                    o.net_total / NULLIF(
+                        (SELECT COUNT(*) FROM bagile.enrolments e2
+                         WHERE e2.order_id = o.id AND e2.status != 'cancelled'), 0
+                    ) AS share
+                FROM bagile.enrolments e
+                JOIN bagile.orders o ON e.order_id = o.id
+                WHERE EXTRACT(YEAR FROM o.order_date) = @year
+                  AND o.status NOT IN ('cancelled', 'refunded', 'failed')
+                  AND e.status != 'cancelled'
+            )
             SELECT
                 COALESCE(
                     CASE
@@ -50,15 +65,11 @@ public class RevenueQueries : IRevenueQueries
                     END,
                     'Other'
                 ) AS CourseType,
-                COALESCE(SUM(o.net_total), 0) AS Revenue,
-                COUNT(DISTINCT o.id) AS OrderCount,
-                COUNT(e.id) AS AttendeeCount
-            FROM bagile.enrolments e
-            JOIN bagile.orders o ON e.order_id = o.id
-            JOIN bagile.course_schedules cs ON e.course_schedule_id = cs.id
-            WHERE EXTRACT(YEAR FROM o.order_date) = @year
-              AND o.status NOT IN ('cancelled', 'refunded', 'failed')
-              AND e.status != 'cancelled'
+                COALESCE(SUM(es.share), 0) AS Revenue,
+                COUNT(DISTINCT es.order_id) AS OrderCount,
+                COUNT(es.enrolment_id) AS AttendeeCount
+            FROM enrolment_share es
+            JOIN bagile.course_schedules cs ON es.course_schedule_id = cs.id
             GROUP BY CourseType
             ORDER BY Revenue DESC;";
 
@@ -105,17 +116,28 @@ public class RevenueQueries : IRevenueQueries
         int year, CancellationToken ct = default)
     {
         var sql = @"
+            WITH enrolment_share AS (
+                SELECT
+                    e.id AS enrolment_id,
+                    e.order_id,
+                    e.course_schedule_id,
+                    o.net_total / NULLIF(
+                        (SELECT COUNT(*) FROM bagile.enrolments e2
+                         WHERE e2.order_id = o.id AND e2.status != 'cancelled'), 0
+                    ) AS share
+                FROM bagile.enrolments e
+                JOIN bagile.orders o ON e.order_id = o.id
+                WHERE EXTRACT(YEAR FROM o.order_date) = @year
+                  AND o.status NOT IN ('cancelled', 'refunded', 'failed')
+                  AND e.status != 'cancelled'
+            )
             SELECT
                 CASE WHEN cs.is_public THEN 'public' ELSE 'private' END AS Source,
-                COALESCE(SUM(o.net_total), 0) AS Revenue,
-                COUNT(DISTINCT o.id) AS OrderCount,
-                COUNT(e.id) AS AttendeeCount
-            FROM bagile.enrolments e
-            JOIN bagile.orders o ON e.order_id = o.id
-            JOIN bagile.course_schedules cs ON e.course_schedule_id = cs.id
-            WHERE EXTRACT(YEAR FROM o.order_date) = @year
-              AND o.status NOT IN ('cancelled', 'refunded', 'failed')
-              AND e.status != 'cancelled'
+                COALESCE(SUM(es.share), 0) AS Revenue,
+                COUNT(DISTINCT es.order_id) AS OrderCount,
+                COUNT(es.enrolment_id) AS AttendeeCount
+            FROM enrolment_share es
+            JOIN bagile.course_schedules cs ON es.course_schedule_id = cs.id
             GROUP BY CASE WHEN cs.is_public THEN 'public' ELSE 'private' END
             ORDER BY Revenue DESC;";
 
@@ -127,6 +149,21 @@ public class RevenueQueries : IRevenueQueries
         int year, CancellationToken ct = default)
     {
         var sql = @"
+            WITH enrolment_share AS (
+                SELECT
+                    e.id AS enrolment_id,
+                    e.order_id,
+                    e.student_id,
+                    o.net_total / NULLIF(
+                        (SELECT COUNT(*) FROM bagile.enrolments e2
+                         WHERE e2.order_id = o.id AND e2.status != 'cancelled'), 0
+                    ) AS share
+                FROM bagile.enrolments e
+                JOIN bagile.orders o ON e.order_id = o.id
+                WHERE EXTRACT(YEAR FROM o.order_date) = @year
+                  AND o.status NOT IN ('cancelled', 'refunded', 'failed')
+                  AND e.status != 'cancelled'
+            )
             SELECT
                 COALESCE(s.country, 'Unknown') AS Country,
                 CASE
@@ -139,15 +176,11 @@ public class RevenueQueries : IRevenueQueries
                     WHEN COALESCE(s.country, '') = '' THEN 'Unknown'
                     ELSE 'Rest of World'
                 END AS Region,
-                COALESCE(SUM(o.net_total), 0) AS Revenue,
-                COUNT(DISTINCT o.id) AS OrderCount,
-                COUNT(e.id) AS AttendeeCount
-            FROM bagile.enrolments e
-            JOIN bagile.orders o ON e.order_id = o.id
-            JOIN bagile.students s ON e.student_id = s.id
-            WHERE EXTRACT(YEAR FROM o.order_date) = @year
-              AND o.status NOT IN ('cancelled', 'refunded', 'failed')
-              AND e.status != 'cancelled'
+                COALESCE(SUM(es.share), 0) AS Revenue,
+                COUNT(DISTINCT es.order_id) AS OrderCount,
+                COUNT(es.enrolment_id) AS AttendeeCount
+            FROM enrolment_share es
+            JOIN bagile.students s ON es.student_id = s.id
             GROUP BY Country, Region
             ORDER BY Revenue DESC;";
 
