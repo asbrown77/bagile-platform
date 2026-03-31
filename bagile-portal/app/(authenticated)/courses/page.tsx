@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useApiKey } from "@/lib/hooks/useApiKey";
 import { MonitoringCourse, getMonitoring, formatDate } from "@/lib/api";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -11,10 +12,11 @@ import { GraduationCap } from "lucide-react";
 
 export default function CoursesPage() {
   const apiKey = useApiKey();
+  const searchParams = useSearchParams();
   const [courses, setCourses] = useState<MonitoringCourse[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("all");
-  const [typeFilter, setTypeFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState(searchParams.get("type") || "all");
 
   useEffect(() => {
     if (!apiKey) return;

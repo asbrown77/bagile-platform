@@ -1,14 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useApiKey } from "@/lib/hooks/useApiKey";
 import { RevenueSummary, getRevenueSummary, formatCurrency } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SkeletonCard, SkeletonRow } from "@/components/ui/Skeleton";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { TrendingUp, DollarSign, ShoppingCart } from "lucide-react";
+import { TrendingUp, DollarSign, ShoppingCart, ChevronRight, ChevronDown } from "lucide-react";
 import Link from "next/link";
+
+const COUNTRY_NAMES: Record<string, string> = {
+  GB: "United Kingdom", CZ: "Czech Republic", SI: "Slovenia", DE: "Germany",
+  DK: "Denmark", MT: "Malta", PL: "Poland", IS: "Iceland", BE: "Belgium",
+  SK: "Slovakia", FR: "France", BG: "Bulgaria", UA: "Ukraine", LT: "Lithuania",
+  ZA: "South Africa", IT: "Italy", IN: "India", IE: "Ireland", CH: "Switzerland",
+  NL: "Netherlands", ES: "Spain", SE: "Sweden", NO: "Norway", AT: "Austria",
+  PT: "Portugal", FI: "Finland", HU: "Hungary", RO: "Romania", HR: "Croatia",
+  GR: "Greece", EE: "Estonia", LV: "Latvia", LU: "Luxembourg", CY: "Cyprus",
+  US: "United States", CA: "Canada", AU: "Australia", NZ: "New Zealand",
+  BR: "Brazil", JP: "Japan", KR: "South Korea", SG: "Singapore", AE: "UAE",
+  SA: "Saudi Arabia", IL: "Israel", NG: "Nigeria", KE: "Kenya", EG: "Egypt",
+};
 
 export default function RevenuePage() {
   const apiKey = useApiKey();
@@ -140,10 +153,11 @@ export default function RevenuePage() {
             </table>
           </div>
 
-          {/* By Course Type */}
+          {/* By Course Type — clickable rows */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="px-5 py-3 border-b border-gray-200">
+            <div className="px-5 py-3 border-b border-gray-200 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-gray-900">By Course Type</h2>
+              <span className="text-xs text-gray-400">Click to view courses</span>
             </div>
             <table className="w-full text-sm">
               <thead className="bg-gray-50">
@@ -151,16 +165,38 @@ export default function RevenuePage() {
                   <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Type</th>
                   <th className="text-right px-4 py-2 text-xs font-medium text-gray-500 uppercase">Revenue</th>
                   <th className="text-right px-4 py-2 text-xs font-medium text-gray-500 uppercase">Attendees</th>
+                  <th className="w-8"></th>
                 </tr>
               </thead>
               <tbody>
-                {data.byCourseType.map((ct) => (
-                  <tr key={ct.courseType} className="border-t border-gray-100">
-                    <td className="px-4 py-2.5 font-medium text-gray-900">{ct.courseType}</td>
-                    <td className="px-4 py-2.5 text-right text-gray-700">{formatCurrency(ct.revenue)}</td>
-                    <td className="px-4 py-2.5 text-right text-gray-500">{ct.attendeeCount}</td>
-                  </tr>
-                ))}
+                {data.byCourseType.map((ct) => {
+                  const pct = data.currentYearRevenue > 0
+                    ? Math.round((ct.revenue / data.currentYearRevenue) * 100) : 0;
+                  return (
+                    <tr key={ct.courseType}
+                      className="border-t border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
+                      onClick={() => window.location.href = `/courses?type=${ct.courseType}`}>
+                      <td className="px-4 py-2.5">
+                        <span className="font-medium text-gray-900">{ct.courseType}</span>
+                        <span className="ml-2 text-xs text-gray-400">{pct}%</span>
+                      </td>
+                      <td className="px-4 py-2.5 text-right text-gray-700">{formatCurrency(ct.revenue)}</td>
+                      <td className="px-4 py-2.5 text-right text-gray-500">{ct.attendeeCount}</td>
+                      <td className="px-2 py-2.5 text-gray-300"><ChevronRight className="w-4 h-4" /></td>
+                    </tr>
+                  );
+                })}
+                {/* Total row */}
+                <tr className="border-t-2 border-gray-200 bg-gray-50">
+                  <td className="px-4 py-2.5 font-semibold text-gray-900">Total</td>
+                  <td className="px-4 py-2.5 text-right font-semibold text-gray-900">
+                    {formatCurrency(data.byCourseType.reduce((s, ct) => s + ct.revenue, 0))}
+                  </td>
+                  <td className="px-4 py-2.5 text-right font-semibold text-gray-700">
+                    {data.byCourseType.reduce((s, ct) => s + ct.attendeeCount, 0)}
+                  </td>
+                  <td></td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -197,36 +233,96 @@ export default function RevenuePage() {
             </div>
           )}
 
-          {/* By Country/Region */}
+          {/* By Country/Region — grouped + collapsible */}
           {data.byCountry && data.byCountry.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="px-5 py-3 border-b border-gray-200">
-                <h2 className="text-sm font-semibold text-gray-900">By Region & Country</h2>
-              </div>
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Region</th>
-                    <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Country</th>
-                    <th className="text-right px-4 py-2 text-xs font-medium text-gray-500 uppercase">Revenue</th>
-                    <th className="text-right px-4 py-2 text-xs font-medium text-gray-500 uppercase">Students</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.byCountry.map((c) => (
-                    <tr key={c.country} className="border-t border-gray-100">
-                      <td className="px-4 py-2.5 text-gray-500">{c.region}</td>
-                      <td className="px-4 py-2.5 font-medium text-gray-900">{c.country}</td>
-                      <td className="px-4 py-2.5 text-right text-gray-700">{formatCurrency(c.revenue)}</td>
-                      <td className="px-4 py-2.5 text-right text-gray-500">{c.attendeeCount}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <CountryBreakdown countries={data.byCountry} />
           )}
         </div>
       )}
     </>
+  );
+}
+
+// ── Grouped Country Breakdown Component ──────────────────
+
+function CountryBreakdown({ countries }: { countries: import("@/lib/api").CountryRevenue[] }) {
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({ UK: true, Europe: true });
+
+  // Group by region
+  const regions = countries.reduce((acc, c) => {
+    const region = c.region || "Unknown";
+    if (!acc[region]) acc[region] = [];
+    acc[region].push(c);
+    return acc;
+  }, {} as Record<string, typeof countries>);
+
+  // Region order: UK first, then Europe, then Rest of World, then Unknown
+  const regionOrder = ["UK", "Europe", "Rest of World", "Unknown"];
+  const sortedRegions = regionOrder.filter((r) => regions[r]);
+
+  const regionTotals = (items: typeof countries) => ({
+    revenue: items.reduce((s, c) => s + c.revenue, 0),
+    attendees: items.reduce((s, c) => s + c.attendeeCount, 0),
+  });
+
+  const grandTotal = regionTotals(countries);
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-200 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-gray-900">By Region & Country</h2>
+        <span className="text-xs text-gray-400">Click region to expand</span>
+      </div>
+      <table className="w-full text-sm">
+        <thead className="bg-gray-50">
+          <tr>
+            <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Region / Country</th>
+            <th className="text-right px-4 py-2 text-xs font-medium text-gray-500 uppercase">Revenue</th>
+            <th className="text-right px-4 py-2 text-xs font-medium text-gray-500 uppercase">Students</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sortedRegions.map((region) => {
+            const items = regions[region];
+            const totals = regionTotals(items);
+            const isOpen = expanded[region] ?? false;
+            return (
+              <React.Fragment key={region}>
+                {/* Region header row */}
+                <tr
+                  className="border-t border-gray-200 bg-gray-50 hover:bg-gray-100 cursor-pointer"
+                  onClick={() => setExpanded((prev) => ({ ...prev, [region]: !isOpen }))}
+                >
+                  <td className="px-4 py-2.5 font-semibold text-gray-900 flex items-center gap-2">
+                    {isOpen ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
+                    {region}
+                    <span className="text-xs text-gray-400 font-normal">({items.length} {items.length === 1 ? "country" : "countries"})</span>
+                  </td>
+                  <td className="px-4 py-2.5 text-right font-semibold text-gray-900">{formatCurrency(totals.revenue)}</td>
+                  <td className="px-4 py-2.5 text-right font-semibold text-gray-700">{totals.attendees}</td>
+                </tr>
+                {/* Country rows (collapsed by default except UK + Europe) */}
+                {isOpen && items.map((c) => (
+                  <tr key={c.country} className="border-t border-gray-100 hover:bg-gray-50">
+                    <td className="px-4 py-2 pl-10 text-gray-700">
+                      {COUNTRY_NAMES[c.country] || c.country}
+                      <span className="ml-1.5 text-xs text-gray-400">{c.country}</span>
+                    </td>
+                    <td className="px-4 py-2 text-right text-gray-700">{formatCurrency(c.revenue)}</td>
+                    <td className="px-4 py-2 text-right text-gray-500">{c.attendeeCount}</td>
+                  </tr>
+                ))}
+              </React.Fragment>
+            );
+          })}
+          {/* Grand total */}
+          <tr className="border-t-2 border-gray-200 bg-gray-50">
+            <td className="px-4 py-2.5 font-semibold text-gray-900">Total</td>
+            <td className="px-4 py-2.5 text-right font-semibold text-gray-900">{formatCurrency(grandTotal.revenue)}</td>
+            <td className="px-4 py-2.5 text-right font-semibold text-gray-700">{grandTotal.attendees}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   );
 }
