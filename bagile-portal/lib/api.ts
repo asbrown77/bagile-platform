@@ -443,6 +443,30 @@ export async function addPrivateAttendees(apiKey: string, courseId: number, atte
   });
 }
 
+export interface ScheduleConflict {
+  conflictingCourseId: number;
+  courseName: string;
+  courseCode: string;
+  startDate: string | null;
+  endDate: string | null;
+  type: string;
+  trainerName: string | null;
+  enrolmentCount: number;
+  isGuaranteedToRun: boolean;
+  conflictType: string;
+}
+
+export async function getScheduleConflicts(
+  apiKey: string,
+  startDate: string,
+  endDate: string,
+  trainer?: string
+): Promise<ScheduleConflict[]> {
+  const qs = new URLSearchParams({ startDate, endDate });
+  if (trainer) qs.set("trainer", trainer);
+  return apiRequest(`/api/course-schedules/conflicts?${qs}`, apiKey);
+}
+
 export async function parseAttendees(apiKey: string, rawText: string): Promise<AttendeeInput[]> {
   return apiRequest("/api/course-schedules/parse-attendees", apiKey, {
     method: "POST",

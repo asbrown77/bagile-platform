@@ -10,7 +10,8 @@ import { SkeletonRow } from "@/components/ui/Skeleton";
 import { Badge, statusBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { CreatePrivateCoursePanel } from "@/components/courses/CreatePrivateCoursePanel";
-import { GraduationCap, Plus, Search } from "lucide-react";
+import { GraduationCap, Plus, Search, Calendar } from "lucide-react";
+import Link from "next/link";
 
 export default function CoursesPage() {
   return <Suspense><CoursesContent /></Suspense>;
@@ -127,9 +128,14 @@ function CoursesContent() {
         title={`Courses${!loading ? ` (${filtered.length})` : ""}`}
         subtitle={typeFilter !== "all" ? `${typeFilter} — ${totalAttendees} attendees` : undefined}
         actions={
-          <Button onClick={() => setShowCreate(true)}>
-            <Plus className="w-4 h-4" /> Create Private Course
-          </Button>
+          <div className="flex gap-2">
+            <Link href="/courses/calendar">
+              <Button variant="secondary" size="sm"><Calendar className="w-3.5 h-3.5" /> Calendar</Button>
+            </Link>
+            <Button onClick={() => setShowCreate(true)}>
+              <Plus className="w-4 h-4" /> Create Private Course
+            </Button>
+          </div>
         }
       />
 

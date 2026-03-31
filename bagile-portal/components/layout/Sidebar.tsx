@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import {
   LayoutDashboard, GraduationCap, ArrowLeftRight,
-  TrendingUp, Building2, Users, Handshake, Key, X
+  TrendingUp, Building2, Users, Handshake, Key, X, BarChart3
 } from "lucide-react";
 
 const sections = [
@@ -23,6 +23,7 @@ const sections = [
       { label: "Organisations", href: "/organisations", icon: Building2 },
       { label: "Students", href: "/students", icon: Users },
       { label: "Partners", href: "/partners", icon: Handshake },
+      { label: "Course Demand", href: "/demand", icon: BarChart3 },
     ],
   },
   {

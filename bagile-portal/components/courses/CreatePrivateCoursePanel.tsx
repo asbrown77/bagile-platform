@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SlideOver } from "@/components/ui/SlideOver";
 import { Button } from "@/components/ui/Button";
-import { TabBar } from "@/components/ui/TabBar";
 import { AlertBanner } from "@/components/ui/AlertBanner";
-import { createPrivateCourse, addPrivateAttendees, CreatePrivateCourseRequest, AttendeeInput } from "@/lib/api";
+import { createPrivateCourse, addPrivateAttendees, getScheduleConflicts, CreatePrivateCourseRequest, AttendeeInput, ScheduleConflict } from "@/lib/api";
 import { Trash2, UserPlus, Copy, FileJson } from "lucide-react";
 
 interface Props {
@@ -48,6 +47,18 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
   const [attendees, setAttendees] = useState<AttendeeInput[]>([]);
   const [jsonText, setJsonText] = useState("");
   const [jsonParsed, setJsonParsed] = useState<{ course: CreatePrivateCourseRequest; attendees: AttendeeInput[] } | null>(null);
+  const [conflicts, setConflicts] = useState<ScheduleConflict[]>([]);
+
+  // Check for conflicts when dates change
+  useEffect(() => {
+    if (!apiKey || !form.startDate || !form.endDate) { setConflicts([]); return; }
+    const timer = setTimeout(() => {
+      getScheduleConflicts(apiKey, form.startDate, form.endDate, form.trainerName)
+        .then(setConflicts)
+        .catch(() => setConflicts([]));
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [apiKey, form.startDate, form.endDate, form.trainerName]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
@@ -261,6 +272,26 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
             </div>
           </div>
+
+          {/* Conflict warning */}
+          {conflicts.length > 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <p className="text-xs font-semibold text-amber-800 mb-1.5">
+                {conflicts.length} course{conflicts.length !== 1 ? "s" : ""} overlap these dates:
+              </p>
+              <ul className="space-y-1">
+                {conflicts.slice(0, 5).map((c) => (
+                  <li key={c.conflictingCourseId} className="text-xs text-amber-700 flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${c.conflictType === "trainer_clash" ? "bg-red-500" : "bg-amber-400"}`} />
+                    <span className="font-medium">{c.courseCode}</span>
+                    <span className="text-amber-500">{c.courseName}</span>
+                    {c.trainerName && <span>({c.trainerName})</span>}
+                    <span>{c.enrolmentCount} enrolled</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Trainer + capacity + price */}
           <div className="grid grid-cols-3 gap-4">
