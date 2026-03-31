@@ -2,6 +2,20 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.bagile.co.uk";
 
 // ── Shared request helper ────────────────────────────────
 
+// Convert snake_case keys to camelCase recursively
+function toCamel(obj: any): any {
+  if (Array.isArray(obj)) return obj.map(toCamel);
+  if (obj !== null && typeof obj === "object") {
+    return Object.fromEntries(
+      Object.entries(obj).map(([k, v]) => [
+        k.replace(/_([a-z])/g, (_, c) => c.toUpperCase()),
+        toCamel(v),
+      ])
+    );
+  }
+  return obj;
+}
+
 async function apiRequest<T>(path: string, apiKey: string, options?: { method?: string; body?: unknown }): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     method: options?.method || "GET",
@@ -191,7 +205,33 @@ export interface MonthDrilldownOrder {
 
 export async function getRevenueSummary(apiKey: string, year?: number): Promise<RevenueSummary> {
   const qs = year ? `?year=${year}` : "";
-  return apiRequest(`/api/analytics/revenue${qs}`, apiKey);
+  const raw: any = await apiRequest(`/api/analytics/revenue${qs}`, apiKey);
+
+  // Handle both old format (thisMonth/thisYear) and new CQRS format (currentMonthRevenue)
+  if (raw.thisMonth !== undefined) {
+    // Old minimal API format
+    const monthly = (raw.monthlyBreakdown || []).map((m: any) => ({
+      year: year || new Date().getFullYear(),
+      month: m.month,
+      monthName: ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][m.month] || "",
+      revenue: m.total || 0,
+      orderCount: m.orders || 0,
+      attendeeCount: 0,
+    }));
+    return {
+      currentMonthRevenue: raw.thisMonth?.total || 0,
+      currentYearRevenue: raw.thisYear?.total || 0,
+      previousYearRevenue: 0,
+      currentMonthOrders: raw.thisMonth?.orders || 0,
+      currentYearOrders: raw.thisYear?.orders || 0,
+      monthlyBreakdown: monthly,
+      byCourseType: [],
+      previousYearMonthly: [],
+      bySource: [],
+    };
+  }
+
+  return raw as RevenueSummary;
 }
 
 export async function getRevenueMonthDrilldown(apiKey: string, year: number, month: number): Promise<MonthDrilldown> {
@@ -227,7 +267,8 @@ export async function getOrganisationAnalytics(apiKey: string, year?: number, so
   if (year) params.set("year", String(year));
   if (sortBy) params.set("sortBy", sortBy);
   const qs = params.toString() ? `?${params}` : "";
-  return apiRequest(`/api/analytics/organisations${qs}`, apiKey);
+  const raw: any = await apiRequest(`/api/analytics/organisations${qs}`, apiKey);
+  return { year: raw.year, organisations: (raw.organisations || []).map(toCamel) };
 }
 
 export async function getRepeatCustomers(apiKey: string, year?: number, minBookings?: number): Promise<RepeatCustomer[]> {
@@ -254,7 +295,13 @@ export interface PartnerAnalytics {
 }
 
 export async function getPartnerAnalytics(apiKey: string): Promise<PartnerAnalytics[]> {
-  return apiRequest("/api/analytics/partners", apiKey);
+  const raw: any[] = await apiRequest("/api/analytics/partners", apiKey);
+  return raw.map((p) => {
+    const c = toCamel(p);
+    // Compute tierMismatch client-side if not provided
+    c.tierMismatch = c.tierMismatch ?? (c.ptnTier && c.calculatedTier && c.ptnTier !== c.calculatedTier);
+    return c;
+  });
 }
 
 // ── Course Demand ────────────────────────────────────────
