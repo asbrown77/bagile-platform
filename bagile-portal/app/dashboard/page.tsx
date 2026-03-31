@@ -50,7 +50,13 @@ export default function Dashboard() {
     return code;
   }).filter(Boolean))].sort();
 
-  const isAtRisk = (c: MonitoringCourse) => c.currentEnrolmentCount <= 2 && c.daysUntilStart <= 7;
+  const isAtRisk = (c: MonitoringCourse) => c.currentEnrolmentCount <= 2 && c.daysUntilStart <= 7 && c.daysUntilStart > 0;
+  const isPast = (c: MonitoringCourse) => c.daysUntilStart <= 0;
+  const getStatus = (c: MonitoringCourse) => {
+    if (isPast(c)) return c.daysUntilStart === 0 ? "running" : "completed";
+    if (isAtRisk(c)) return "at risk";
+    return "healthy";
+  };
 
   const filtered = courses.filter((c) => {
     if (trainerFilter !== "all" && c.trainerName !== trainerFilter) return false;
@@ -138,7 +144,7 @@ export default function Dashboard() {
               <tbody>
                 {filtered.map((c) => (
                   <tr key={c.id}
-                    className={`border-t hover:bg-gray-50 cursor-pointer ${isAtRisk(c) ? "bg-red-50/50" : ""}`}
+                    className={`border-t hover:bg-gray-50 cursor-pointer ${isAtRisk(c) ? "bg-red-50/50" : isPast(c) ? "bg-gray-50/50" : ""}`}
                     onClick={() => window.location.href = `/course/${c.id}`}
                   >
                     <td className="px-4 py-3">
@@ -156,11 +162,14 @@ export default function Dashboard() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        isAtRisk(c) ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"
-                      }`}>
-                        {isAtRisk(c) ? "at risk" : "healthy"}
-                      </span>
+                      {(() => { const s = getStatus(c); return (
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          s === "running" ? "bg-blue-100 text-blue-700" :
+                          s === "completed" ? "bg-gray-100 text-gray-600" :
+                          s === "at risk" ? "bg-red-100 text-red-700" :
+                          "bg-green-100 text-green-700"
+                        }`}>{s}</span>
+                      ); })()}
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-600">{c.recommendedAction}</td>
                   </tr>
