@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useApiKey } from "@/lib/hooks/useApiKey";
 import {
-  CourseAttendee, CourseScheduleDetail,
-  getCourseAttendees, getCourseScheduleDetail,
+  CourseAttendee, CourseScheduleDetail, TransfersByCourse,
+  getCourseAttendees, getCourseScheduleDetail, getTransfersByCourse,
   formatCurrency, formatDate,
 } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
@@ -33,6 +33,7 @@ export default function CourseDetail() {
   const [successMsg, setSuccessMsg] = useState("");
   const [activeTab, setActiveTab] = useState("attendees");
   const [showAddAttendees, setShowAddAttendees] = useState(false);
+  const [transfers, setTransfers] = useState<TransfersByCourse | null>(null);
 
   useEffect(() => {
     if (!apiKey || !courseId) return;
@@ -41,12 +42,14 @@ export default function CourseDetail() {
 
   async function loadData() {
     try {
-      const [detail, atts] = await Promise.all([
+      const [detail, atts, xfers] = await Promise.all([
         getCourseScheduleDetail(apiKey, courseId),
         getCourseAttendees(apiKey, courseId),
+        getTransfersByCourse(apiKey, courseId).catch(() => null),
       ]);
       setCourse(detail);
       setAttendees(atts);
+      setTransfers(xfers);
     } catch {
       setError("Failed to load course data");
     } finally {
@@ -99,9 +102,11 @@ export default function CourseDetail() {
   const orders = [...new Map(active.map((a) => [a.orderNumber, a])).values()].filter((a) => a.orderNumber);
   const totalRevenue = orders.reduce((s, o) => s + (o.orderAmount || 0), 0);
 
+  const transferCount = (transfers?.totalTransfersIn ?? 0) + (transfers?.totalTransfersOut ?? 0);
   const tabs = [
     { id: "attendees", label: "Attendees", count: active.length },
     ...(!isPrivate ? [{ id: "orders", label: "Orders", count: orders.length }] : []),
+    ...(transferCount > 0 ? [{ id: "transfers", label: "Transfers", count: transferCount }] : []),
     ...(inactive.length > 0 ? [{ id: "history", label: "Transferred / Refunded", count: inactive.length }] : []),
   ];
 
@@ -329,6 +334,72 @@ export default function CourseDetail() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Transfers tab */}
+      {activeTab === "transfers" && transfers && transferCount > 0 && (
+        <div className="space-y-6">
+          {transfers.transfersOut.length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="px-5 py-3 border-b border-gray-200">
+                <h3 className="text-sm font-semibold text-gray-900">Transferred Out ({transfers.transfersOut.length})</h3>
+              </div>
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Student</th>
+                    <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Transferred To</th>
+                    <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Reason</th>
+                    <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {transfers.transfersOut.map((t, i) => (
+                    <tr key={i} className="border-t border-gray-100">
+                      <td className="px-4 py-2.5">
+                        <p className="font-medium text-gray-900">{t.studentName}</p>
+                        <p className="text-xs text-gray-400">{t.studentEmail}</p>
+                      </td>
+                      <td className="px-4 py-2.5 text-gray-600">{t.toCourseTitle || t.toCourseCode || "Pending"}</td>
+                      <td className="px-4 py-2.5 text-gray-500 text-xs hidden md:table-cell">{t.reason || "—"}</td>
+                      <td className="px-4 py-2.5 text-gray-500 hidden md:table-cell">{formatDate(t.transferDate)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {transfers.transfersIn.length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="px-5 py-3 border-b border-gray-200">
+                <h3 className="text-sm font-semibold text-gray-900">Transferred In ({transfers.transfersIn.length})</h3>
+              </div>
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Student</th>
+                    <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Transferred From</th>
+                    <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Reason</th>
+                    <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {transfers.transfersIn.map((t, i) => (
+                    <tr key={i} className="border-t border-gray-100">
+                      <td className="px-4 py-2.5">
+                        <p className="font-medium text-gray-900">{t.studentName}</p>
+                        <p className="text-xs text-gray-400">{t.studentEmail}</p>
+                      </td>
+                      <td className="px-4 py-2.5 text-gray-600">{t.fromCourseTitle || t.fromCourseCode || "—"}</td>
+                      <td className="px-4 py-2.5 text-gray-500 text-xs hidden md:table-cell">{t.reason || "—"}</td>
+                      <td className="px-4 py-2.5 text-gray-500 hidden md:table-cell">{formatDate(t.transferDate)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 

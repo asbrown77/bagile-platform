@@ -15,6 +15,7 @@ public record CourseScheduleDto
     public string? Status { get; init; }            // published/draft/cancelled/completed
     public string? TrainerName { get; init; }
     public string? FormatType { get; init; }        // virtual/in_person
+    public int? Capacity { get; init; }
     public int CurrentEnrolmentCount { get; init; }
     public bool GuaranteedToRun { get; init; }      // e.g., enrolments >= 3
     public bool NeedsAttention { get; init; }       // e.g., starts in <= 7 days AND enrolments < 3

@@ -500,6 +500,34 @@ export async function getOrganisations(apiKey: string, params?: { name?: string;
   return apiRequest(`/api/organisations?${qs}`, apiKey);
 }
 
+// ── Transfers by Course ──────────────────────────────────
+
+export interface TransferRecord {
+  studentId: number;
+  studentName: string;
+  studentEmail: string;
+  fromCourseCode: string;
+  fromCourseTitle: string;
+  toCourseCode: string;
+  toCourseTitle: string;
+  reason: string | null;
+  transferDate: string;
+}
+
+export interface TransfersByCourse {
+  courseScheduleId: number;
+  courseCode: string;
+  courseTitle: string;
+  transfersOut: TransferRecord[];
+  transfersIn: TransferRecord[];
+  totalTransfersOut: number;
+  totalTransfersIn: number;
+}
+
+export async function getTransfersByCourse(apiKey: string, courseId: number): Promise<TransfersByCourse> {
+  return apiRequest(`/api/transfers/by-course/${courseId}`, apiKey);
+}
+
 // ── Students ─────────────────────────────────────────────
 
 export interface StudentListItem {

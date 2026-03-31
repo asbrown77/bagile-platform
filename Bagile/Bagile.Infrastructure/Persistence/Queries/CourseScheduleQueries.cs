@@ -38,6 +38,7 @@ public class CourseScheduleQueries : ICourseScheduleQueries
                 cs.format_type AS FormatType,
                 CASE WHEN cs.is_public THEN 'public' ELSE 'private' END AS Type,
                 cs.status AS Status,
+                cs.capacity AS Capacity,
                 COUNT(e.id) AS CurrentEnrolmentCount,
                 CASE WHEN COUNT(e.id) >= 3 THEN true ELSE false END AS GuaranteedToRun,
                 CASE
@@ -56,7 +57,7 @@ public class CourseScheduleQueries : ICourseScheduleQueries
             " + (type != null ? " AND ((cs.is_public = true AND @type = 'public') OR (cs.is_public = false AND @type = 'private'))" : "") + @"
             " + (status != null ? " AND cs.status = @status" : "") + @"
             GROUP BY cs.id, cs.sku, cs.name, cs.start_date, cs.end_date,
-                     cs.format_type, cs.trainer_name, cs.is_public, cs.status
+                     cs.format_type, cs.trainer_name, cs.is_public, cs.status, cs.capacity
             ORDER BY cs.start_date DESC
             LIMIT @pageSize OFFSET @offset;";
 
