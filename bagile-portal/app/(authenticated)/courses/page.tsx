@@ -196,18 +196,76 @@ function CoursesContent() {
         )}
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      {/* Sort toggle */}
+      <div className="flex items-center justify-between mb-2">
+        <button onClick={() => setSortAsc(!sortAsc)} className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1">
+          Sort by date {sortAsc ? "↑ earliest first" : "↓ latest first"}
+        </button>
+        {!loading && filtered.length > 0 && (
+          <span className="text-xs text-gray-400">{filtered.length} course{filtered.length !== 1 ? "s" : ""} · {totalAttendees} attendees</span>
+        )}
+      </div>
+
+      {/* Mobile cards */}
+      <div className="md:hidden space-y-3">
+        {loading && Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="skeleton h-4 w-3/4 mb-2 rounded" />
+            <div className="skeleton h-3 w-1/2 mb-3 rounded" />
+            <div className="flex gap-2"><div className="skeleton h-6 w-12 rounded" /><div className="skeleton h-6 w-16 rounded" /></div>
+          </div>
+        ))}
+        {!loading && filtered.map((c) => {
+          const status = getDisplayStatus(c);
+          const daysAway = c.startDate ? Math.round((new Date(c.startDate).getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+          const daysLabel = daysAway > 0 ? `${daysAway}d away` : daysAway === 0 ? "today" : `${Math.abs(daysAway)}d ago`;
+          return (
+            <div key={c.id}
+              onClick={() => window.location.href = `/courses/${c.id}`}
+              className={`bg-white rounded-xl border border-gray-200 shadow-sm p-4 cursor-pointer hover:bg-gray-50 transition-colors
+                ${status === "at risk" ? "border-red-200 bg-red-50/30" : ""}
+                ${status === "completed" ? "opacity-60" : ""}`}>
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-gray-900 truncate">{c.title}</p>
+                  <p className="text-xs text-gray-400 font-mono mt-0.5">{c.courseCode}</p>
+                </div>
+                <div className="ml-3 text-right shrink-0">
+                  <span className={`text-xl font-bold ${
+                    status === "at risk" ? "text-red-600" :
+                    status === "guaranteed" || status === "running" ? "text-green-600" : "text-gray-700"
+                  }`}>{c.currentEnrolmentCount}</span>
+                  {c.capacity && <span className="text-xs text-gray-400">/{c.capacity}</span>}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 mt-2 flex-wrap">
+                <span className="text-sm text-gray-600">{formatDate(c.startDate)} ({daysLabel})</span>
+                {statusBadge(status)}
+                <Badge variant={isVirtual(c) ? "info" : "neutral"}>
+                  {isVirtual(c) ? "Virtual" : "In-person"}
+                </Badge>
+                {c.type === "private" && <Badge variant="warning">Private</Badge>}
+              </div>
+            </div>
+          );
+        })}
+        {!loading && filtered.length === 0 && (
+          <EmptyState
+            icon={<GraduationCap className="w-10 h-10" />}
+            title="No courses"
+            description={search ? `No courses matching "${search}"` : "No courses match your filters"}
+          />
+        )}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden md:block bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
               <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Course</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">
-                <button onClick={() => setSortAsc(!sortAsc)} className="flex items-center gap-1 hover:text-gray-700">
-                  Date {sortAsc ? "↑" : "↓"}
-                </button>
-              </th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide hidden md:table-cell">Trainer</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Date</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Trainer</th>
               <th className="text-center px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Enrolled</th>
               <th className="text-center px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Status</th>
             </tr>
@@ -216,9 +274,7 @@ function CoursesContent() {
             {loading && Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} cols={5} />)}
             {!loading && filtered.map((c) => {
               const status = getDisplayStatus(c);
-              const daysAway = c.startDate
-                ? Math.round((new Date(c.startDate).getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-                : 0;
+              const daysAway = c.startDate ? Math.round((new Date(c.startDate).getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : 0;
               const daysLabel = daysAway > 0 ? `${daysAway}d away` : daysAway === 0 ? "today" : `${Math.abs(daysAway)}d ago`;
               return (
                 <tr key={c.id}
@@ -227,31 +283,25 @@ function CoursesContent() {
                     ${status === "completed" ? "opacity-60" : ""}`}
                   onClick={() => window.location.href = `/courses/${c.id}`}>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <div>
-                        <p className="font-medium text-gray-900">{c.title}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-xs text-gray-400 font-mono">{c.courseCode}</span>
-                          <Badge variant={isVirtual(c) ? "info" : "neutral"}>
-                            {isVirtual(c) ? "Virtual" : "In-person"}
-                          </Badge>
-                          {c.type === "private" && <Badge variant="warning">Private</Badge>}
-                        </div>
-                      </div>
+                    <p className="font-medium text-gray-900">{c.title}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-xs text-gray-400 font-mono">{c.courseCode}</span>
+                      <Badge variant={isVirtual(c) ? "info" : "neutral"}>
+                        {isVirtual(c) ? "Virtual" : "In-person"}
+                      </Badge>
+                      {c.type === "private" && <Badge variant="warning">Private</Badge>}
                     </div>
                   </td>
                   <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
                     {formatDate(c.startDate)} <span className="text-xs text-gray-400">({daysLabel})</span>
                   </td>
-                  <td className="px-4 py-3 text-gray-600 hidden md:table-cell">{c.trainerName || "—"}</td>
+                  <td className="px-4 py-3 text-gray-600">{c.trainerName || "—"}</td>
                   <td className="px-4 py-3 text-center">
                     <span className={`text-lg font-bold ${
                       status === "at risk" ? "text-red-600" :
                       status === "guaranteed" || status === "running" || status === "completed" ? "text-green-600" :
                       "text-gray-700"
-                    }`}>
-                      {c.currentEnrolmentCount}
-                    </span>
+                    }`}>{c.currentEnrolmentCount}</span>
                     {c.capacity && <span className="text-xs text-gray-400">/{c.capacity}</span>}
                   </td>
                   <td className="px-4 py-3 text-center">{statusBadge(status)}</td>
@@ -263,20 +313,12 @@ function CoursesContent() {
                 <EmptyState
                   icon={<GraduationCap className="w-10 h-10" />}
                   title="No courses"
-                  description={search ? `No courses matching "${search}"` : typeFilter !== "all"
-                    ? `No ${typeFilter} courses found`
-                    : "No courses match your filters"}
+                  description={search ? `No courses matching "${search}"` : "No courses match your filters"}
                 />
               </td></tr>
             )}
           </tbody>
         </table>
-
-        {!loading && filtered.length > 0 && (
-          <div className="px-4 py-2 bg-gray-50 border-t border-gray-200 text-xs text-gray-500">
-            {filtered.length} course{filtered.length !== 1 ? "s" : ""} · {totalAttendees} attendees
-          </div>
-        )}
       </div>
     </>
   );

@@ -18,16 +18,17 @@ export default function OrganisationsPage() {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortKey>("totalSpend");
   const [sortAsc, setSortAsc] = useState(false);
-  const [year, setYear] = useState(new Date().getFullYear());
+  const [yearFilter, setYearFilter] = useState<string>(String(new Date().getFullYear()));
 
   useEffect(() => {
     if (!apiKey) return;
     setLoading(true);
-    getOrganisationAnalytics(apiKey, year)
+    const yearNum = yearFilter === "all" ? undefined : Number(yearFilter);
+    getOrganisationAnalytics(apiKey, yearNum)
       .then((data) => setOrgs(data.organisations || []))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [apiKey, year]);
+  }, [apiKey, yearFilter]);
 
   const filtered = orgs
     .filter((o) => !search || o.company.toLowerCase().includes(search.toLowerCase()))
@@ -55,12 +56,21 @@ export default function OrganisationsPage() {
 
   return (
     <>
-      <PageHeader title="Organisations" subtitle={`Companies by bookings and spend — ${year}`}
+      <PageHeader title="Organisations" subtitle={`Companies by bookings and spend${yearFilter === "all" ? " — all time" : ` — ${yearFilter}`}`}
         actions={
-          <select value={year} onChange={(e) => setYear(Number(e.target.value))}
-            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white">
-            {[2026, 2025, 2024].map((y) => <option key={y} value={y}>{y}</option>)}
-          </select>
+          <div className="inline-flex rounded-lg border border-gray-300 overflow-hidden">
+            {["all", "2026", "2025", "2024"].map((opt) => (
+              <button
+                key={opt}
+                onClick={() => setYearFilter(opt)}
+                className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                  yearFilter === opt ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"
+                } ${opt !== "all" ? "border-l border-gray-300" : ""}`}
+              >
+                {opt === "all" ? "All time" : opt}
+              </button>
+            ))}
+          </div>
         }
       />
 
@@ -76,7 +86,34 @@ export default function OrganisationsPage() {
         />
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      {/* Mobile cards */}
+      <div className="md:hidden space-y-3">
+        {!loading && filtered.map((o) => (
+          <div key={o.company}
+            onClick={() => window.location.href = `/organisations/${encodeURIComponent(o.company)}`}
+            className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 cursor-pointer hover:bg-gray-50">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="font-medium text-gray-900">{o.company}</p>
+                {o.partnerType === "ptn" && <Badge variant="info" dot>Partner</Badge>}
+              </div>
+              <p className="font-bold text-gray-900">{formatCurrency(o.totalSpend)}</p>
+            </div>
+            <div className="flex gap-4 mt-2 text-xs text-gray-500">
+              <span>{o.orderCount} orders</span>
+              <span>{o.delegateCount} delegates</span>
+            </div>
+          </div>
+        ))}
+        {!loading && filtered.length === 0 && (
+          <EmptyState icon={<Building2 className="w-10 h-10" />}
+            title={search ? "No matches" : "No data"}
+            description={search ? `No companies matching "${search}"` : "No organisation data found"} />
+        )}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden md:block bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
@@ -84,7 +121,7 @@ export default function OrganisationsPage() {
               <th className="text-center px-4 py-3"><SortHeader label="Orders" sortKey="orderCount" /></th>
               <th className="text-center px-4 py-3"><SortHeader label="Delegates" sortKey="delegateCount" /></th>
               <th className="text-right px-4 py-3"><SortHeader label="Spend" sortKey="totalSpend" /></th>
-              <th className="text-center px-4 py-3 hidden md:table-cell text-xs font-medium text-gray-500 uppercase tracking-wide">Type</th>
+              <th className="text-center px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Type</th>
             </tr>
           </thead>
           <tbody>
@@ -96,7 +133,7 @@ export default function OrganisationsPage() {
                 <td className="px-4 py-3 text-center text-gray-700">{o.orderCount}</td>
                 <td className="px-4 py-3 text-center text-gray-700">{o.delegateCount}</td>
                 <td className="px-4 py-3 text-right font-medium text-gray-900">{formatCurrency(o.totalSpend)}</td>
-                <td className="px-4 py-3 text-center hidden md:table-cell">
+                <td className="px-4 py-3 text-center">
                   {o.partnerType === "ptn" ? <Badge variant="info" dot>Partner</Badge> : null}
                 </td>
               </tr>
