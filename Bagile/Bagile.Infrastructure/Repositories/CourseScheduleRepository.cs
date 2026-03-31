@@ -142,6 +142,32 @@ public class CourseScheduleRepository : ICourseScheduleRepository
         await conn.ExecuteAsync(sql, new { scheduleId, status });
     }
 
+    public async Task<long> InsertPrivateCourseAsync(CourseSchedule schedule)
+    {
+        const string sql = @"
+            INSERT INTO bagile.course_schedules
+                (name, status, start_date, end_date, capacity, price, sku,
+                 trainer_name, format_type, is_public,
+                 source_system, client_organisation_id, notes, created_by,
+                 last_synced)
+            VALUES
+                (@Name, @Status, @StartDate, @EndDate, @Capacity, @Price, @Sku,
+                 @TrainerName, @FormatType, @IsPublic,
+                 @SourceSystem, @ClientOrganisationId, @Notes, @CreatedBy,
+                 now())
+            RETURNING id;";
+
+        await using var conn = new NpgsqlConnection(_connStr);
+        return await conn.ExecuteScalarAsync<long>(sql, schedule);
+    }
+
+    public async Task<bool> ExistsBySkuAsync(string sku)
+    {
+        const string sql = "SELECT EXISTS(SELECT 1 FROM bagile.course_schedules WHERE sku = @sku);";
+        await using var conn = new NpgsqlConnection(_connStr);
+        return await conn.ExecuteScalarAsync<bool>(sql, new { sku });
+    }
+
     public async Task<long?> GetIdBySkuAsync(string sku)
     {
         if (string.IsNullOrWhiteSpace(sku))

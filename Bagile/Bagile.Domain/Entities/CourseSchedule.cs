@@ -24,6 +24,9 @@ public class CourseSchedule
     public string SourceSystem { get; set; } = "woo";
     public long? SourceProductId { get; set; }
     public DateTime LastSynced { get; set; } = DateTime.UtcNow;
+    public long? ClientOrganisationId { get; set; }
+    public string? Notes { get; set; }
+    public string? CreatedBy { get; set; }
 
     // optional helper for tests
     public CourseSchedule() { }

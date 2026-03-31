@@ -1,4 +1,5 @@
 ﻿using Bagile.Application.CourseSchedules.DTOs;
+using Bagile.Application.CourseSchedules.Queries.GetScheduleConflicts;
 
 namespace Bagile.Application.Common.Interfaces;
 
@@ -49,5 +50,11 @@ public interface ICourseScheduleQueries
     /// </summary>
     Task<IEnumerable<CourseMonitoringRawDto>> GetCourseMonitoringDataAsync(
         int daysAhead,
+        CancellationToken ct = default);
+
+    Task<IEnumerable<ScheduleConflictDto>> GetScheduleConflictsAsync(
+        DateTime startDate,
+        DateTime endDate,
+        string? trainerName,
         CancellationToken ct = default);
 }

@@ -4,7 +4,8 @@
     {
         public long Id { get; set; }
         public long StudentId { get; set; }
-        public long OrderId { get; set; }
+        public long? OrderId { get; set; }
+        public string? Source { get; set; } = "woo";
         public long? CourseScheduleId { get; set; }
 
         public string Status { get; set; } = "active";

@@ -25,4 +25,6 @@ public interface IEnrolmentRepository
     Task CancelEnrolmentAsync(long enrolmentId, string? reason = null);
     Task<IEnumerable<Enrolment>> GetByOrderIdAsync(long orderId);
     Task<Enrolment?> FindAsync(long studentId, long orderId, long courseScheduleId);
+    Task<long> InsertWithoutOrderAsync(long studentId, long courseScheduleId, string source);
+    Task<bool> ExistsByStudentAndCourseAsync(long studentId, long courseScheduleId);
 }

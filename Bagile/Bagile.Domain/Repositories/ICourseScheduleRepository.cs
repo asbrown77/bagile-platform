@@ -11,5 +11,7 @@ namespace Bagile.Domain.Repositories
         Task<IEnumerable<CourseSchedule>> GetAllAsync();
         Task<long> UpsertFromWooPayloadAsync(long productId, string? courseName, string? sku, DateTime? startDate, DateTime? endDate, decimal? price, string? currency);
         Task UpdateStatusAsync(long scheduleId, string status);
+        Task<long> InsertPrivateCourseAsync(CourseSchedule schedule);
+        Task<bool> ExistsBySkuAsync(string sku);
     }
 }

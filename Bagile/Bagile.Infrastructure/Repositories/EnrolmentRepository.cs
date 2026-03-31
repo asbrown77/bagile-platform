@@ -202,6 +202,37 @@ namespace Bagile.Infrastructure.Repositories
             await conn.ExecuteAsync(sql, new { id = enrolmentId });
         }
 
+        public async Task<long> InsertWithoutOrderAsync(
+            long studentId, long courseScheduleId, string source)
+        {
+            const string sql = @"
+                INSERT INTO bagile.enrolments
+                    (student_id, order_id, course_schedule_id, status, source)
+                VALUES
+                    (@studentId, NULL, @courseScheduleId, 'active', @source)
+                RETURNING id;";
+
+            await using var conn = new NpgsqlConnection(_conn);
+            return await conn.ExecuteScalarAsync<long>(sql,
+                new { studentId, courseScheduleId, source });
+        }
+
+        public async Task<bool> ExistsByStudentAndCourseAsync(
+            long studentId, long courseScheduleId)
+        {
+            const string sql = @"
+                SELECT EXISTS(
+                    SELECT 1 FROM bagile.enrolments
+                    WHERE student_id = @studentId
+                      AND course_schedule_id = @courseScheduleId
+                      AND status NOT IN ('cancelled', 'transferred')
+                );";
+
+            await using var conn = new NpgsqlConnection(_conn);
+            return await conn.ExecuteScalarAsync<bool>(sql,
+                new { studentId, courseScheduleId });
+        }
+
         public async Task<Enrolment?> FindAsync(long studentId, long orderId, long courseScheduleId)
         {
             const string sql = @"

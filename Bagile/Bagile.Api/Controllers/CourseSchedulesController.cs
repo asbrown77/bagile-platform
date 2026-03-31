@@ -5,7 +5,10 @@ using Bagile.Application.CourseSchedules.Queries.GetCourseSchedules;
 using Bagile.Application.CourseSchedules.Queries.GetCourseScheduleById;
 using Bagile.Application.CourseSchedules.Queries.GetCourseAttendees;
 using Bagile.Application.CourseSchedules.Queries.GetCourseMonitoring;
+using Bagile.Application.CourseSchedules.Queries.GetScheduleConflicts;
 using Bagile.Application.CourseSchedules.Commands.CancelCourse;
+using Bagile.Application.CourseSchedules.Commands.CreatePrivateCourse;
+using Bagile.Application.CourseSchedules.Commands.AddPrivateAttendees;
 
 namespace Bagile.Api.Controllers;
 
@@ -137,9 +140,68 @@ public class CourseSchedulesController : ControllerBase
 
         return Ok(result);
     }
+    // ── Private Courses ────────────────────────────────────
+
+    [HttpPost("private")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    public async Task<IActionResult> CreatePrivateCourse(
+        [FromBody] CreatePrivateCourseCommand command)
+    {
+        var result = await _mediator.Send(command);
+        return CreatedAtAction(nameof(GetCourseSchedule),
+            new { id = result.Id }, result);
+    }
+
+    [HttpPost("{id}/attendees")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> AddPrivateAttendees(
+        long id,
+        [FromBody] AddPrivateAttendeesRequest request)
+    {
+        var command = new AddPrivateAttendeesCommand
+        {
+            CourseScheduleId = id,
+            Attendees = request.Attendees
+        };
+        var result = await _mediator.Send(command);
+        return Ok(result);
+    }
+
+    [HttpPost("parse-attendees")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ParseAttendees(
+        [FromBody] ParseAttendeesRequest request)
+    {
+        var result = await _mediator.Send(new ParseAttendeesCommand(request.RawText));
+        return Ok(result);
+    }
+
+    // ── Conflicts ────────────────────────────────────────
+
+    [HttpGet("conflicts")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetScheduleConflicts(
+        [FromQuery] DateTime startDate,
+        [FromQuery] DateTime endDate,
+        [FromQuery] string? trainer = null)
+    {
+        var result = await _mediator.Send(
+            new GetScheduleConflictsQuery(startDate, endDate, trainer));
+        return Ok(result);
+    }
 }
 
 public record CancelCourseRequest
 {
     public string Reason { get; init; } = "";
+}
+
+public record AddPrivateAttendeesRequest
+{
+    public List<AttendeeInput> Attendees { get; init; } = new();
+}
+
+public record ParseAttendeesRequest
+{
+    public string RawText { get; init; } = "";
 }
