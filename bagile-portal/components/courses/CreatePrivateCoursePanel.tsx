@@ -39,10 +39,12 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
     setError("");
     setSaving(true);
     try {
-      await createPrivateCourse(apiKey, form);
+      const created = await createPrivateCourse(apiKey, form);
       setForm({ name: "", courseCode: "PSM", startDate: "", endDate: "", formatType: "virtual" });
       onCreated();
       onClose();
+      // Redirect to the new course detail page where they can add attendees
+      window.location.href = `/courses/${created.id}`;
     } catch (err) {
       setError("Failed to create course");
     } finally {
