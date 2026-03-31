@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useApiKey } from "@/lib/hooks/useApiKey";
 import { PartnerAnalytics, getPartnerAnalytics, formatCurrency } from "@/lib/api";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { AlertBanner } from "@/components/ui/AlertBanner";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SkeletonRow } from "@/components/ui/Skeleton";
 import { Badge } from "@/components/ui/Badge";
@@ -14,13 +15,15 @@ export default function PartnersPage() {
   const [partners, setPartners] = useState<PartnerAnalytics[]>([]);
   const [loading, setLoading] = useState(true);
   const [year, setYear] = useState(new Date().getFullYear());
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!apiKey) return;
     setLoading(true);
+    setError("");
     getPartnerAnalytics(apiKey, year)
       .then(setPartners)
-      .catch(() => {})
+      .catch(() => setError("Failed to load partner data"))
       .finally(() => setLoading(false));
   }, [apiKey, year]);
 
@@ -36,6 +39,8 @@ export default function PartnersPage() {
           </select>
         }
       />
+
+      {error && <div className="mb-6"><AlertBanner variant="danger" onDismiss={() => setError("")}>{error}</AlertBanner></div>}
 
       {mismatches.length > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex items-center gap-3">

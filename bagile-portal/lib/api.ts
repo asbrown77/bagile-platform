@@ -578,6 +578,18 @@ export async function getStudentEnrolments(apiKey: string, id: number): Promise<
   return apiRequest(`/api/students/${id}/enrolments`, apiKey);
 }
 
+// ── Dashboard Overview ───────────────────────────────────
+
+export interface DashboardOverview {
+  revenue: RevenueSummary;
+  monitoring: MonitoringCourse[];
+  pendingTransferCount: number;
+}
+
+export async function getDashboardOverview(apiKey: string): Promise<DashboardOverview> {
+  return apiRequest("/api/dashboard/overview", apiKey);
+}
+
 // ── Transfers ────────────────────────────────────────────
 
 export interface PendingTransfer {

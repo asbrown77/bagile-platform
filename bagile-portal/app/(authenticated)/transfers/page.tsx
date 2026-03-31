@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useApiKey } from "@/lib/hooks/useApiKey";
 import { PendingTransfer, getPendingTransfers, formatDate } from "@/lib/api";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { AlertBanner } from "@/components/ui/AlertBanner";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SkeletonRow } from "@/components/ui/Skeleton";
 import { Badge } from "@/components/ui/Badge";
@@ -13,18 +14,21 @@ export default function TransfersPage() {
   const apiKey = useApiKey();
   const [pending, setPending] = useState<PendingTransfer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!apiKey) return;
+    setError("");
     getPendingTransfers(apiKey)
       .then((data) => setPending(Array.isArray(data) ? data : []))
-      .catch(() => {})
+      .catch(() => setError("Failed to load transfers"))
       .finally(() => setLoading(false));
   }, [apiKey]);
 
   return (
     <>
       <PageHeader title="Transfers" subtitle="Attendees awaiting rebooking" />
+      {error && <div className="mb-4"><AlertBanner variant="danger" onDismiss={() => setError("")}>{error}</AlertBanner></div>}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">

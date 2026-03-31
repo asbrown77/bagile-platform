@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useApiKey } from "@/lib/hooks/useApiKey";
 import { StudentListItem, getStudents, formatDate } from "@/lib/api";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { AlertBanner } from "@/components/ui/AlertBanner";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SkeletonRow } from "@/components/ui/Skeleton";
 import { Users, Search } from "lucide-react";
@@ -13,6 +14,7 @@ export default function StudentsPage() {
   const [students, setStudents] = useState<StudentListItem[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const pageSize = 25;
@@ -31,6 +33,7 @@ export default function StudentsPage() {
       setTotalCount(result.totalCount || 0);
     } catch {
       setStudents([]);
+      setError("Failed to load students");
     } finally {
       setLoading(false);
     }
@@ -50,6 +53,8 @@ export default function StudentsPage() {
   return (
     <>
       <PageHeader title="Students" subtitle={`${totalCount} students`} />
+
+      {error && <div className="mb-4"><AlertBanner variant="danger" onDismiss={() => setError("")}>{error}</AlertBanner></div>}
 
       {/* Search */}
       <div className="relative mb-4">

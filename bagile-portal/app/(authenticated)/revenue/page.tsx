@@ -5,6 +5,7 @@ import { useApiKey } from "@/lib/hooks/useApiKey";
 import { RevenueSummary, getRevenueSummary, formatCurrency } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { AlertBanner } from "@/components/ui/AlertBanner";
 import { SkeletonCard, SkeletonRow } from "@/components/ui/Skeleton";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { TrendingUp, DollarSign, ShoppingCart, ChevronRight, ChevronDown } from "lucide-react";
@@ -28,13 +29,15 @@ export default function RevenuePage() {
   const [data, setData] = useState<RevenueSummary | null>(null);
   const [year, setYear] = useState(new Date().getFullYear());
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!apiKey) return;
     setLoading(true);
+    setError("");
     getRevenueSummary(apiKey, year)
       .then(setData)
-      .catch(() => {})
+      .catch(() => setError("Failed to load revenue data"))
       .finally(() => setLoading(false));
   }, [apiKey, year]);
 
@@ -71,6 +74,8 @@ export default function RevenuePage() {
           </select>
         }
       />
+
+      {error && <div className="mb-6"><AlertBanner variant="danger" onDismiss={() => setError("")}>{error}</AlertBanner></div>}
 
       {/* KPI Cards */}
       {loading ? (

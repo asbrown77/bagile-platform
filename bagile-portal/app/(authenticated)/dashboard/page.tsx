@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useApiKey } from "@/lib/hooks/useApiKey";
 import {
   MonitoringCourse, RevenueSummary, PendingTransfer,
-  getMonitoring, getRevenueSummary, getPendingTransfers,
+  getMonitoring, getRevenueSummary, getPendingTransfers, getDashboardOverview,
   formatCurrency, formatDate,
 } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
@@ -34,16 +34,27 @@ export default function Dashboard() {
 
   async function loadData() {
     try {
-      const [monitoring, rev] = await Promise.all([
-        getMonitoring(apiKey, 60),
-        getRevenueSummary(apiKey),
-      ]);
-      // Filter out courses with no meaningful data
-      setCourses(monitoring.filter((c) =>
-        c.title && c.title !== "N/A" && c.courseCode && c.courseCode !== ""
-      ));
-      setRevenue(rev);
-      try { setPendingTransfers(await getPendingTransfers(apiKey)); } catch {}
+      // Single aggregated call — falls back to parallel if endpoint unavailable
+      try {
+        const overview = await getDashboardOverview(apiKey);
+        setCourses((overview.monitoring || []).filter((c) =>
+          c.title && c.title !== "N/A" && c.courseCode && c.courseCode !== ""
+        ));
+        setRevenue(overview.revenue);
+        if (overview.pendingTransferCount > 0) {
+          setPendingTransfers(await getPendingTransfers(apiKey));
+        }
+      } catch {
+        const [monitoring, rev] = await Promise.all([
+          getMonitoring(apiKey, 60),
+          getRevenueSummary(apiKey),
+        ]);
+        setCourses(monitoring.filter((c) =>
+          c.title && c.title !== "N/A" && c.courseCode && c.courseCode !== ""
+        ));
+        setRevenue(rev);
+        try { setPendingTransfers(await getPendingTransfers(apiKey)); } catch {}
+      }
     } catch {
       setError("Failed to load dashboard data");
     } finally {
