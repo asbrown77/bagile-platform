@@ -33,6 +33,7 @@ function CoursesContent() {
   );
   const [year, setYear] = useState(urlYear ? Number(urlYear) : currentYear);
   const [showCreate, setShowCreate] = useState(false);
+  const [visibilityFilter, setVisibilityFilter] = useState("all");
 
   const loadCourses = useCallback(async () => {
     if (!apiKey) return;
@@ -50,10 +51,11 @@ function CoursesContent() {
     }
 
     const courseCode = typeFilter !== "all" ? typeFilter : undefined;
+    const type = visibilityFilter !== "all" ? visibilityFilter : undefined;
 
     try {
       const result = await getCourseSchedules(apiKey, {
-        from, to, courseCode, pageSize: 100,
+        from, to, courseCode, type, pageSize: 100,
       });
       setCourses((result.items || []).filter(
         (c) => c.title && c.title !== "N/A" && c.courseCode
@@ -63,7 +65,7 @@ function CoursesContent() {
     } finally {
       setLoading(false);
     }
-  }, [apiKey, dateRange, year, typeFilter]);
+  }, [apiKey, dateRange, year, typeFilter, visibilityFilter]);
 
   useEffect(() => { loadCourses(); }, [loadCourses]);
 
@@ -124,6 +126,13 @@ function CoursesContent() {
             {[2026, 2025, 2024].map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
         )}
+
+        <select value={visibilityFilter} onChange={(e) => setVisibilityFilter(e.target.value)}
+          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white">
+          <option value="all">Public & Private</option>
+          <option value="public">Public only</option>
+          <option value="private">Private only</option>
+        </select>
 
         <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}
           className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white">
