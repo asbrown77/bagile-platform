@@ -56,7 +56,38 @@ export default function PartnersPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      {/* Mobile cards */}
+      <div className="md:hidden space-y-3">
+        {!loading && partners.map((p) => (
+          <div key={p.name} className={`bg-white rounded-xl border shadow-sm p-4 ${p.tierMismatch ? "border-amber-200 bg-amber-50/30" : "border-gray-200"}`}>
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <p className="font-medium text-gray-900">{p.name}</p>
+                  {p.tierMismatch && <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />}
+                </div>
+                {p.contactEmail && <p className="text-xs text-gray-400 mt-0.5">{p.contactEmail}</p>}
+              </div>
+              <p className="font-bold text-gray-900">{formatCurrency(p.spendThisYear)}</p>
+            </div>
+            <div className="flex items-center gap-3 mt-2 flex-wrap">
+              <Badge variant="info">{p.ptnTier || "—"} ({p.discountRate}%)</Badge>
+              <span className="text-xs text-gray-400">→</span>
+              <Badge variant={p.tierMismatch ? "warning" : "success"}>{p.calculatedTier} ({p.calculatedDiscount}%)</Badge>
+            </div>
+            <div className="flex gap-4 mt-2 text-xs text-gray-500">
+              <span>{p.bookingsThisYear} bookings</span>
+              <span>{p.delegatesThisYear} delegates</span>
+            </div>
+          </div>
+        ))}
+        {!loading && partners.length === 0 && (
+          <EmptyState icon={<Handshake className="w-10 h-10" />} title="No partners" description={`No PTN partners with data for ${year}`} />
+        )}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden md:block bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>

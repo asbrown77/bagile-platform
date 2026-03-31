@@ -9,6 +9,7 @@ import {
 } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { AlertBanner } from "@/components/ui/AlertBanner";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SkeletonCard, SkeletonRow } from "@/components/ui/Skeleton";
 import { Badge } from "@/components/ui/Badge";
@@ -72,13 +73,12 @@ export default function OrganisationDetailPage() {
             icon={<Calendar className="w-4 h-4" />}
           />
         </div>
-      ) : (
+      ) : !loading && (
         <div className="mb-8">
-          <EmptyState
-            icon={<Building2 className="w-10 h-10" />}
-            title="Organisation not found"
-            description={`No organisation record found for "${orgName}". This company may only appear in billing data.`}
-          />
+          <AlertBanner variant="info">
+            <strong>{orgName}</strong> appears in billing data but isn't registered as an organisation yet.
+            Their booking data is available on the Organisations analytics page.
+          </AlertBanner>
         </div>
       )}
 
