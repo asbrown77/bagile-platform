@@ -16,6 +16,8 @@ _"I can see revenue, partner value, course demand, and make scheduling decisions
 
 ## Sprint Queue
 
+*All sprints complete. Next: dashboard UI for cancel/transfer + analytics pages.*
+
 ### Sprint 11: Course Management Hub
 **Goal:** The course detail page is a trainer's daily tool — everything needed to run a course in one place.
 **We'll know it worked when:** A trainer can click a course, see attendees, export for Scrum.org with country codes, and manage cancellations/transfers from the dashboard.
@@ -84,6 +86,18 @@ Items below are prioritised but not yet scheduled. Refine before pulling into a 
 ---
 
 ## Completed
+
+### Sprint 12-13 (31 Mar 2026)
+- [x] V32: organisations table with aliases, PTN tiers, seeded 19 orgs including all PTN partners
+- [x] GET /api/analytics/organisations — top companies by spend with fuzzy matching
+- [x] GET /api/analytics/partners — PTN tier status, calculated vs current, upgrade flags
+- [x] GET /api/analytics/course-demand — bookings by type, fill rates, monthly trends
+- [x] MCP tools: get_organisation_analytics, get_partner_analytics, get_course_demand
+
+### Sprint 11 (31 Mar 2026)
+- [x] V31: expanded enrolment status constraint for refund/transfer workflow
+- [x] Fixed pending transfers query (cs.updated_at → cs.last_synced)
+- [x] All transfer/refund endpoints verified working
 
 ### Sprint 10 (31 Mar 2026)
 - [x] Revenue summary endpoint + dashboard cards (£ this month, £ this year, monthly breakdown)
