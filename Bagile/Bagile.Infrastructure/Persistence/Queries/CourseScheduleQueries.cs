@@ -27,22 +27,24 @@ public class CourseScheduleQueries : ICourseScheduleQueries
         CancellationToken ct = default)
     {
         var sql = @"
-            SELECT 
+            SELECT
                 cs.id AS Id,
                 COALESCE(cs.sku, '') AS CourseCode,
                 cs.name AS Title,
                 cs.start_date AS StartDate,
                 cs.end_date AS EndDate,
                 cs.format_type AS Location,
+                cs.trainer_name AS TrainerName,
+                cs.format_type AS FormatType,
                 CASE WHEN cs.is_public THEN 'public' ELSE 'private' END AS Type,
                 cs.status AS Status,
                 COUNT(e.id) AS CurrentEnrolmentCount,
                 CASE WHEN COUNT(e.id) >= 3 THEN true ELSE false END AS GuaranteedToRun,
-                CASE 
-                    WHEN cs.start_date <= CURRENT_DATE + INTERVAL '7 days' 
-                         AND COUNT(e.id) < 3 
-                    THEN true 
-                    ELSE false 
+                CASE
+                    WHEN cs.start_date <= CURRENT_DATE + INTERVAL '7 days'
+                         AND COUNT(e.id) < 3
+                    THEN true
+                    ELSE false
                 END AS NeedsAttention
             FROM bagile.course_schedules cs
             LEFT JOIN bagile.enrolments e ON e.course_schedule_id = cs.id AND e.status NOT IN ('cancelled', 'transferred')
@@ -53,7 +55,8 @@ public class CourseScheduleQueries : ICourseScheduleQueries
             " + (trainer != null ? " AND cs.trainer_name ILIKE @trainerPattern" : "") + @"
             " + (type != null ? " AND ((cs.is_public = true AND @type = 'public') OR (cs.is_public = false AND @type = 'private'))" : "") + @"
             " + (status != null ? " AND cs.status = @status" : "") + @"
-            GROUP BY cs.id, cs.sku, cs.name, cs.start_date, cs.end_date, cs.format_type, cs.is_public, cs.status
+            GROUP BY cs.id, cs.sku, cs.name, cs.start_date, cs.end_date,
+                     cs.format_type, cs.trainer_name, cs.is_public, cs.status
             ORDER BY cs.start_date DESC
             LIMIT @pageSize OFFSET @offset;";
 

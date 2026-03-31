@@ -338,6 +338,48 @@ export async function getCourseDemand(apiKey: string, months?: number): Promise<
   return apiRequest(`/api/analytics/course-demand${qs}`, apiKey);
 }
 
+// ── Course Schedules (full list with history) ────────────
+
+export interface CourseScheduleItem {
+  id: number;
+  courseCode: string;
+  title: string;
+  startDate: string | null;
+  endDate: string | null;
+  location: string | null;
+  trainerName: string | null;
+  formatType: string | null;
+  type: string | null;
+  status: string | null;
+  currentEnrolmentCount: number;
+  guaranteedToRun: boolean;
+  needsAttention: boolean;
+}
+
+export interface PagedResult<T> {
+  items: T[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export async function getCourseSchedules(
+  apiKey: string,
+  params: { from?: string; to?: string; courseCode?: string; trainer?: string; type?: string; status?: string; page?: number; pageSize?: number }
+): Promise<PagedResult<CourseScheduleItem>> {
+  const qs = new URLSearchParams();
+  if (params.from) qs.set("from", params.from);
+  if (params.to) qs.set("to", params.to);
+  if (params.courseCode) qs.set("courseCode", params.courseCode);
+  if (params.trainer) qs.set("trainer", params.trainer);
+  if (params.type) qs.set("type", params.type);
+  if (params.status) qs.set("status", params.status);
+  qs.set("page", String(params.page || 1));
+  qs.set("pageSize", String(params.pageSize || 50));
+  return apiRequest(`/api/course-schedules?${qs}`, apiKey);
+}
+
 // ── Transfers ────────────────────────────────────────────
 
 export interface PendingTransfer {

@@ -175,7 +175,7 @@ export default function RevenuePage() {
                   return (
                     <tr key={ct.courseType}
                       className="border-t border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
-                      onClick={() => window.location.href = `/courses?type=${ct.courseType}`}>
+                      onClick={() => window.location.href = `/courses?type=${ct.courseType}&year=${year}`}>
                       <td className="px-4 py-2.5">
                         <span className="font-medium text-gray-900">{ct.courseType}</span>
                         <span className="ml-2 text-xs text-gray-400">{pct}%</span>

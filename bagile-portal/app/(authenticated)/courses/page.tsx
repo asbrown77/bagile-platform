@@ -1,9 +1,9 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { useApiKey } from "@/lib/hooks/useApiKey";
-import { MonitoringCourse, getMonitoring, formatDate } from "@/lib/api";
+import { CourseScheduleItem, getCourseSchedules, formatDate } from "@/lib/api";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SkeletonRow } from "@/components/ui/Skeleton";
@@ -17,65 +17,113 @@ export default function CoursesPage() {
 function CoursesContent() {
   const apiKey = useApiKey();
   const searchParams = useSearchParams();
-  const [courses, setCourses] = useState<MonitoringCourse[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [typeFilter, setTypeFilter] = useState(searchParams.get("type") || "all");
 
-  useEffect(() => {
+  const urlType = searchParams.get("type") || "";
+  const urlYear = searchParams.get("year") || "";
+
+  const currentYear = new Date().getFullYear();
+
+  const [courses, setCourses] = useState<CourseScheduleItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [typeFilter, setTypeFilter] = useState(urlType || "all");
+  const [dateRange, setDateRange] = useState<"upcoming" | "year" | "all">(
+    urlType ? "year" : "upcoming"
+  );
+  const [year, setYear] = useState(urlYear ? Number(urlYear) : currentYear);
+
+  const loadCourses = useCallback(async () => {
     if (!apiKey) return;
-    getMonitoring(apiKey, 90)
-      .then((data) => setCourses(data.filter((c) => c.title && c.title !== "N/A" && c.courseCode)))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [apiKey]);
+    setLoading(true);
+
+    let from: string | undefined;
+    let to: string | undefined;
+
+    if (dateRange === "upcoming") {
+      const d = new Date(); d.setDate(d.getDate() - 2);
+      from = d.toISOString().split("T")[0];
+    } else if (dateRange === "year") {
+      from = `${year}-01-01`;
+      to = `${year}-12-31`;
+    }
+
+    const courseCode = typeFilter !== "all" ? typeFilter : undefined;
+
+    try {
+      const result = await getCourseSchedules(apiKey, {
+        from, to, courseCode, pageSize: 100,
+      });
+      setCourses((result.items || []).filter(
+        (c) => c.title && c.title !== "N/A" && c.courseCode
+      ));
+    } catch {
+      setCourses([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [apiKey, dateRange, year, typeFilter]);
+
+  useEffect(() => { loadCourses(); }, [loadCourses]);
+
+  const courseTypes = [...new Set(
+    courses.map((c) => c.courseCode?.split("-")[0]).filter(Boolean)
+  )].sort() as string[];
 
   const today = new Date(); today.setHours(0, 0, 0, 0);
-  const getStatus = (c: MonitoringCourse) => {
-    const start = new Date(c.startDate); start.setHours(0, 0, 0, 0);
+  const getDisplayStatus = (c: CourseScheduleItem) => {
+    if (c.status === "cancelled") return "cancelled";
+    const start = new Date(c.startDate || ""); start.setHours(0, 0, 0, 0);
     const end = c.endDate ? new Date(c.endDate) : start; end.setHours(0, 0, 0, 0);
     if (start <= today && today <= end) return "running";
     if (today > end) return "completed";
-    if (c.currentEnrolmentCount < 3 && c.daysUntilStart <= 7) return "at risk";
-    return c.currentEnrolmentCount >= 3 ? "guaranteed" : "monitor";
+    if (c.needsAttention) return "at risk";
+    return c.guaranteedToRun ? "guaranteed" : "monitor";
   };
 
-  const courseTypes = [...new Set(courses.map((c) => c.courseCode?.split("-")[0]).filter(Boolean))].sort() as string[];
+  const isVirtual = (c: CourseScheduleItem) =>
+    c.formatType?.toLowerCase().includes("virtual") || c.location?.toLowerCase().includes("virtual");
 
-  const filtered = courses.filter((c) => {
-    const status = getStatus(c);
-    if (statusFilter !== "all" && status !== statusFilter) return false;
-    if (typeFilter !== "all" && !c.courseCode?.startsWith(typeFilter)) return false;
-    return true;
-  });
-
-  const isVirtual = (c: MonitoringCourse) => c.location?.toLowerCase().includes("virtual");
+  const totalAttendees = courses.reduce((s, c) => s + c.currentEnrolmentCount, 0);
+  const completedCount = courses.filter((c) => getDisplayStatus(c) === "completed").length;
 
   return (
     <>
-      <PageHeader title="Courses" subtitle="All upcoming and recent courses" />
+      <PageHeader
+        title="Courses"
+        subtitle={typeFilter !== "all"
+          ? `${typeFilter} — ${courses.length} courses, ${totalAttendees} total attendees`
+          : `${courses.length} courses`}
+      />
 
       {/* Filters */}
       <div className="flex gap-3 mb-4 items-center flex-wrap">
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
+        <select value={dateRange} onChange={(e) => setDateRange(e.target.value as "upcoming" | "year" | "all")}
           className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white">
-          <option value="all">All statuses</option>
-          <option value="running">Running</option>
-          <option value="guaranteed">Guaranteed</option>
-          <option value="monitor">Monitor</option>
-          <option value="at risk">At Risk</option>
-          <option value="completed">Completed</option>
+          <option value="upcoming">Upcoming</option>
+          <option value="year">Full Year</option>
+          <option value="all">All Time</option>
         </select>
-        {courseTypes.length > 1 && (
-          <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}
+
+        {dateRange === "year" && (
+          <select value={year} onChange={(e) => setYear(Number(e.target.value))}
             className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white">
-            <option value="all">All types</option>
-            {courseTypes.map((t) => <option key={t} value={t}>{t}</option>)}
+            {[2026, 2025, 2024].map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
         )}
-        <span className="text-xs text-gray-400">{filtered.length} course{filtered.length !== 1 ? "s" : ""}</span>
+
+        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}
+          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white">
+          <option value="all">All types</option>
+          {urlType && !courseTypes.includes(urlType) && <option value={urlType}>{urlType}</option>}
+          {courseTypes.map((t) => <option key={t} value={t}>{t}</option>)}
+        </select>
+
+        <span className="text-xs text-gray-400">
+          {courses.length} course{courses.length !== 1 ? "s" : ""}
+          {completedCount > 0 && ` (${completedCount} completed)`}
+        </span>
       </div>
 
+      {/* Table */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
@@ -90,11 +138,16 @@ function CoursesContent() {
           </thead>
           <tbody>
             {loading && Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} cols={6} />)}
-            {!loading && filtered.map((c) => {
-              const status = getStatus(c);
+            {!loading && courses.map((c) => {
+              const status = getDisplayStatus(c);
+              const daysAway = c.startDate
+                ? Math.round((new Date(c.startDate).getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+                : 0;
               return (
                 <tr key={c.id}
-                  className={`border-t border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${status === "at risk" ? "bg-red-50/40" : ""}`}
+                  className={`border-t border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors
+                    ${status === "at risk" ? "bg-red-50/40" : ""}
+                    ${status === "completed" ? "opacity-70" : ""}`}
                   onClick={() => window.location.href = `/courses/${c.id}`}>
                   <td className="px-4 py-3">
                     <p className="font-medium text-gray-900">{c.title}</p>
@@ -103,31 +156,55 @@ function CoursesContent() {
                   <td className="px-4 py-3 text-gray-600">
                     {formatDate(c.startDate)}
                     <p className="text-xs text-gray-400">
-                      {c.daysUntilStart > 0 ? `${c.daysUntilStart}d away` : c.daysUntilStart === 0 ? "Today" : "Past"}
+                      {daysAway > 0 ? `${daysAway}d away` : daysAway === 0 ? "Today" : `${Math.abs(daysAway)}d ago`}
                     </p>
                   </td>
                   <td className="px-4 py-3 text-gray-600 hidden md:table-cell">{c.trainerName || "—"}</td>
                   <td className="px-4 py-3 text-center">
-                    <span className={`text-lg font-bold ${status === "at risk" ? "text-red-600" : status === "guaranteed" || status === "running" ? "text-green-600" : "text-gray-700"}`}>
+                    <span className={`text-lg font-bold ${
+                      status === "at risk" ? "text-red-600" :
+                      status === "guaranteed" || status === "running" || status === "completed" ? "text-green-600" :
+                      "text-gray-700"
+                    }`}>
                       {c.currentEnrolmentCount}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-center">{statusBadge(status)}</td>
                   <td className="px-4 py-3 text-center hidden lg:table-cell">
-                    <Badge variant={isVirtual(c) ? "info" : "neutral"} dot>
-                      {isVirtual(c) ? "Virtual" : "In-person"}
-                    </Badge>
+                    <div className="flex flex-col items-center gap-1">
+                      <Badge variant={isVirtual(c) ? "info" : "neutral"} dot>
+                        {isVirtual(c) ? "Virtual" : "In-person"}
+                      </Badge>
+                      {c.type && (
+                        <Badge variant={c.type === "public" ? "success" : "warning"} dot>
+                          {c.type === "public" ? "Public" : "Private"}
+                        </Badge>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );
             })}
-            {!loading && filtered.length === 0 && (
+            {!loading && courses.length === 0 && (
               <tr><td colSpan={6}>
-                <EmptyState icon={<GraduationCap className="w-10 h-10" />} title="No courses" description="No courses match your filters" />
+                <EmptyState
+                  icon={<GraduationCap className="w-10 h-10" />}
+                  title="No courses"
+                  description={typeFilter !== "all"
+                    ? `No ${typeFilter} courses found for this period`
+                    : "No courses match your filters"}
+                />
               </td></tr>
             )}
           </tbody>
         </table>
+
+        {!loading && courses.length > 0 && (
+          <div className="px-4 py-2.5 bg-gray-50 border-t border-gray-200 flex items-center justify-between text-xs text-gray-500">
+            <span>{courses.length} course{courses.length !== 1 ? "s" : ""}</span>
+            <span>{totalAttendees} total attendees</span>
+          </div>
+        )}
       </div>
     </>
   );
