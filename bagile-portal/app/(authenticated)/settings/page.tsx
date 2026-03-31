@@ -37,6 +37,7 @@ export default function Settings() {
         const data = await loginWithGoogle(response.credential);
         localStorage.setItem("bagile_portal_token", data.token);
         localStorage.setItem("bagile_portal_user", JSON.stringify({ email: data.email, name: data.name }));
+        if (data.apiKey) localStorage.setItem("bagile_api_key", data.apiKey);
         setToken(data.token);
         setUser({ email: data.email, name: data.name });
       } catch (err: any) {
@@ -79,6 +80,8 @@ export default function Settings() {
       const result = await createKey(token, label.trim());
       setNewKey(result);
       setLabel("");
+      // Auto-save as the dashboard API key
+      localStorage.setItem("bagile_api_key", result.key);
       await refreshKeys();
     } catch { setError("Failed to create key"); }
   }
