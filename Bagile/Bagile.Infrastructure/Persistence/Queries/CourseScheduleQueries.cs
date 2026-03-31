@@ -177,6 +177,7 @@ public class CourseScheduleQueries : ICourseScheduleQueries
     {
         var sql = @"
             SELECT
+                e.id AS EnrolmentId,
                 s.id AS StudentId,
                 s.first_name AS FirstName,
                 s.last_name AS LastName,
@@ -186,10 +187,15 @@ public class CourseScheduleQueries : ICourseScheduleQueries
                 e.status AS Status,
                 cs.sku AS CourseCode,
                 cs.name AS CourseName,
-                s.country AS Country
+                s.country AS Country,
+                o.external_id AS OrderNumber,
+                o.total_amount AS OrderAmount,
+                o.status AS OrderStatus,
+                o.currency AS Currency
             FROM bagile.enrolments e
             JOIN bagile.students s ON e.student_id = s.id
             JOIN bagile.course_schedules cs ON e.course_schedule_id = cs.id
+            LEFT JOIN bagile.orders o ON e.order_id = o.id
             WHERE e.course_schedule_id = @scheduleId
               AND e.status != 'cancelled'
             ORDER BY s.last_name, s.first_name;";

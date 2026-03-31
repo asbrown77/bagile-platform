@@ -72,8 +72,11 @@ export default function Dashboard() {
   const filtered = courses.filter((c) => {
     if (trainerFilter !== "all" && c.trainerName !== trainerFilter) return false;
     if (courseTypeFilter !== "all" && !c.courseCode?.startsWith(courseTypeFilter)) return false;
-    if (statusFilter === "at-risk" && !isAtRisk(c)) return false;
-    if (statusFilter === "healthy" && isAtRisk(c)) return false;
+    if (statusFilter === "at-risk" && getStatus(c) !== "at risk") return false;
+    if (statusFilter === "guaranteed" && getStatus(c) !== "guaranteed") return false;
+    if (statusFilter === "monitor" && getStatus(c) !== "monitor") return false;
+    if (statusFilter === "running" && getStatus(c) !== "running") return false;
+    if (statusFilter === "completed" && getStatus(c) !== "completed") return false;
     return true;
   });
 
@@ -132,8 +135,11 @@ export default function Dashboard() {
               <span className="text-sm text-gray-600">Status:</span>
               <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="border rounded px-3 py-1.5 text-sm bg-white">
                 <option value="all">All</option>
+                <option value="running">Running</option>
+                <option value="completed">Completed</option>
+                <option value="guaranteed">Guaranteed</option>
+                <option value="monitor">Monitor</option>
                 <option value="at-risk">At Risk</option>
-                <option value="healthy">Healthy</option>
               </select>
             </div>
             <span className="text-sm text-gray-400">{filtered.length} course{filtered.length !== 1 ? "s" : ""}</span>

@@ -93,6 +93,7 @@ export interface MonitoringCourse {
 }
 
 export interface CourseAttendee {
+  enrolmentId: number;
   studentId: number;
   firstName: string;
   lastName: string;
@@ -102,6 +103,11 @@ export interface CourseAttendee {
   status: string;
   courseCode: string | null;
   courseName: string | null;
+  country: string | null;
+  orderNumber: string | null;
+  orderAmount: number | null;
+  orderStatus: string | null;
+  currency: string | null;
 }
 
 export interface OrderSummary {
