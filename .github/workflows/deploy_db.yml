@@ -35,7 +35,7 @@ jobs:
           username: root
           key: ${{ secrets.HETZNER_SSH_KEY }}
           source: "migrations/*"
-          target: "/opt/bagile/migrations"
+          target: "/opt/bagile"
 
       - name: Run migrations remotely
         uses: appleboy/ssh-action@v0.1.7
@@ -45,4 +45,6 @@ jobs:
           key: ${{ secrets.HETZNER_SSH_KEY }}
           script: |
             cd /opt/bagile
+            # Clean up any nested migrations directory from previous deploys
+            rm -rf /opt/bagile/migrations/migrations
             bash deploy_db.sh ${{ github.event.inputs.environment || 'prod' }}
