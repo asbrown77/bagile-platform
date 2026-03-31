@@ -16,7 +16,7 @@ _"I can see revenue, partner value, course demand, and make scheduling decisions
 
 ## Sprint Queue
 
-*All sprints complete. Next: dashboard UI for cancel/transfer + analytics pages.*
+*All sprints through 14 complete.*
 
 ### Sprint 11: Course Management Hub
 **Goal:** The course detail page is a trainer's daily tool — everything needed to run a course in one place.
@@ -86,6 +86,11 @@ Items below are prioritised but not yet scheduled. Refine before pulling into a 
 ---
 
 ## Completed
+
+### Sprint 14 (31 Mar 2026)
+- [x] Course detail: attendees with orders, country, revenue, cancel/transfer actions
+- [x] Dashboard status filter: Running, Completed, Guaranteed, Monitor, At Risk
+- [x] Show courses from 2 days ago; use end date for running/completed
 
 ### Sprint 12-13 (31 Mar 2026)
 - [x] V32: organisations table with aliases, PTN tiers, seeded 19 orgs including all PTN partners
