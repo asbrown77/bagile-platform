@@ -24,10 +24,9 @@ WORKDIR /app
 ENV NODE_ENV=production
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 
-# Copy standalone output — handle both flat and nested workspace layouts
+# Copy standalone output
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 # If standalone nested under workspace root, flatten it
 RUN if [ ! -f server.js ] && [ -f $(find . -name server.js -maxdepth 4 | head -1) ]; then \
