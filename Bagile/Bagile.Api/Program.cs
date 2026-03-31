@@ -129,6 +129,7 @@ app.MapXeroOAuthEndpoints();
 app.MapPortalEndpoints();
 app.MapTransferEndpoints();
 app.MapRevenueEndpoints();
+app.MapOrganisationEndpoints();
 
 app.Run();
 
