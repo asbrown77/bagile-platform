@@ -66,7 +66,7 @@ export default function Dashboard() {
     if (isRunning(c)) return "running";
     if (isCompleted(c)) return "completed";
     if (isAtRisk(c)) return "at risk";
-    return "healthy";
+    return c.currentEnrolmentCount >= 3 ? "guaranteed" : "monitor";
   };
 
   const filtered = courses.filter((c) => {
@@ -178,7 +178,8 @@ export default function Dashboard() {
                           s === "running" ? "bg-blue-100 text-blue-700" :
                           s === "completed" ? "bg-gray-100 text-gray-600" :
                           s === "at risk" ? "bg-red-100 text-red-700" :
-                          "bg-green-100 text-green-700"
+                          s === "guaranteed" ? "bg-green-100 text-green-700" :
+                          "bg-amber-100 text-amber-700"
                         }`}>{s}</span>
                       ); })()}
                     </td>
