@@ -377,3 +377,13 @@ Archive/seeds/999_drop_all.sql
 bagile-mcp-server/node_modules/
 bagile-mcp-server/dist/
 bagile-mcp-server/.env
+
+# Build/deploy artifacts
+*.zip
+
+# Next.js
+bagile-portal/.next/
+bagile-portal/.env.local
+
+# Portal settings (may contain API keys)
+Bagile/.claude/settings.local.json
