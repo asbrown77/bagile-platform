@@ -90,7 +90,8 @@ export default function OrganisationsPage() {
           <tbody>
             {loading && Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} cols={5} />)}
             {!loading && filtered.map((o) => (
-              <tr key={o.company} className="border-t border-gray-100 hover:bg-gray-50">
+              <tr key={o.company} className="border-t border-gray-100 hover:bg-gray-50 cursor-pointer"
+                onClick={() => window.location.href = `/organisations/${encodeURIComponent(o.company)}`}>
                 <td className="px-4 py-3 font-medium text-gray-900">{o.company}</td>
                 <td className="px-4 py-3 text-center text-gray-700">{o.orderCount}</td>
                 <td className="px-4 py-3 text-center text-gray-700">{o.delegateCount}</td>

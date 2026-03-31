@@ -380,6 +380,66 @@ export async function getCourseSchedules(
   return apiRequest(`/api/course-schedules?${qs}`, apiKey);
 }
 
+// ── Course Schedule Detail ───────────────────────────────
+
+export interface CourseScheduleDetail extends CourseScheduleItem {
+  capacity: number | null;
+  price: number | null;
+  sku: string | null;
+  sourceSystem: string | null;
+  lastSynced: string | null;
+}
+
+export async function getCourseScheduleDetail(apiKey: string, id: number): Promise<CourseScheduleDetail> {
+  return apiRequest(`/api/course-schedules/${id}`, apiKey);
+}
+
+// ── Organisation Detail ─────────────────────────────────
+
+export interface OrganisationDetail {
+  name: string;
+  primaryDomain: string | null;
+  totalStudents: number;
+  totalEnrolments: number;
+  totalOrders: number;
+  totalRevenue: number;
+  firstOrderDate: string | null;
+  lastOrderDate: string | null;
+  lastCourseDate: string | null;
+}
+
+export interface OrganisationListItem {
+  name: string;
+  primaryDomain: string | null;
+  totalStudents: number;
+  totalEnrolments: number;
+}
+
+export interface OrgCourseHistory {
+  courseCode: string;
+  courseTitle: string;
+  publicCount: number;
+  privateCount: number;
+  totalCount: number;
+  lastRunDate: string | null;
+}
+
+export async function getOrganisationDetail(apiKey: string, name: string): Promise<OrganisationDetail> {
+  return apiRequest(`/api/organisations/${encodeURIComponent(name)}`, apiKey);
+}
+
+export async function getOrganisationCourseHistory(apiKey: string, name: string): Promise<OrgCourseHistory[]> {
+  return apiRequest(`/api/organisations/${encodeURIComponent(name)}/course-history`, apiKey);
+}
+
+export async function getOrganisations(apiKey: string, params?: { name?: string; page?: number; pageSize?: number }): Promise<PagedResult<OrganisationListItem>> {
+  const qs = new URLSearchParams();
+  if (params?.name) qs.set("name", params.name);
+  qs.set("page", String(params?.page || 1));
+  qs.set("pageSize", String(params?.pageSize || 50));
+  return apiRequest(`/api/organisations?${qs}`, apiKey);
+}
+
 // ── Transfers ────────────────────────────────────────────
 
 export interface PendingTransfer {
