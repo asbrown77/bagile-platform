@@ -275,6 +275,85 @@ server.tool(
 );
 
 // ============================================================
+// ANALYTICS
+// ============================================================
+
+server.tool(
+  "get_revenue_summary",
+  "Get revenue summary — monthly breakdown, year-on-year comparison (fair YTD), by course type, by source (public/private), by country/region",
+  {
+    year: z.number().optional().describe("Year to analyse (default: current year)"),
+  },
+  async (params) => {
+    const result = await apiGet("/api/analytics/revenue", params);
+    return { content: [{ type: "text" as const, text: formatResult(result) }] };
+  }
+);
+
+server.tool(
+  "get_revenue_month_drilldown",
+  "Get detailed revenue for a specific month — every order with company, payment method, course, attendees",
+  {
+    year: z.number().describe("Year"),
+    month: z.number().min(1).max(12).describe("Month (1-12)"),
+  },
+  async ({ year, month }) => {
+    const result = await apiGet(`/api/analytics/revenue/${year}/${month}`);
+    return { content: [{ type: "text" as const, text: formatResult(result) }] };
+  }
+);
+
+server.tool(
+  "get_organisation_analytics",
+  "Get top organisations by spend, bookings, and delegates for a given year",
+  {
+    year: z.number().optional().describe("Year (default: current)"),
+    sortBy: z.string().optional().describe("Sort by: spend, bookings, delegates (default: spend)"),
+  },
+  async (params) => {
+    const result = await apiGet("/api/analytics/organisations", params);
+    return { content: [{ type: "text" as const, text: formatResult(result) }] };
+  }
+);
+
+server.tool(
+  "get_repeat_customers",
+  "Get repeat customers — companies with multiple bookings, lifetime spend, relationship duration",
+  {
+    year: z.number().optional().describe("Year for 'this year' metrics (default: current)"),
+    minBookings: z.number().optional().describe("Minimum bookings to include (default: 2)"),
+  },
+  async (params) => {
+    const result = await apiGet("/api/analytics/organisations/repeat-customers", params);
+    return { content: [{ type: "text" as const, text: formatResult(result) }] };
+  }
+);
+
+server.tool(
+  "get_partner_analytics",
+  "Get PTN partner tier tracking — current vs calculated tier, bookings, delegates, spend, mismatch flags",
+  {
+    year: z.number().optional().describe("Year (default: current)"),
+  },
+  async (params) => {
+    const result = await apiGet("/api/analytics/partners", params);
+    return { content: [{ type: "text" as const, text: formatResult(result) }] };
+  }
+);
+
+server.tool(
+  "get_course_demand",
+  "Get course demand analytics — which course types sell best, fill rates, monthly trends",
+  {
+    months: z.number().optional().describe("Lookback period in months (default: 12)"),
+  },
+  async (params) => {
+    const result = await apiGet("/api/analytics/course-demand", params);
+    return { content: [{ type: "text" as const, text: formatResult(result) }] };
+  }
+);
+
+// ============================================================
 // HEALTH CHECK
 // ============================================================
 

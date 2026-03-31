@@ -113,15 +113,35 @@ export default function Settings() {
       {error && <AlertBanner variant="danger" onDismiss={() => setError("")}>{error}</AlertBanner>}
 
       {newKey && (
-        <div className="mb-6">
+        <div className="mb-6 space-y-4">
           <AlertBanner variant="success">
-            <p className="font-semibold mb-1">Key created — copy it now!</p>
+            <p className="font-semibold mb-1">Key created — copy it now! This is the only time you'll see the full key.</p>
             <div className="flex items-center gap-2 mt-2">
               <code className="bg-white border px-3 py-2 rounded text-sm flex-1 font-mono break-all">{newKey.key}</code>
               <Button size="sm" onClick={() => navigator.clipboard.writeText(newKey.key)}>Copy</Button>
             </div>
             <button onClick={() => setNewKey(null)} className="text-sm mt-2 underline">Dismiss</button>
           </AlertBanner>
+
+          {/* MCP Setup Instructions */}
+          <div className="bg-gray-900 rounded-xl p-5 text-sm">
+            <p className="text-gray-300 font-medium mb-3">To use with Claude Code (MCP), add this to your project's <code className="text-amber-400">.mcp.json</code>:</p>
+            <pre className="bg-gray-950 rounded-lg p-4 text-gray-300 overflow-x-auto text-xs leading-relaxed">
+{`{
+  "mcpServers": {
+    "bagile-api": {
+      "command": "node",
+      "args": ["path/to/bagile-mcp-server/dist/index.js"],
+      "env": {
+        "BAGILE_API_URL": "https://api.bagile.co.uk",
+        "BAGILE_API_KEY": "${newKey.key}"
+      }
+    }
+  }
+}`}
+            </pre>
+            <p className="text-gray-500 text-xs mt-3">This gives Claude Code access to courses, orders, students, revenue, and analytics via 20+ MCP tools.</p>
+          </div>
         </div>
       )}
 
@@ -180,6 +200,71 @@ export default function Settings() {
             </tbody>
           </table>
         )}
+      </div>
+
+      {/* MCP Setup Guide */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mt-6">
+        <div className="px-5 py-3 border-b border-gray-200">
+          <h2 className="text-sm font-semibold text-gray-900">Using with AI Assistants (MCP)</h2>
+        </div>
+        <div className="p-5 text-sm text-gray-600 space-y-4">
+          <p>
+            The BAgile API can be used as an MCP (Model Context Protocol) server with Claude Code,
+            Cursor, Windsurf, or any MCP-compatible AI assistant. This gives your AI access to query
+            courses, orders, students, revenue analytics, and more.
+          </p>
+
+          <div>
+            <p className="font-medium text-gray-900 mb-2">Setup steps:</p>
+            <ol className="list-decimal list-inside space-y-1.5 text-gray-600">
+              <li>Create an API key above (label it "MCP" or "Claude Code")</li>
+              <li>Clone the MCP server: <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">bagile-mcp-server/</code> from the repo</li>
+              <li>Run <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">npm install && npm run build</code></li>
+              <li>Add the config below to your project's <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">.mcp.json</code></li>
+            </ol>
+          </div>
+
+          <pre className="bg-gray-900 rounded-lg p-4 text-gray-300 overflow-x-auto text-xs leading-relaxed">
+{`// .mcp.json (in your project root)
+{
+  "mcpServers": {
+    "bagile-api": {
+      "command": "node",
+      "args": ["path/to/bagile-mcp-server/dist/index.js"],
+      "env": {
+        "BAGILE_API_URL": "https://api.bagile.co.uk",
+        "BAGILE_API_KEY": "your-api-key-here"
+      }
+    }
+  }
+}`}
+          </pre>
+
+          <div>
+            <p className="font-medium text-gray-900 mb-2">Available MCP tools ({20}):</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1 text-xs text-gray-500">
+              <span>list_course_schedules — Filter courses by date, type, trainer</span>
+              <span>get_course_attendees — Attendees with billing details</span>
+              <span>get_course_monitoring — At-risk courses, decision deadlines</span>
+              <span>list_orders — Orders with status, date, email filters</span>
+              <span>get_order — Full order detail with line items</span>
+              <span>list_students — Search by name, email, organisation</span>
+              <span>get_student_enrolments — Student's course history</span>
+              <span>list_organisations — Company lookup</span>
+              <span>get_organisation_course_history — What they've booked</span>
+              <span>list_transfers / get_pending_transfers — Transfer management</span>
+              <span>get_revenue_summary — Monthly, YoY, by type, by country</span>
+              <span>get_partner_analytics — PTN tier tracking</span>
+              <span>cancel_course — Cancel with reason</span>
+              <span>health_check — API status</span>
+            </div>
+          </div>
+
+          <p className="text-xs text-gray-400">
+            Once configured, ask Claude: "Show me at-risk courses" or "What's our revenue this month?" —
+            it will use the MCP tools to query your live BAgile data.
+          </p>
+        </div>
       </div>
     </>
   );
