@@ -16,7 +16,8 @@ import { AlertBanner } from "@/components/ui/AlertBanner";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SkeletonCard, SkeletonRow } from "@/components/ui/Skeleton";
 import { Badge, statusBadge } from "@/components/ui/Badge";
-import { Download, Mail, Users, Calendar, User, Monitor, MapPin } from "lucide-react";
+import { AddAttendeesPanel } from "@/components/courses/AddAttendeesPanel";
+import { Download, Mail, Users, Calendar, User, UserPlus, Video, MapPin, FileText, ExternalLink, Send } from "lucide-react";
 import Link from "next/link";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.bagile.co.uk";
@@ -31,6 +32,7 @@ export default function CourseDetail() {
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [activeTab, setActiveTab] = useState("attendees");
+  const [showAddAttendees, setShowAddAttendees] = useState(false);
 
   useEffect(() => {
     if (!apiKey || !courseId) return;
@@ -103,8 +105,35 @@ export default function CourseDetail() {
     ...(inactive.length > 0 ? [{ id: "history", label: "Transferred / Refunded", count: inactive.length }] : []),
   ];
 
+  // Build mailto with joining details
+  function sendJoiningDetails() {
+    const emails = active.map((a) => a.email).join(",");
+    const courseName = course?.title || "";
+    const dateStr = course?.startDate ? formatDate(course.startDate) : "";
+    let body = `Hi,\n\nHere are the joining details for ${courseName} on ${dateStr}:\n\n`;
+    if (isVirtual && course?.meetingUrl) {
+      body += `Meeting Link: ${course.meetingUrl}\n`;
+      if (course.meetingId) body += `Meeting ID: ${course.meetingId}\n`;
+      if (course.meetingPasscode) body += `Passcode: ${course.meetingPasscode}\n`;
+    }
+    if (!isVirtual && course?.venueAddress) {
+      body += `Venue: ${course.venueAddress}\n`;
+    }
+    body += `\nPlease let me know if you have any questions.\n\nBest regards`;
+    window.open(`mailto:${emails}?subject=${encodeURIComponent(`Joining Details: ${courseName}`)}&body=${encodeURIComponent(body)}`);
+  }
+
   return (
     <>
+      {/* Add attendees panel */}
+      <AddAttendeesPanel
+        open={showAddAttendees}
+        onClose={() => setShowAddAttendees(false)}
+        apiKey={apiKey}
+        courseId={courseId}
+        onAdded={loadData}
+      />
+
       <div className="mb-2">
         <Link href="/courses" className="text-sm text-brand-600 hover:text-brand-700">&larr; Courses</Link>
       </div>
@@ -113,11 +142,21 @@ export default function CourseDetail() {
         title={course?.title || `Course ${courseId}`}
         subtitle={course?.courseCode}
         actions={
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            {isPrivate && (
+              <Button size="sm" onClick={() => setShowAddAttendees(true)}>
+                <UserPlus className="w-3.5 h-3.5" /> Add Attendees
+              </Button>
+            )}
             {active.length > 0 && (
               <>
                 <Button variant="secondary" size="sm" onClick={downloadCsv}><Download className="w-3.5 h-3.5" /> Export CSV</Button>
                 <Button variant="secondary" size="sm" onClick={emailAll}><Mail className="w-3.5 h-3.5" /> Email All</Button>
+                {(course?.meetingUrl || course?.venueAddress) && (
+                  <Button variant="secondary" size="sm" onClick={sendJoiningDetails}>
+                    <Send className="w-3.5 h-3.5" /> Send Joining Details
+                  </Button>
+                )}
               </>
             )}
           </div>
@@ -164,7 +203,46 @@ export default function CourseDetail() {
                   Capacity: {course.capacity}
                 </span>
               )}
+              {course.invoiceReference && (
+                <span className="flex items-center gap-1.5 text-gray-600">
+                  <FileText className="w-3.5 h-3.5 text-gray-400" />
+                  Invoice: {course.invoiceReference}
+                </span>
+              )}
             </div>
+
+            {/* Meeting details (virtual) */}
+            {isVirtual && course.meetingUrl && (
+              <div className="mt-3 pt-3 border-t border-gray-100 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+                <span className="flex items-center gap-1.5 text-gray-600">
+                  <Video className="w-3.5 h-3.5 text-blue-500" />
+                  <a href={course.meetingUrl} target="_blank" rel="noopener" className="text-brand-600 hover:underline">
+                    Join Meeting <ExternalLink className="w-3 h-3 inline" />
+                  </a>
+                </span>
+                {course.meetingId && (
+                  <span className="text-gray-500">ID: <span className="font-mono">{course.meetingId}</span></span>
+                )}
+                {course.meetingPasscode && (
+                  <span className="text-gray-500">Passcode: <span className="font-mono">{course.meetingPasscode}</span></span>
+                )}
+              </div>
+            )}
+
+            {/* Venue details (in-person) */}
+            {!isVirtual && course.venueAddress && (
+              <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-1.5 text-sm text-gray-600">
+                <MapPin className="w-3.5 h-3.5 text-amber-500" />
+                {course.venueAddress}
+              </div>
+            )}
+
+            {/* Notes */}
+            {course.notes && (
+              <div className="mt-3 pt-3 border-t border-gray-100 text-sm text-gray-500">
+                {course.notes}
+              </div>
+            )}
           </div>
 
           {/* KPI cards */}

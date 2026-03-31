@@ -8,7 +8,9 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SkeletonRow } from "@/components/ui/Skeleton";
 import { Badge, statusBadge } from "@/components/ui/Badge";
-import { GraduationCap } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { CreatePrivateCoursePanel } from "@/components/courses/CreatePrivateCoursePanel";
+import { GraduationCap, Plus } from "lucide-react";
 
 export default function CoursesPage() {
   return <Suspense><CoursesContent /></Suspense>;
@@ -30,6 +32,7 @@ function CoursesContent() {
     urlType ? "year" : "upcoming"
   );
   const [year, setYear] = useState(urlYear ? Number(urlYear) : currentYear);
+  const [showCreate, setShowCreate] = useState(false);
 
   const loadCourses = useCallback(async () => {
     if (!apiKey) return;
@@ -87,11 +90,23 @@ function CoursesContent() {
 
   return (
     <>
+      <CreatePrivateCoursePanel
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        apiKey={apiKey}
+        onCreated={loadCourses}
+      />
+
       <PageHeader
         title="Courses"
         subtitle={typeFilter !== "all"
           ? `${typeFilter} — ${courses.length} courses, ${totalAttendees} total attendees`
           : `${courses.length} courses`}
+        actions={
+          <Button size="sm" onClick={() => setShowCreate(true)}>
+            <Plus className="w-3.5 h-3.5" /> Create Private Course
+          </Button>
+        }
       />
 
       {/* Filters */}

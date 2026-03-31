@@ -27,6 +27,11 @@ public class CourseSchedule
     public long? ClientOrganisationId { get; set; }
     public string? Notes { get; set; }
     public string? CreatedBy { get; set; }
+    public string? InvoiceReference { get; set; }
+    public string? MeetingUrl { get; set; }
+    public string? MeetingId { get; set; }
+    public string? MeetingPasscode { get; set; }
+    public string? VenueAddress { get; set; }
 
     // optional helper for tests
     public CourseSchedule() { }

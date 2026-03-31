@@ -149,12 +149,14 @@ public class CourseScheduleRepository : ICourseScheduleRepository
                 (name, status, start_date, end_date, capacity, price, sku,
                  trainer_name, format_type, is_public,
                  source_system, client_organisation_id, notes, created_by,
-                 last_synced)
+                 invoice_reference, meeting_url, meeting_id, meeting_passcode,
+                 venue_address, last_synced)
             VALUES
                 (@Name, @Status, @StartDate, @EndDate, @Capacity, @Price, @Sku,
                  @TrainerName, @FormatType, @IsPublic,
                  @SourceSystem, @ClientOrganisationId, @Notes, @CreatedBy,
-                 now())
+                 @InvoiceReference, @MeetingUrl, @MeetingId, @MeetingPasscode,
+                 @VenueAddress, now())
             RETURNING id;";
 
         await using var conn = new NpgsqlConnection(_connStr);

@@ -388,6 +388,65 @@ export interface CourseScheduleDetail extends CourseScheduleItem {
   sku: string | null;
   sourceSystem: string | null;
   lastSynced: string | null;
+  invoiceReference: string | null;
+  meetingUrl: string | null;
+  meetingId: string | null;
+  meetingPasscode: string | null;
+  venueAddress: string | null;
+  notes: string | null;
+}
+
+// ── Private Course Management ────────────────────────────
+
+export interface CreatePrivateCourseRequest {
+  name: string;
+  courseCode: string;
+  startDate: string;
+  endDate: string;
+  formatType: string;
+  trainerName?: string;
+  capacity?: number;
+  price?: number;
+  clientOrganisationId?: number;
+  notes?: string;
+  invoiceReference?: string;
+  meetingUrl?: string;
+  meetingId?: string;
+  meetingPasscode?: string;
+  venueAddress?: string;
+}
+
+export interface AttendeeInput {
+  firstName: string;
+  lastName: string;
+  email: string;
+  company?: string;
+  country?: string;
+}
+
+export interface AddAttendeesResult {
+  totalSubmitted: number;
+  created: number;
+  alreadyEnrolled: number;
+  errors: string[];
+}
+
+export async function createPrivateCourse(apiKey: string, data: CreatePrivateCourseRequest): Promise<CourseScheduleDetail> {
+  return apiRequest("/api/course-schedules/private", apiKey, { method: "POST", body: data });
+}
+
+export async function addPrivateAttendees(apiKey: string, courseId: number, attendees: AttendeeInput[]): Promise<AddAttendeesResult> {
+  return apiRequest(`/api/course-schedules/${courseId}/attendees`, apiKey, {
+    method: "POST",
+    body: { attendees },
+  });
+}
+
+export async function parseAttendees(apiKey: string, rawText: string): Promise<AttendeeInput[]> {
+  return apiRequest("/api/course-schedules/parse-attendees", apiKey, {
+    method: "POST",
+    body: { rawText },
+  });
 }
 
 export async function getCourseScheduleDetail(apiKey: string, id: number): Promise<CourseScheduleDetail> {

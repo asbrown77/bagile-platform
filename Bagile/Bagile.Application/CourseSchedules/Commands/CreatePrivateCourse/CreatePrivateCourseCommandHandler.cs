@@ -47,7 +47,12 @@ public class CreatePrivateCourseCommandHandler
             SourceSystem = "portal",
             ClientOrganisationId = request.ClientOrganisationId,
             Notes = request.Notes,
-            CreatedBy = "portal"
+            CreatedBy = "portal",
+            InvoiceReference = request.InvoiceReference,
+            MeetingUrl = request.MeetingUrl,
+            MeetingId = request.MeetingId,
+            MeetingPasscode = request.MeetingPasscode,
+            VenueAddress = request.VenueAddress
         };
 
         var id = await _courseRepo.InsertPrivateCourseAsync(schedule);

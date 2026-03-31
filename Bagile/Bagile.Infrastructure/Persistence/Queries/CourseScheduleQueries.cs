@@ -128,20 +128,28 @@ public class CourseScheduleQueries : ICourseScheduleQueries
                 cs.source_system AS SourceSystem,
                 cs.source_product_id AS SourceProductId,
                 cs.last_synced AS LastSynced,
+                cs.invoice_reference AS InvoiceReference,
+                cs.meeting_url AS MeetingUrl,
+                cs.meeting_id AS MeetingId,
+                cs.meeting_passcode AS MeetingPasscode,
+                cs.venue_address AS VenueAddress,
+                cs.notes AS Notes,
                 COUNT(e.id) AS CurrentEnrolmentCount,
                 CASE WHEN COUNT(e.id) >= 3 THEN true ELSE false END AS GuaranteedToRun,
-                CASE 
-                    WHEN cs.start_date <= CURRENT_DATE + INTERVAL '7 days' 
-                         AND COUNT(e.id) < 3 
-                    THEN true 
-                    ELSE false 
+                CASE
+                    WHEN cs.start_date <= CURRENT_DATE + INTERVAL '7 days'
+                         AND COUNT(e.id) < 3
+                    THEN true
+                    ELSE false
                 END AS NeedsAttention
             FROM bagile.course_schedules cs
             LEFT JOIN bagile.enrolments e ON e.course_schedule_id = cs.id AND e.status NOT IN ('cancelled', 'transferred')
             WHERE cs.id = @scheduleId
-            GROUP BY cs.id, cs.sku, cs.name, cs.start_date, cs.end_date, cs.format_type, 
-                     cs.is_public, cs.status, cs.capacity, cs.price, cs.trainer_name, 
-                     cs.source_system, cs.source_product_id, cs.last_synced;";
+            GROUP BY cs.id, cs.sku, cs.name, cs.start_date, cs.end_date, cs.format_type,
+                     cs.is_public, cs.status, cs.capacity, cs.price, cs.trainer_name,
+                     cs.source_system, cs.source_product_id, cs.last_synced,
+                     cs.invoice_reference, cs.meeting_url, cs.meeting_id,
+                     cs.meeting_passcode, cs.venue_address, cs.notes;";
 
         await using var conn = new NpgsqlConnection(_connectionString);
         return await conn.QueryFirstOrDefaultAsync<CourseScheduleDetailDto>(sql, new { scheduleId });

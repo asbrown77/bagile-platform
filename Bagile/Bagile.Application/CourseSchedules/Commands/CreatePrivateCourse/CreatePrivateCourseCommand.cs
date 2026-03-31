@@ -15,4 +15,9 @@ public record CreatePrivateCourseCommand : IRequest<CourseScheduleDetailDto>
     public decimal? Price { get; init; }
     public long? ClientOrganisationId { get; init; }
     public string? Notes { get; init; }
+    public string? InvoiceReference { get; init; }
+    public string? MeetingUrl { get; init; }
+    public string? MeetingId { get; init; }
+    public string? MeetingPasscode { get; init; }
+    public string? VenueAddress { get; init; }
 }
