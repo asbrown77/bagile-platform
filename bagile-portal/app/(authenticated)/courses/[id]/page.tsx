@@ -143,11 +143,9 @@ export default function CourseDetail() {
         subtitle={course?.courseCode}
         actions={
           <div className="flex gap-2 flex-wrap">
-            {isPrivate && (
-              <Button size="sm" onClick={() => setShowAddAttendees(true)}>
-                <UserPlus className="w-3.5 h-3.5" /> Add Attendees
-              </Button>
-            )}
+            <Button size="sm" onClick={() => setShowAddAttendees(true)}>
+              <UserPlus className="w-3.5 h-3.5" /> Add Attendees
+            </Button>
             {active.length > 0 && (
               <>
                 <Button variant="secondary" size="sm" onClick={downloadCsv}><Download className="w-3.5 h-3.5" /> Export CSV</Button>
