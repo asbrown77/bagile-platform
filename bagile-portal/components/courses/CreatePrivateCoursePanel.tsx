@@ -138,18 +138,20 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
   }
 
   const isVirtual = form.formatType === "virtual";
-  const tabs = [
-    { id: "form", label: "Form" },
-    { id: "json", label: "JSON Import" },
-  ];
 
   return (
     <SlideOver open={open} onClose={onClose} title="Create Private Course" subtitle="Add a new private/corporate course" wide>
       {error && <div className="mb-4"><AlertBanner variant="danger">{error}</AlertBanner></div>}
 
-      <TabBar tabs={tabs} activeTab={mode} onChange={setMode} />
-
-      {/* ── JSON Import Mode ────────────────────────────── */}
+      {/* ── JSON Import Mode (advanced) ────────────────── */}
+      {mode !== "json" && (
+        <div className="mb-4">
+          <button onClick={() => setMode("json")}
+            className="text-xs text-gray-400 hover:text-brand-600 underline">
+            Advanced: Import from JSON
+          </button>
+        </div>
+      )}
       {mode === "json" && (
         <div className="space-y-4">
           {/* Template */}
@@ -212,6 +214,9 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
               </div>
             </div>
           )}
+          <button onClick={() => setMode("form")} className="text-xs text-gray-400 hover:text-brand-600 underline mt-4">
+            Back to form
+          </button>
         </div>
       )}
 

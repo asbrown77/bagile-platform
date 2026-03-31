@@ -10,7 +10,7 @@ import { SkeletonRow } from "@/components/ui/Skeleton";
 import { Badge, statusBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { CreatePrivateCoursePanel } from "@/components/courses/CreatePrivateCoursePanel";
-import { GraduationCap, Plus } from "lucide-react";
+import { GraduationCap, Plus, Search } from "lucide-react";
 
 export default function CoursesPage() {
   return <Suspense><CoursesContent /></Suspense>;
@@ -22,18 +22,25 @@ function CoursesContent() {
 
   const urlType = searchParams.get("type") || "";
   const urlYear = searchParams.get("year") || "";
-
   const currentYear = new Date().getFullYear();
 
   const [courses, setCourses] = useState<CourseScheduleItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState(urlType || "all");
-  const [dateRange, setDateRange] = useState<"upcoming" | "year" | "all">(
-    urlType ? "year" : "upcoming"
+  const [dateRange, setDateRange] = useState(
+    urlType ? String(urlYear || currentYear) : "upcoming"
   );
-  const [year, setYear] = useState(urlYear ? Number(urlYear) : currentYear);
   const [showCreate, setShowCreate] = useState(false);
   const [visibilityFilter, setVisibilityFilter] = useState("all");
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [sortAsc, setSortAsc] = useState(true); // earliest first by default
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => setSearch(searchInput), 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   const loadCourses = useCallback(async () => {
     if (!apiKey) return;
@@ -45,9 +52,10 @@ function CoursesContent() {
     if (dateRange === "upcoming") {
       const d = new Date(); d.setDate(d.getDate() - 2);
       from = d.toISOString().split("T")[0];
-    } else if (dateRange === "year") {
-      from = `${year}-01-01`;
-      to = `${year}-12-31`;
+    } else if (dateRange !== "all") {
+      // It's a year number
+      from = `${dateRange}-01-01`;
+      to = `${dateRange}-12-31`;
     }
 
     const courseCode = typeFilter !== "all" ? typeFilter : undefined;
@@ -65,7 +73,7 @@ function CoursesContent() {
     } finally {
       setLoading(false);
     }
-  }, [apiKey, dateRange, year, typeFilter, visibilityFilter]);
+  }, [apiKey, dateRange, typeFilter, visibilityFilter]);
 
   useEffect(() => { loadCourses(); }, [loadCourses]);
 
@@ -87,8 +95,24 @@ function CoursesContent() {
   const isVirtual = (c: CourseScheduleItem) =>
     c.formatType?.toLowerCase().includes("virtual") || c.location?.toLowerCase().includes("virtual");
 
-  const totalAttendees = courses.reduce((s, c) => s + c.currentEnrolmentCount, 0);
-  const completedCount = courses.filter((c) => getDisplayStatus(c) === "completed").length;
+  // Filter by search + sort by date
+  const filtered = courses
+    .filter((c) => !search || c.title.toLowerCase().includes(search.toLowerCase()) || c.courseCode.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => {
+      const da = new Date(a.startDate || "").getTime();
+      const db = new Date(b.startDate || "").getTime();
+      return sortAsc ? da - db : db - da;
+    });
+
+  const totalAttendees = filtered.reduce((s, c) => s + c.currentEnrolmentCount, 0);
+
+  // Segmented date range options
+  const dateOptions = [
+    { value: "upcoming", label: "Upcoming" },
+    { value: String(currentYear), label: String(currentYear) },
+    { value: String(currentYear - 1), label: String(currentYear - 1) },
+    { value: "all", label: "All" },
+  ];
 
   return (
     <>
@@ -100,51 +124,76 @@ function CoursesContent() {
       />
 
       <PageHeader
-        title="Courses"
-        subtitle={typeFilter !== "all"
-          ? `${typeFilter} — ${courses.length} courses, ${totalAttendees} total attendees`
-          : `${courses.length} courses`}
+        title={`Courses${!loading ? ` (${filtered.length})` : ""}`}
+        subtitle={typeFilter !== "all" ? `${typeFilter} — ${totalAttendees} attendees` : undefined}
         actions={
-          <Button size="sm" onClick={() => setShowCreate(true)}>
-            <Plus className="w-3.5 h-3.5" /> Create Private Course
+          <Button onClick={() => setShowCreate(true)}>
+            <Plus className="w-4 h-4" /> Create Private Course
           </Button>
         }
       />
 
-      {/* Filters */}
+      {/* Search + filters */}
       <div className="flex gap-3 mb-4 items-center flex-wrap">
-        <select value={dateRange} onChange={(e) => setDateRange(e.target.value as "upcoming" | "year" | "all")}
-          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white">
-          <option value="upcoming">Upcoming</option>
-          <option value="year">Full Year</option>
-          <option value="all">All Time</option>
-        </select>
+        {/* Search */}
+        <div className="relative flex-1 min-w-[200px] max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search courses..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="w-full pl-10 pr-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+          />
+        </div>
 
-        {dateRange === "year" && (
-          <select value={year} onChange={(e) => setYear(Number(e.target.value))}
+        {/* Date range — segmented */}
+        <div className="inline-flex rounded-lg border border-gray-300 overflow-hidden">
+          {dateOptions.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setDateRange(opt.value)}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                dateRange === opt.value
+                  ? "bg-brand-600 text-white"
+                  : "bg-white text-gray-600 hover:bg-gray-50"
+              } ${opt.value !== dateOptions[0].value ? "border-l border-gray-300" : ""}`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Visibility toggle */}
+        <div className="inline-flex rounded-lg border border-gray-300 overflow-hidden">
+          {[
+            { value: "all", label: "All" },
+            { value: "public", label: "Public" },
+            { value: "private", label: "Private" },
+          ].map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setVisibilityFilter(opt.value)}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                visibilityFilter === opt.value
+                  ? "bg-brand-600 text-white"
+                  : "bg-white text-gray-600 hover:bg-gray-50"
+              } ${opt.value !== "all" ? "border-l border-gray-300" : ""}`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Course type */}
+        {courseTypes.length > 1 && (
+          <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}
             className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white">
-            {[2026, 2025, 2024].map((y) => <option key={y} value={y}>{y}</option>)}
+            <option value="all">All types</option>
+            {urlType && !courseTypes.includes(urlType) && <option value={urlType}>{urlType}</option>}
+            {courseTypes.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
         )}
-
-        <select value={visibilityFilter} onChange={(e) => setVisibilityFilter(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white">
-          <option value="all">Public & Private</option>
-          <option value="public">Public only</option>
-          <option value="private">Private only</option>
-        </select>
-
-        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white">
-          <option value="all">All types</option>
-          {urlType && !courseTypes.includes(urlType) && <option value={urlType}>{urlType}</option>}
-          {courseTypes.map((t) => <option key={t} value={t}>{t}</option>)}
-        </select>
-
-        <span className="text-xs text-gray-400">
-          {courses.length} course{courses.length !== 1 ? "s" : ""}
-          {completedCount > 0 && ` (${completedCount} completed)`}
-        </span>
       </div>
 
       {/* Table */}
@@ -153,35 +202,46 @@ function CoursesContent() {
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
               <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Course</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Date</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">
+                <button onClick={() => setSortAsc(!sortAsc)} className="flex items-center gap-1 hover:text-gray-700">
+                  Date {sortAsc ? "↑" : "↓"}
+                </button>
+              </th>
               <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide hidden md:table-cell">Trainer</th>
               <th className="text-center px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Enrolled</th>
               <th className="text-center px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Status</th>
-              <th className="text-center px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide hidden lg:table-cell">Format</th>
             </tr>
           </thead>
           <tbody>
-            {loading && Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} cols={6} />)}
-            {!loading && courses.map((c) => {
+            {loading && Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} cols={5} />)}
+            {!loading && filtered.map((c) => {
               const status = getDisplayStatus(c);
               const daysAway = c.startDate
                 ? Math.round((new Date(c.startDate).getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
                 : 0;
+              const daysLabel = daysAway > 0 ? `${daysAway}d away` : daysAway === 0 ? "today" : `${Math.abs(daysAway)}d ago`;
               return (
                 <tr key={c.id}
                   className={`border-t border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors
-                    ${status === "at risk" ? "bg-red-50/40" : ""}
-                    ${status === "completed" ? "opacity-70" : ""}`}
+                    ${status === "at risk" ? "bg-red-50/50" : ""}
+                    ${status === "completed" ? "opacity-60" : ""}`}
                   onClick={() => window.location.href = `/courses/${c.id}`}>
                   <td className="px-4 py-3">
-                    <p className="font-medium text-gray-900">{c.title}</p>
-                    <p className="text-xs text-gray-400 font-mono">{c.courseCode}</p>
+                    <div className="flex items-center gap-2">
+                      <div>
+                        <p className="font-medium text-gray-900">{c.title}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-xs text-gray-400 font-mono">{c.courseCode}</span>
+                          <Badge variant={isVirtual(c) ? "info" : "neutral"}>
+                            {isVirtual(c) ? "Virtual" : "In-person"}
+                          </Badge>
+                          {c.type === "private" && <Badge variant="warning">Private</Badge>}
+                        </div>
+                      </div>
+                    </div>
                   </td>
-                  <td className="px-4 py-3 text-gray-600">
-                    {formatDate(c.startDate)}
-                    <p className="text-xs text-gray-400">
-                      {daysAway > 0 ? `${daysAway}d away` : daysAway === 0 ? "Today" : `${Math.abs(daysAway)}d ago`}
-                    </p>
+                  <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                    {formatDate(c.startDate)} <span className="text-xs text-gray-400">({daysLabel})</span>
                   </td>
                   <td className="px-4 py-3 text-gray-600 hidden md:table-cell">{c.trainerName || "—"}</td>
                   <td className="px-4 py-3 text-center">
@@ -192,30 +252,19 @@ function CoursesContent() {
                     }`}>
                       {c.currentEnrolmentCount}
                     </span>
+                    {c.capacity && <span className="text-xs text-gray-400">/{c.capacity}</span>}
                   </td>
                   <td className="px-4 py-3 text-center">{statusBadge(status)}</td>
-                  <td className="px-4 py-3 text-center hidden lg:table-cell">
-                    <div className="flex flex-col items-center gap-1">
-                      <Badge variant={isVirtual(c) ? "info" : "neutral"} dot>
-                        {isVirtual(c) ? "Virtual" : "In-person"}
-                      </Badge>
-                      {c.type && (
-                        <Badge variant={c.type === "public" ? "success" : "warning"} dot>
-                          {c.type === "public" ? "Public" : "Private"}
-                        </Badge>
-                      )}
-                    </div>
-                  </td>
                 </tr>
               );
             })}
-            {!loading && courses.length === 0 && (
-              <tr><td colSpan={6}>
+            {!loading && filtered.length === 0 && (
+              <tr><td colSpan={5}>
                 <EmptyState
                   icon={<GraduationCap className="w-10 h-10" />}
                   title="No courses"
-                  description={typeFilter !== "all"
-                    ? `No ${typeFilter} courses found for this period`
+                  description={search ? `No courses matching "${search}"` : typeFilter !== "all"
+                    ? `No ${typeFilter} courses found`
                     : "No courses match your filters"}
                 />
               </td></tr>
@@ -223,10 +272,9 @@ function CoursesContent() {
           </tbody>
         </table>
 
-        {!loading && courses.length > 0 && (
-          <div className="px-4 py-2.5 bg-gray-50 border-t border-gray-200 flex items-center justify-between text-xs text-gray-500">
-            <span>{courses.length} course{courses.length !== 1 ? "s" : ""}</span>
-            <span>{totalAttendees} total attendees</span>
+        {!loading && filtered.length > 0 && (
+          <div className="px-4 py-2 bg-gray-50 border-t border-gray-200 text-xs text-gray-500">
+            {filtered.length} course{filtered.length !== 1 ? "s" : ""} · {totalAttendees} attendees
           </div>
         )}
       </div>

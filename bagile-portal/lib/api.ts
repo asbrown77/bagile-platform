@@ -351,6 +351,7 @@ export interface CourseScheduleItem {
   formatType: string | null;
   type: string | null;
   status: string | null;
+  capacity: number | null;
   currentEnrolmentCount: number;
   guaranteedToRun: boolean;
   needsAttention: boolean;
