@@ -75,8 +75,10 @@ export default function Dashboard() {
   const studentsThisYear = revenue?.monthlyBreakdown
     .reduce((sum, m) => sum + m.attendeeCount, 0) ?? 0;
 
-  const yoyChange = revenue && revenue.previousYearRevenue > 0
-    ? Math.round(((revenue.currentYearRevenue - revenue.previousYearRevenue) / revenue.previousYearRevenue) * 100)
+  // Fair YTD comparison: same months only
+  const previousYtd = revenue?.previousYearYtdRevenue ?? 0;
+  const yoyChange = revenue && previousYtd > 0
+    ? Math.round(((revenue.currentYearRevenue - previousYtd) / previousYtd) * 100)
     : null;
 
   const greeting = new Date().getHours() < 12 ? "Good morning" : new Date().getHours() < 18 ? "Good afternoon" : "Good evening";

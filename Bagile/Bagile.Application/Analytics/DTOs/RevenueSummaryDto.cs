@@ -11,6 +11,8 @@ public record RevenueSummaryDto
     public IEnumerable<CourseTypeRevenueDto> ByCourseType { get; init; } = [];
     public IEnumerable<MonthlyRevenueDto> PreviousYearMonthly { get; init; } = [];
     public IEnumerable<SourceRevenueDto> BySource { get; init; } = [];
+    public IEnumerable<CountryRevenueDto> ByCountry { get; init; } = [];
+    public decimal PreviousYearYtdRevenue { get; init; }
 }
 
 public record MonthlyRevenueDto
@@ -26,6 +28,15 @@ public record MonthlyRevenueDto
 public record SourceRevenueDto
 {
     public string Source { get; init; } = "";
+    public decimal Revenue { get; init; }
+    public int OrderCount { get; init; }
+    public int AttendeeCount { get; init; }
+}
+
+public record CountryRevenueDto
+{
+    public string Region { get; init; } = "";
+    public string Country { get; init; } = "";
     public decimal Revenue { get; init; }
     public int OrderCount { get; init; }
     public int AttendeeCount { get; init; }

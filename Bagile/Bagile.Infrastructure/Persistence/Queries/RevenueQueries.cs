@@ -122,4 +122,36 @@ public class RevenueQueries : IRevenueQueries
         await using var conn = new NpgsqlConnection(_connectionString);
         return await conn.QueryAsync<SourceRevenueDto>(sql, new { year });
     }
+
+    public async Task<IEnumerable<CountryRevenueDto>> GetRevenueByCountryAsync(
+        int year, CancellationToken ct = default)
+    {
+        var sql = @"
+            SELECT
+                COALESCE(s.country, 'Unknown') AS Country,
+                CASE
+                    WHEN UPPER(COALESCE(s.country, '')) = 'GB' THEN 'UK'
+                    WHEN UPPER(COALESCE(s.country, '')) IN (
+                        'AT','BE','BG','HR','CY','CZ','DK','EE','FI','FR','DE',
+                        'GR','HU','IE','IT','LV','LT','LU','MT','NL','PL','PT',
+                        'RO','SK','SI','ES','SE','NO','CH','IS'
+                    ) THEN 'Europe'
+                    WHEN COALESCE(s.country, '') = '' THEN 'Unknown'
+                    ELSE 'Rest of World'
+                END AS Region,
+                COALESCE(SUM(o.net_total), 0) AS Revenue,
+                COUNT(DISTINCT o.id) AS OrderCount,
+                COUNT(e.id) AS AttendeeCount
+            FROM bagile.enrolments e
+            JOIN bagile.orders o ON e.order_id = o.id
+            JOIN bagile.students s ON e.student_id = s.id
+            WHERE EXTRACT(YEAR FROM o.order_date) = @year
+              AND o.status NOT IN ('cancelled', 'refunded', 'failed')
+              AND e.status != 'cancelled'
+            GROUP BY Country, Region
+            ORDER BY Revenue DESC;";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        return await conn.QueryAsync<CountryRevenueDto>(sql, new { year });
+    }
 }

@@ -25,11 +25,20 @@ public class GetRevenueSummaryQueryHandler
         var previousYearMonthly = (await _queries.GetMonthlyRevenueAsync(previousYear, ct)).ToList();
         var byCourseType = await _queries.GetRevenueByCourseTypeAsync(year, ct);
         var bySource = await _queries.GetRevenueBySourceAsync(year, ct);
+        var byCountry = await _queries.GetRevenueByCountryAsync(year, ct);
 
         int currentMonth = DateTime.UtcNow.Month;
 
         var currentMonthData = currentYearMonthly
             .FirstOrDefault(m => m.Month == currentMonth);
+
+        // Fair YTD comparison: only compare months that have elapsed
+        var maxMonth = currentYearMonthly.Any()
+            ? currentYearMonthly.Max(m => m.Month)
+            : currentMonth;
+        var previousYearYtd = previousYearMonthly
+            .Where(m => m.Month <= maxMonth)
+            .Sum(m => m.Revenue);
 
         return new RevenueSummaryDto
         {
@@ -38,10 +47,12 @@ public class GetRevenueSummaryQueryHandler
             CurrentYearRevenue = currentYearMonthly.Sum(m => m.Revenue),
             CurrentYearOrders = currentYearMonthly.Sum(m => m.OrderCount),
             PreviousYearRevenue = previousYearMonthly.Sum(m => m.Revenue),
+            PreviousYearYtdRevenue = previousYearYtd,
             MonthlyBreakdown = currentYearMonthly,
             PreviousYearMonthly = previousYearMonthly,
             ByCourseType = byCourseType,
-            BySource = bySource
+            BySource = bySource,
+            ByCountry = byCountry
         };
     }
 }

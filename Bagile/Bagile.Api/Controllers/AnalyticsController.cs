@@ -70,9 +70,10 @@ public class AnalyticsController : ControllerBase
 
     [HttpGet("partners")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetPartnerAnalytics()
+    public async Task<IActionResult> GetPartnerAnalytics(
+        [FromQuery] int? year = null)
     {
-        var result = await _mediator.Send(new GetPartnerAnalyticsQuery());
+        var result = await _mediator.Send(new GetPartnerAnalyticsQuery(year));
         return Ok(result);
     }
 

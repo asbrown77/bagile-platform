@@ -15,4 +15,7 @@ public interface IRevenueQueries
 
     Task<IEnumerable<SourceRevenueDto>> GetRevenueBySourceAsync(
         int year, CancellationToken ct = default);
+
+    Task<IEnumerable<CountryRevenueDto>> GetRevenueByCountryAsync(
+        int year, CancellationToken ct = default);
 }

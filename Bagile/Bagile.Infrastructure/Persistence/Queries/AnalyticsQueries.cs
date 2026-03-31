@@ -68,9 +68,10 @@ public class AnalyticsQueries : IAnalyticsQueries
     }
 
     public async Task<IEnumerable<PartnerAnalyticsDto>> GetPartnerAnalyticsAsync(
-        CancellationToken ct = default)
+        int? year = null, CancellationToken ct = default)
     {
-        var yearStart = new DateTime(DateTime.UtcNow.Year, 1, 1);
+        var targetYear = year ?? DateTime.UtcNow.Year;
+        var yearStart = new DateTime(targetYear, 1, 1);
 
         var sql = @"
             SELECT

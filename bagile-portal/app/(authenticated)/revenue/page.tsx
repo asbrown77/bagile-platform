@@ -25,8 +25,10 @@ export default function RevenuePage() {
       .finally(() => setLoading(false));
   }, [apiKey, year]);
 
-  const yoyChange = data && data.previousYearRevenue > 0
-    ? Math.round(((data.currentYearRevenue - data.previousYearRevenue) / data.previousYearRevenue) * 100)
+  // Fair YTD comparison: compare same months only
+  const previousYtd = data?.previousYearYtdRevenue ?? 0;
+  const yoyChange = data && previousYtd > 0
+    ? Math.round(((data.currentYearRevenue - previousYtd) / previousYtd) * 100)
     : null;
 
   // Chart data: merge current + previous year monthly
@@ -68,7 +70,7 @@ export default function RevenuePage() {
             label={`Revenue ${year}`}
             value={formatCurrency(data.currentYearRevenue)}
             trend={yoyChange !== null ? { value: yoyChange, isPositive: yoyChange >= 0 } : undefined}
-            subtitle={`vs ${formatCurrency(data.previousYearRevenue)} in ${year - 1}`}
+            subtitle={`vs ${formatCurrency(previousYtd)} same period ${year - 1}`}
             icon={<TrendingUp className="w-4 h-4" />}
           />
           <Card
@@ -165,32 +167,64 @@ export default function RevenuePage() {
         </div>
       )}
 
-      {/* By Source */}
-      {!loading && data && data.bySource.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="px-5 py-3 border-b border-gray-200">
-            <h2 className="text-sm font-semibold text-gray-900">By Source</h2>
-          </div>
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Source</th>
-                <th className="text-right px-4 py-2 text-xs font-medium text-gray-500 uppercase">Revenue</th>
-                <th className="text-right px-4 py-2 text-xs font-medium text-gray-500 uppercase">Orders</th>
-                <th className="text-right px-4 py-2 text-xs font-medium text-gray-500 uppercase">Attendees</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.bySource.map((s) => (
-                <tr key={s.source} className="border-t border-gray-100">
-                  <td className="px-4 py-2.5 font-medium text-gray-900 capitalize">{s.source}</td>
-                  <td className="px-4 py-2.5 text-right text-gray-700">{formatCurrency(s.revenue)}</td>
-                  <td className="px-4 py-2.5 text-right text-gray-500">{s.orderCount}</td>
-                  <td className="px-4 py-2.5 text-right text-gray-500">{s.attendeeCount}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* By Source + By Country side by side */}
+      {!loading && data && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* By Source */}
+          {data.bySource.length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="px-5 py-3 border-b border-gray-200">
+                <h2 className="text-sm font-semibold text-gray-900">By Source</h2>
+              </div>
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Source</th>
+                    <th className="text-right px-4 py-2 text-xs font-medium text-gray-500 uppercase">Revenue</th>
+                    <th className="text-right px-4 py-2 text-xs font-medium text-gray-500 uppercase">Attendees</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.bySource.map((s) => (
+                    <tr key={s.source} className="border-t border-gray-100">
+                      <td className="px-4 py-2.5 font-medium text-gray-900 capitalize">{s.source}</td>
+                      <td className="px-4 py-2.5 text-right text-gray-700">{formatCurrency(s.revenue)}</td>
+                      <td className="px-4 py-2.5 text-right text-gray-500">{s.attendeeCount}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* By Country/Region */}
+          {data.byCountry && data.byCountry.length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="px-5 py-3 border-b border-gray-200">
+                <h2 className="text-sm font-semibold text-gray-900">By Region & Country</h2>
+              </div>
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Region</th>
+                    <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Country</th>
+                    <th className="text-right px-4 py-2 text-xs font-medium text-gray-500 uppercase">Revenue</th>
+                    <th className="text-right px-4 py-2 text-xs font-medium text-gray-500 uppercase">Students</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.byCountry.map((c) => (
+                    <tr key={c.country} className="border-t border-gray-100">
+                      <td className="px-4 py-2.5 text-gray-500">{c.region}</td>
+                      <td className="px-4 py-2.5 font-medium text-gray-900">{c.country}</td>
+                      <td className="px-4 py-2.5 text-right text-gray-700">{formatCurrency(c.revenue)}</td>
+                      <td className="px-4 py-2.5 text-right text-gray-500">{c.attendeeCount}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </>

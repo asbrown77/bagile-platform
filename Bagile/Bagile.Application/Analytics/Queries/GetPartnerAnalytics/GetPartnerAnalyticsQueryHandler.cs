@@ -18,7 +18,7 @@ public class GetPartnerAnalyticsQueryHandler
         GetPartnerAnalyticsQuery request,
         CancellationToken ct)
     {
-        var partners = (await _queries.GetPartnerAnalyticsAsync(ct)).ToList();
+        var partners = (await _queries.GetPartnerAnalyticsAsync(request.Year, ct)).ToList();
 
         return partners.Select(p => p with
         {

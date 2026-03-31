@@ -150,6 +150,8 @@ export interface RevenueSummary {
   byCourseType: CourseTypeRevenue[];
   previousYearMonthly: MonthlyRevenue[];
   bySource: SourceRevenue[];
+  byCountry: CountryRevenue[];
+  previousYearYtdRevenue: number;
 }
 
 export interface MonthlyRevenue {
@@ -170,6 +172,14 @@ export interface CourseTypeRevenue {
 
 export interface SourceRevenue {
   source: string;
+  revenue: number;
+  orderCount: number;
+  attendeeCount: number;
+}
+
+export interface CountryRevenue {
+  region: string;
+  country: string;
   revenue: number;
   orderCount: number;
   attendeeCount: number;
@@ -228,6 +238,8 @@ export async function getRevenueSummary(apiKey: string, year?: number): Promise<
       byCourseType: [],
       previousYearMonthly: [],
       bySource: [],
+      byCountry: [],
+      previousYearYtdRevenue: 0,
     };
   }
 
@@ -294,8 +306,9 @@ export interface PartnerAnalytics {
   tierMismatch: boolean;
 }
 
-export async function getPartnerAnalytics(apiKey: string): Promise<PartnerAnalytics[]> {
-  const raw: any[] = await apiRequest("/api/analytics/partners", apiKey);
+export async function getPartnerAnalytics(apiKey: string, year?: number): Promise<PartnerAnalytics[]> {
+  const qs = year ? `?year=${year}` : "";
+  const raw: any[] = await apiRequest(`/api/analytics/partners${qs}`, apiKey);
   return raw.map((p) => {
     const c = toCamel(p);
     // Compute tierMismatch client-side if not provided

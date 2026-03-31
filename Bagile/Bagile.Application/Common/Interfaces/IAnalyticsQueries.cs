@@ -8,7 +8,7 @@ public interface IAnalyticsQueries
         int year, string sortBy = "spend", CancellationToken ct = default);
 
     Task<IEnumerable<PartnerAnalyticsDto>> GetPartnerAnalyticsAsync(
-        CancellationToken ct = default);
+        int? year = null, CancellationToken ct = default);
 
     Task<IEnumerable<CourseDemandDto>> GetCourseDemandAsync(
         int lookbackMonths = 12, CancellationToken ct = default);
