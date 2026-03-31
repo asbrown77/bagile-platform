@@ -440,6 +440,56 @@ export async function getOrganisations(apiKey: string, params?: { name?: string;
   return apiRequest(`/api/organisations?${qs}`, apiKey);
 }
 
+// ── Students ─────────────────────────────────────────────
+
+export interface StudentListItem {
+  id: number;
+  email: string;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  company: string | null;
+  createdAt: string;
+}
+
+export interface StudentDetail extends StudentListItem {
+  totalEnrolments: number;
+  lastCourseDate: string | null;
+  updatedAt: string;
+}
+
+export interface StudentEnrolment {
+  enrolmentId: number;
+  courseScheduleId: number;
+  courseCode: string;
+  courseTitle: string;
+  courseStartDate: string | null;
+  status: string;
+  type: string | null;
+  enrolledAt: string;
+}
+
+export async function getStudents(
+  apiKey: string,
+  params?: { name?: string; email?: string; organisation?: string; page?: number; pageSize?: number }
+): Promise<PagedResult<StudentListItem>> {
+  const qs = new URLSearchParams();
+  if (params?.name) qs.set("name", params.name);
+  if (params?.email) qs.set("email", params.email);
+  if (params?.organisation) qs.set("organisation", params.organisation);
+  qs.set("page", String(params?.page || 1));
+  qs.set("pageSize", String(params?.pageSize || 25));
+  return apiRequest(`/api/students?${qs}`, apiKey);
+}
+
+export async function getStudentDetail(apiKey: string, id: number): Promise<StudentDetail> {
+  return apiRequest(`/api/students/${id}`, apiKey);
+}
+
+export async function getStudentEnrolments(apiKey: string, id: number): Promise<StudentEnrolment[]> {
+  return apiRequest(`/api/students/${id}/enrolments`, apiKey);
+}
+
 // ── Transfers ────────────────────────────────────────────
 
 export interface PendingTransfer {
