@@ -56,6 +56,69 @@ _"I can see revenue, partner value, course demand, and make scheduling decisions
 
 ---
 
+## Next Sprint: 15 — "Portal Polish & Course Risk Config"
+
+**Goal:** The portal looks professional (favicon, title) and course risk thresholds are configurable, not hardcoded.
+**We'll know it worked when:** Browser tab shows BAgile favicon + correct title. Courses at 0 days show "cancel" not "at risk". The 2-day at-risk threshold is a dashboard setting, not a magic number in code.
+
+| # | Item | Size | Status |
+|---|------|------|--------|
+| 1 | Favicon — copy BAgile logo to portal, add to layout | XS | READY |
+| 2 | Page title — confirm/fix "b-agile portal" in browser tab | XS | READY |
+| 3 | Course at-risk configurable threshold — 0 days = cancel, ≤ N days = at risk (N = config, default 2) | M | READY |
+
+### 1 — Favicon
+
+**What it is:** Copy the existing BAgile favicon from the WordPress site to `bagile-portal/public/` and wire it up in the Next.js layout so the browser tab shows the BAgile logo.
+
+**Files:**
+- `bagile-portal/public/favicon.png` (copy from WordPress uploads)
+- `bagile-portal/app/layout.tsx` — add `<link rel="icon">` or Next.js `icon` metadata
+
+**AC:**
+- [ ] Browser tab shows BAgile 3-circles logo
+- [ ] Works in Chrome, Firefox, Safari
+
+### 2 — Page title
+
+**What it is:** The metadata title in `layout.tsx` currently says "BAgile Portal". Confirm this is correct or change to user's preferred casing.
+
+**Files:**
+- `bagile-portal/app/layout.tsx` — `metadata.title`
+
+**AC:**
+- [ ] Browser tab shows correct product name
+
+### 3 — Course at-risk configurable threshold
+
+**What it is:** Replace the hardcoded 7-day / 3-enrolment "at risk" logic with configurable thresholds. Add a new status "cancel" for courses at 0 days until start with low enrolment. The at-risk day threshold (default: 2 days) should be configurable from the dashboard settings page.
+
+**Current hardcoded values (4 locations):**
+- `Bagile.Infrastructure/Persistence/Queries/CourseScheduleQueries.cs:45` — `INTERVAL '7 days'` + `< 3`
+- `Bagile.Infrastructure/Persistence/Queries/CourseScheduleQueries.cs:141` — same
+- `bagile-portal/app/(authenticated)/dashboard/page.tsx:72` — `daysUntilStart <= 7` + `< 3`
+- `bagile-portal/app/(authenticated)/layout.tsx:26` — `daysUntilStart <= 7` + `< 3`
+
+**New logic:**
+- `daysUntilStart === 0` AND low enrolment → "cancel" (should cancel, too late)
+- `daysUntilStart <= AT_RISK_DAYS` AND low enrolment → "at risk" (configurable, default 2)
+- `daysUntilStart > AT_RISK_DAYS` → normal ("monitor" / "guaranteed")
+
+**Files:**
+- `Bagile.Infrastructure/Persistence/Queries/CourseScheduleQueries.cs` — parameterise the interval
+- `bagile-portal/app/(authenticated)/dashboard/page.tsx` — read threshold from config
+- `bagile-portal/app/(authenticated)/layout.tsx` — same
+- `bagile-portal/app/(authenticated)/courses/page.tsx` — add "cancel" status handling
+- `bagile-portal/app/(authenticated)/courses/calendar/page.tsx` — same
+- `bagile-portal/components/ui/Badge.tsx` — add "cancel" badge variant
+- `bagile-portal/app/(authenticated)/settings/page.tsx` or new config store — threshold setting
+
+**3 Amigos:**
+- **Tester:** What if threshold is set to 0? → Everything is either "cancel" or normal, no "at risk" window
+- **Dev:** Where to store config? → localStorage for MVP, API-backed setting later
+- **Dev:** Backend SQL still uses 7 days — decouple? → Frontend overrides with its own threshold for now; backend SQL broadened to return enough data
+- **PO:** Should "cancel" be an action or just a label? → Just a label/badge for now, actual cancel action already exists on course detail
+
 ## Pull Backlog
 
 Items below are prioritised but not yet scheduled. Refine before pulling into a sprint.
