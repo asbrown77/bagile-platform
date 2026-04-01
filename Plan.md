@@ -123,6 +123,43 @@ _"I can see revenue, partner value, course demand, and make scheduling decisions
 
 Items below are prioritised but not yet scheduled. Refine before pulling into a sprint.
 
+### P1 — Editable Attendee Details (Override PTN/Partner Data)
+
+**Problem:** PTN partners (NobleProg, QA Ltd, etc.) place orders with their own staff email addresses instead of the actual attendee's email. The ETL syncs these wrong emails into the platform. Currently the only fix is to update WooCommerce order meta AND FooEvents tickets manually, then wait for ETL re-sync. There's no way to correct attendee data directly in the platform.
+
+**Solution:** Allow attendee details (email, first name, last name, company) to be overridden in the platform, with overrides surviving ETL re-syncs.
+
+| # | Item | Size |
+|---|------|------|
+| 1 | `PUT /api/students/{id}` endpoint — update email, name, company | S |
+| 2 | Override flag on student fields — ETL skips fields marked as manually overridden | M |
+| 3 | Portal UI: inline-editable attendee fields on course detail page | M |
+| 4 | MCP tool: `update_student` for Claude agent access | S |
+
+**Why override flag matters:** The ETL upserts students by email (email is the unique key). Without an override mechanism, the next ETL cycle would either overwrite the correction or create a duplicate student record with the old email.
+
+**Important context for refinement:**
+
+PTN partners (NobleProg, QA Ltd, etc.) often deliberately register with their own email addresses. This isn't always a mistake — they may want to:
+- Control ticket delivery and forward to delegates themselves with their own context
+- Manage the relationship with their end client (e.g. government departments like Ofgem, DVSA)
+- Bundle joining instructions with their own onboarding materials
+
+So this feature needs two distinct concepts:
+1. **Platform record override** — correct who actually attended (needed for Scrum.org class submissions, certification records, repeat customer tracking, and analytics). This should NOT trigger any FooEvents ticket resends.
+2. **FooEvents/WooCommerce stays as-is** — the partner's original email remains on the ticket/order. Ticket delivery stays under partner control.
+
+Today's real example: NobleProg order #12874/#12884 had 3 attendees registered with `claire.alcock@nobleprog.com` emails. The real attendees were at Ofgem/GPA. We needed the correct emails for Scrum.org submission but NobleProg controls the ticket delivery flow.
+
+The current workaround requires updating 3 systems (FooEvents tickets, WooCommerce order meta, waiting for ETL sync) which is error-prone and slow.
+
+**AC:**
+- [ ] Can update attendee email/name/company from course detail page
+- [ ] Changes persist through ETL sync cycles (override flag)
+- [ ] Updates are platform-only — no side effects on FooEvents tickets or WooCommerce orders
+- [ ] MCP tool available so Claude agent can update directly
+- [ ] Audit trail: who changed what, when
+
 ### P2 — Payment Visibility
 
 | ID | Item | Who Needs It | Status |

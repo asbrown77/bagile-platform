@@ -9,16 +9,18 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { ChevronLeft, ChevronRight, List } from "lucide-react";
 import Link from "next/link";
+import { getCourseDisplayStatus, type CourseDisplayStatus } from "@/lib/courseStatus";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"];
 
-type Status = "running" | "completed" | "at risk" | "guaranteed" | "monitor" | "cancelled";
+type Status = CourseDisplayStatus;
 
-const STATUS_COLORS: Record<Status, string> = {
+const STATUS_COLORS: Record<string, string> = {
   running: "bg-blue-500 text-white",
   completed: "bg-gray-300 text-gray-700",
+  cancel: "bg-red-700 text-white",
   "at risk": "bg-red-500 text-white",
   guaranteed: "bg-green-500 text-white",
   monitor: "bg-amber-400 text-amber-900",
@@ -66,13 +68,7 @@ export default function CalendarPage() {
   const today = new Date(); today.setHours(0, 0, 0, 0);
 
   function getStatus(c: CourseScheduleItem): Status {
-    if (c.status === "cancelled") return "cancelled";
-    const start = new Date(c.startDate || ""); start.setHours(0, 0, 0, 0);
-    const end = c.endDate ? new Date(c.endDate) : start; end.setHours(0, 0, 0, 0);
-    if (start <= today && today <= end) return "running";
-    if (today > end) return "completed";
-    if (c.needsAttention) return "at risk";
-    return c.guaranteedToRun ? "guaranteed" : "monitor";
+    return getCourseDisplayStatus(c);
   }
 
   // Build calendar grid

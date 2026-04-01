@@ -18,6 +18,7 @@ import {
   Users, Calendar, ChevronRight, CheckCircle
 } from "lucide-react";
 import Link from "next/link";
+import { getCourseDisplayStatus } from "@/lib/courseStatus";
 
 export default function Dashboard() {
   const apiKey = useApiKey();
@@ -64,14 +65,7 @@ export default function Dashboard() {
 
   // Derived data
   const today = new Date(); today.setHours(0, 0, 0, 0);
-  const getStatus = (c: MonitoringCourse) => {
-    const start = new Date(c.startDate); start.setHours(0, 0, 0, 0);
-    const end = c.endDate ? new Date(c.endDate) : start; end.setHours(0, 0, 0, 0);
-    if (start <= today && today <= end) return "running";
-    if (today > end) return "completed";
-    if (c.currentEnrolmentCount < 3 && c.daysUntilStart <= 7) return "at risk";
-    return c.currentEnrolmentCount >= 3 ? "guaranteed" : "monitor";
-  };
+  const getStatus = (c: MonitoringCourse) => getCourseDisplayStatus(c);
 
   const todaysCourses = courses.filter((c) => getStatus(c) === "running");
   const atRiskCourses = courses.filter((c) => getStatus(c) === "at risk");

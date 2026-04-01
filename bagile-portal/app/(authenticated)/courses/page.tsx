@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/Button";
 import { CreatePrivateCoursePanel } from "@/components/courses/CreatePrivateCoursePanel";
 import { GraduationCap, Plus, Search, Calendar } from "lucide-react";
 import Link from "next/link";
+import { getCourseDisplayStatus } from "@/lib/courseStatus";
 
 export default function CoursesPage() {
   return <Suspense><CoursesContent /></Suspense>;
@@ -83,15 +84,7 @@ function CoursesContent() {
   )].sort() as string[];
 
   const today = new Date(); today.setHours(0, 0, 0, 0);
-  const getDisplayStatus = (c: CourseScheduleItem) => {
-    if (c.status === "cancelled") return "cancelled";
-    const start = new Date(c.startDate || ""); start.setHours(0, 0, 0, 0);
-    const end = c.endDate ? new Date(c.endDate) : start; end.setHours(0, 0, 0, 0);
-    if (start <= today && today <= end) return "running";
-    if (today > end) return "completed";
-    if (c.needsAttention) return "at risk";
-    return c.guaranteedToRun ? "guaranteed" : "monitor";
-  };
+  const getDisplayStatus = (c: CourseScheduleItem) => getCourseDisplayStatus(c);
 
   const isVirtual = (c: CourseScheduleItem) =>
     c.formatType?.toLowerCase().includes("virtual") || c.location?.toLowerCase().includes("virtual");
@@ -229,7 +222,7 @@ function CoursesContent() {
             <div key={c.id}
               onClick={() => window.location.href = `/courses/${c.id}`}
               className={`bg-white rounded-xl border border-gray-200 shadow-sm p-4 cursor-pointer hover:bg-gray-50 transition-colors
-                ${status === "at risk" ? "border-red-200 bg-red-50/30" : ""}
+                ${status === "cancel" ? "border-red-300 bg-red-100/50" : status === "at risk" ? "border-red-200 bg-red-50/30" : ""}
                 ${status === "completed" ? "opacity-60" : ""}`}>
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
@@ -238,7 +231,7 @@ function CoursesContent() {
                 </div>
                 <div className="ml-3 text-right shrink-0">
                   <span className={`text-xl font-bold ${
-                    status === "at risk" ? "text-red-600" :
+                    status === "cancel" || status === "at risk" ? "text-red-600" :
                     status === "guaranteed" || status === "running" ? "text-green-600" : "text-gray-700"
                   }`}>{c.currentEnrolmentCount}</span>
                   {c.capacity && <span className="text-xs text-gray-400">/{c.capacity}</span>}
@@ -285,7 +278,7 @@ function CoursesContent() {
               return (
                 <tr key={c.id}
                   className={`border-t border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors
-                    ${status === "at risk" ? "bg-red-50/50" : ""}
+                    ${status === "cancel" ? "bg-red-100/60" : status === "at risk" ? "bg-red-50/50" : ""}
                     ${status === "completed" ? "opacity-60" : ""}`}
                   onClick={() => window.location.href = `/courses/${c.id}`}>
                   <td className="px-4 py-3">

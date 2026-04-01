@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { getMonitoring, getPendingTransfers } from "@/lib/api";
 import { useApiKey } from "@/lib/hooks/useApiKey";
+import { getCourseDisplayStatus } from "@/lib/courseStatus";
 
 export default function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const apiKey = useApiKey();
@@ -20,12 +21,11 @@ export default function AuthenticatedLayout({ children }: { children: React.Reac
 
     getMonitoring(apiKey, 14)
       .then((courses) => {
-        const atRisk = courses.filter((c) => {
-          const start = new Date(c.startDate); start.setHours(0, 0, 0, 0);
-          const now = new Date(); now.setHours(0, 0, 0, 0);
-          return start > now && c.currentEnrolmentCount < 3 && c.daysUntilStart <= 7;
+        const flagged = courses.filter((c) => {
+          const status = getCourseDisplayStatus(c);
+          return status === "at risk" || status === "cancel";
         });
-        setAtRiskCourses(atRisk.length);
+        setAtRiskCourses(flagged.length);
       })
       .catch(() => {});
   }, [apiKey]);

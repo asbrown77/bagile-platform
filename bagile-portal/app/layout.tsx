@@ -2,8 +2,11 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "BAgile Portal",
-  description: "BAgile Platform Dashboard",
+  title: "b-agile Portal",
+  description: "b-agile Platform Dashboard",
+  icons: {
+    icon: "/favicon.png",
+  },
 };
 
 export default function RootLayout({
