@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "b-agile Portal",
-  description: "b-agile Platform Dashboard",
+  title: "BAgile Portal",
+  description: "BAgile Platform Dashboard",
   icons: {
     icon: "/favicon.png",
   },
