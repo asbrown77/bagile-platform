@@ -56,6 +56,23 @@ _"I can see revenue, partner value, course demand, and make scheduling decisions
 
 ---
 
+## Bug: ETL Creates Duplicate Enrolments When Attendee Email Changes
+
+**Status:** OPEN — discovered 1 Apr 2026
+**Impact:** Course attendee lists show duplicates (e.g. PSPO-300326-AB shows 11 instead of 8)
+
+**Root cause:** `EnrolmentRepository.UpsertAsync` matches by `student_id + order_id + course_schedule_id`. When an attendee email is corrected in WooCommerce, `StudentRepository.UpsertAsync` creates a NEW student (email is unique key). The enrolment upsert then can't find the old enrolment (wrong student_id) and creates a duplicate.
+
+**Affected files:**
+- `Bagile.EtlService/Services/WooOrderService.cs:93-111` — ticket processing loop
+- `Bagile.Infrastructure/Repositories/EnrolmentRepository.cs:16-59` — upsert logic
+
+**Fix:** Match existing enrolments by `order_id + course_schedule_id` (not student_id). When found, update the student_id on the existing enrolment rather than creating a new one. Need to handle multi-ticket orders (e.g. order 12874 had 2 tickets).
+
+**Cleanup needed:** Enrolments 1796, 15, 19 on course 130 are orphaned duplicates with old emails. Need removing or marking cancelled.
+
+---
+
 ## Next Sprint: 15 — "Portal Polish & Course Risk Config"
 
 **Goal:** The portal looks professional (favicon, title) and course risk thresholds are configurable, not hardcoded.

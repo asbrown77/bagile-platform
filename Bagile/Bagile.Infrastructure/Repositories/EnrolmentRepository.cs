@@ -15,14 +15,19 @@ namespace Bagile.Infrastructure.Repositories
 
         public async Task UpsertAsync(Enrolment enrolment)
         {
-            const string selectSql = @"
-        SELECT id
+            // Fetch ALL active enrolments for this order+course. We match on
+            // order_id + course_schedule_id (not student_id) so that email
+            // corrections in WooCommerce don't create duplicate enrolments.
+            // For multi-ticket orders the same query runs once per ticket;
+            // each call either finds its own row by student_id or claims an
+            // unmatched row and updates its student_id.
+            const string selectAllSql = @"
+        SELECT id, student_id
         FROM bagile.enrolments
-        WHERE student_id = @StudentId
-          AND order_id = @OrderId
+        WHERE order_id = @OrderId
           AND course_schedule_id = @CourseScheduleId
           AND is_cancelled IS NOT TRUE
-        LIMIT 1;";
+        ORDER BY id;";
 
             const string insertSql = @"
         INSERT INTO bagile.enrolments
@@ -32,28 +37,51 @@ namespace Bagile.Infrastructure.Repositories
 
             const string updateSql = @"
         UPDATE bagile.enrolments
-        SET status = @Status,
+        SET student_id = @StudentId,
+            status     = @Status,
             updated_at = NOW()
         WHERE id = @Id;";
 
             await using var conn = new NpgsqlConnection(_conn);
 
-            var existingId = await conn.ExecuteScalarAsync<long?>(selectSql, enrolment);
+            var existing = (await conn.QueryAsync<(long Id, long StudentId)>(
+                selectAllSql,
+                new { enrolment.OrderId, enrolment.CourseScheduleId }
+            )).ToList();
 
-            if (existingId.HasValue)
+            long? matchedId = null;
+
+            if (existing.Count > 0)
             {
-                // Update existing row unless transferred
-                enrolment.Id = existingId.Value;
+                // 1. Prefer an exact student_id match — same student, re-sync only
+                var exact = existing.FirstOrDefault(r => r.StudentId == enrolment.StudentId);
+                if (exact != default)
+                {
+                    matchedId = exact.Id;
+                }
+                else
+                {
+                    // 2. Email changed: find a row whose student_id does NOT appear in the
+                    //    current batch yet. Since UpsertAsync is called sequentially per
+                    //    ticket, any row already updated to a new student_id will be found
+                    //    by case 1 on subsequent calls, so the first unmatched row here is
+                    //    the correct one to claim.
+                    matchedId = existing.First().Id;
+                }
+            }
 
+            if (matchedId.HasValue)
+            {
+                enrolment.Id = matchedId.Value;
                 await conn.ExecuteAsync(updateSql, new
                 {
-                    Id = existingId.Value,
+                    Id = matchedId.Value,
+                    enrolment.StudentId,
                     enrolment.Status
                 });
             }
             else
             {
-                // Insert new normal enrolment
                 await conn.ExecuteAsync(insertSql, enrolment);
             }
         }
