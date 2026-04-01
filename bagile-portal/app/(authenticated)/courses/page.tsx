@@ -60,12 +60,11 @@ function CoursesContent() {
       to = `${dateRange}-12-31`;
     }
 
-    const courseCode = typeFilter !== "all" ? typeFilter : undefined;
     const type = visibilityFilter !== "all" ? visibilityFilter : undefined;
 
     try {
       const result = await getCourseSchedules(apiKey, {
-        from, to, courseCode, type, pageSize: 100,
+        from, to, type, pageSize: 100,
       });
       setCourses((result.items || []).filter(
         (c) => c.title && c.title !== "N/A" && c.courseCode
@@ -75,7 +74,7 @@ function CoursesContent() {
     } finally {
       setLoading(false);
     }
-  }, [apiKey, dateRange, typeFilter, visibilityFilter]);
+  }, [apiKey, dateRange, visibilityFilter]);
 
   useEffect(() => { loadCourses(); }, [loadCourses]);
 
@@ -90,8 +89,23 @@ function CoursesContent() {
     c.formatType?.toLowerCase().includes("virtual") || c.location?.toLowerCase().includes("virtual");
 
   // Filter by search + sort by date
+  // Course code matching uses segment-aware logic (split by '-') so that
+  // e.g. "PSPOA" matches PSPOA-xxx but NOT PSPOAI-xxx, and "PSMA" doesn't match PSMAI.
+  // If the search matches a known course type exactly, only that type matches.
+  // Otherwise partial prefix search on the type segment is allowed.
+  const matchesCourseCode = (code: string, term: string) => {
+    const segments = code.toLowerCase().split("-");
+    const typeSegment = segments[0];
+    const lowerTerm = term.toLowerCase();
+    const isKnownType = courseTypes.some((t) => t.toLowerCase() === lowerTerm);
+    if (isKnownType) return typeSegment === lowerTerm;
+    if (typeSegment.startsWith(lowerTerm)) return true;
+    return segments.slice(1).some((s) => s.includes(lowerTerm));
+  };
+
   const filtered = courses
-    .filter((c) => !search || c.title.toLowerCase().includes(search.toLowerCase()) || c.courseCode.toLowerCase().includes(search.toLowerCase()))
+    .filter((c) => typeFilter === "all" || c.courseCode.split("-")[0] === typeFilter)
+    .filter((c) => !search || c.title.toLowerCase().includes(search.toLowerCase()) || matchesCourseCode(c.courseCode, search))
     .sort((a, b) => {
       const da = new Date(a.startDate || "").getTime();
       const db = new Date(b.startDate || "").getTime();
@@ -232,7 +246,7 @@ function CoursesContent() {
                 <div className="ml-3 text-right shrink-0">
                   <span className={`text-xl font-bold ${
                     status === "cancel" || status === "at risk" ? "text-red-600" :
-                    status === "guaranteed" || status === "running" ? "text-green-600" : "text-gray-700"
+                    status === "guaranteed" || status === "running" || status === "completed" ? "text-green-600" : "text-gray-700"
                   }`}>{c.currentEnrolmentCount}</span>
                   {c.capacity && <span className="text-xs text-gray-400">/{c.capacity}</span>}
                 </div>
@@ -297,7 +311,7 @@ function CoursesContent() {
                   <td className="px-4 py-3 text-gray-600">{c.trainerName || "—"}</td>
                   <td className="px-4 py-3 text-center">
                     <span className={`text-lg font-bold ${
-                      status === "at risk" ? "text-red-600" :
+                      status === "cancel" || status === "at risk" ? "text-red-600" :
                       status === "guaranteed" || status === "running" || status === "completed" ? "text-green-600" :
                       "text-gray-700"
                     }`}>{c.currentEnrolmentCount}</span>

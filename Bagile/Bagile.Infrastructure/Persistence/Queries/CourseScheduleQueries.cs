@@ -66,7 +66,7 @@ public class CourseScheduleQueries : ICourseScheduleQueries
         {
             from,
             to,
-            courseCodePattern = courseCode != null ? $"%{courseCode}%" : null,
+            courseCodePattern = courseCode != null ? $"{courseCode}-%" : null,
             trainerPattern = trainer != null ? $"%{trainer}%" : null,
             type,
             status,
@@ -100,7 +100,7 @@ public class CourseScheduleQueries : ICourseScheduleQueries
         {
             from,
             to,
-            courseCodePattern = courseCode != null ? $"%{courseCode}%" : null,
+            courseCodePattern = courseCode != null ? $"{courseCode}-%" : null,
             trainerPattern = trainer != null ? $"%{trainer}%" : null,
             type,
             status

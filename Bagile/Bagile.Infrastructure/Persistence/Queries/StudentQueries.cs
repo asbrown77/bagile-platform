@@ -51,7 +51,7 @@ public class StudentQueries : IStudentQueries
             emailPattern = email != null ? $"%{email}%" : null,
             namePattern = name != null ? $"%{name}%" : null,
             organisationPattern = organisation != null ? $"%{organisation}%" : null,
-            courseCodePattern = courseCode != null ? $"%{courseCode}%" : null,
+            courseCodePattern = courseCode != null ? $"{courseCode}-%" : null,
             pageSize,
             offset = (page - 1) * pageSize
         });
@@ -83,7 +83,7 @@ public class StudentQueries : IStudentQueries
             emailPattern = email != null ? $"%{email}%" : null,
             namePattern = name != null ? $"%{name}%" : null,
             organisationPattern = organisation != null ? $"%{organisation}%" : null,
-            courseCodePattern = courseCode != null ? $"%{courseCode}%" : null
+            courseCodePattern = courseCode != null ? $"{courseCode}-%" : null
         });
     }
 
