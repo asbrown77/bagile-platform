@@ -177,6 +177,30 @@ The current workaround requires updating 3 systems (FooEvents tickets, WooCommer
 - [ ] MCP tool available so Claude agent can update directly
 - [ ] Audit trail: who changed what, when
 
+### P1.5 — Post-Course Follow-Up Emails
+
+**Problem:** After each course, Alex manually sends a follow-up email with assessment info, resources, and book recommendations. Each course type (PSM, PSPO, PSPO-A, PSU, PAL-EBM, etc.) has a unique template with different learning paths, blog links, practice assessments, and reading lists. Currently these live only in Alex's Gmail sent folder and have to be copy-pasted and adapted manually each time.
+
+**Goal:** One-click "Send Follow-Up" from the portal course detail page, with templates also accessible via MCP so the Claude agent can draft them.
+
+| # | Item | Size |
+|---|------|------|
+| 1 | Template storage — HTML templates per course type with placeholder variables (attendee names, course date, trainer name, delay apology toggle) | M |
+| 2 | Template management UI — edit templates from portal settings page (rich text editor) | M |
+| 3 | "Send Follow-Up" button on course detail page — select template, preview with real attendee data, confirm and send | L |
+| 4 | MCP tool: `generate_post_course_email` — returns populated HTML for a given course schedule ID | S |
+| 5 | Seed existing templates — PSM, PSPO, PSPO-A, PSU, PAL-EBM (from email history). Create drafts for missing: PSM-AI, PSPO-AI, PSK, PAL-E, PSM-A, PSFS, APS-SD | M |
+
+**Design considerations:**
+- Templates could live in the database (simple, queryable, editable via portal) OR as markdown/HTML files in the repo (version controlled, reviewable). Database is probably better since non-technical users (Alex) need to edit them and they change per course, not per deployment.
+- Each template has a `course_type` key (e.g. "PSM", "PSPO") and an HTML body with variables like `{{greeting}}`, `{{delay_note}}`, `{{trainer_name}}`, `{{sign_off}}`
+- Portal renders a preview before sending — trainer can review and tweak before it goes out
+- Email is sent from alexbrown@bagile.co.uk (or the trainer's email), not info@
+- MCP tool returns the populated template so Claude can create a Gmail draft — useful when Alex asks "send the follow-up for last week's PSPO"
+- Future: could auto-trigger when scrum.org class is processed (n8n webhook?)
+
+**Templates found (5 of 12+):** PSM, PSPO, PSPO-A, PSU, PAL-EBM — all materially different (different resources, books, learning paths, assessment details). Missing: PSM-AI, PSPO-AI, PSK, PAL-E, PSM-A, PSFS, APS-SD.
+
 ### P2 — Payment Visibility
 
 | ID | Item | Who Needs It | Status |
