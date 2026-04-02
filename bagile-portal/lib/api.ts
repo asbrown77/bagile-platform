@@ -395,6 +395,9 @@ export interface CourseScheduleDetail extends CourseScheduleItem {
   sku: string | null;
   sourceSystem: string | null;
   lastSynced: string | null;
+  clientOrganisationId: number | null;
+  clientOrganisationName: string | null;
+  clientOrganisationAcronym: string | null;
   invoiceReference: string | null;
   meetingUrl: string | null;
   meetingId: string | null;
@@ -528,6 +531,28 @@ export async function getOrganisations(apiKey: string, params?: { name?: string;
   qs.set("page", String(params?.page || 1));
   qs.set("pageSize", String(params?.pageSize || 50));
   return apiRequest(`/api/organisations?${qs}`, apiKey);
+}
+
+// ── Organisation Type-ahead ──────────────────────────────
+
+export interface OrgSummary {
+  id: number;
+  name: string;
+  acronym: string | null;
+  partnerType: string | null;
+  ptnTier: string | null;
+}
+
+/** Search the organisations table (name + aliases). Returns up to 10 results. */
+export async function searchOrganisations(apiKey: string, q: string): Promise<OrgSummary[]> {
+  if (!q.trim()) return [];
+  const qs = new URLSearchParams({ q });
+  return apiRequest(`/api/organisations/search?${qs}`, apiKey);
+}
+
+/** Create a new organisation row (from the portal type-ahead "Create as new" flow). */
+export async function createOrganisation(apiKey: string, name: string, acronym?: string): Promise<OrgSummary> {
+  return apiRequest("/api/organisations", apiKey, { method: "POST", body: { name, acronym } });
 }
 
 // ── Transfers by Course ──────────────────────────────────
@@ -773,6 +798,7 @@ export interface UpdatePrivateCourseRequest {
   endDate: string;
   capacity?: number;
   price?: number;
+  clientOrganisationId?: number;
   invoiceReference?: string;
   venueAddress?: string;
   meetingUrl?: string;
