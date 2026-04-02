@@ -4,7 +4,10 @@ import { useState, useEffect } from "react";
 import { SlideOver } from "@/components/ui/SlideOver";
 import { Button } from "@/components/ui/Button";
 import { AlertBanner } from "@/components/ui/AlertBanner";
-import { CourseScheduleDetail, UpdatePrivateCourseRequest, updatePrivateCourse, Trainer, getTrainers } from "@/lib/api";
+import { OrganisationTypeAhead } from "@/components/ui/OrganisationTypeAhead";
+import { CourseScheduleDetail, UpdatePrivateCourseRequest, updatePrivateCourse, Trainer, getTrainers, OrgSummary } from "@/lib/api";
+import { generateCourseName, generateInvoiceRef } from "@/lib/privateCourseHelpers";
+import { RotateCcw } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -20,11 +23,25 @@ function toDateInput(iso: string | null | undefined): string {
 }
 
 export function EditPrivateCoursePanel({ open, onClose, apiKey, course, onSaved }: Props) {
-  const [form, setForm] = useState<UpdatePrivateCourseRequest>({
-    name: "",
-    startDate: "",
-    endDate: "",
-  });
+  // Organisation
+  const [org, setOrg] = useState<OrgSummary | null>(null);
+
+  // Editable fields
+  const [courseName, setCourseName] = useState("");
+  const [nameOverridden, setNameOverridden] = useState(true); // Default true in edit: preserve what's there
+  const [trainerName, setTrainerName] = useState<string | undefined>();
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [capacity, setCapacity] = useState<number | undefined>();
+  const [price, setPrice] = useState<number | undefined>();
+  const [invoiceRef, setInvoiceRef] = useState("");
+  const [refOverridden, setRefOverridden] = useState(true); // Default true in edit: preserve existing ref
+  const [venueAddress, setVenueAddress] = useState("");
+  const [meetingUrl, setMeetingUrl] = useState("");
+  const [meetingId, setMeetingId] = useState("");
+  const [meetingPasscode, setMeetingPasscode] = useState("");
+  const [notes, setNotes] = useState("");
+
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [trainers, setTrainers] = useState<Trainer[]>([]);
@@ -37,40 +54,77 @@ export function EditPrivateCoursePanel({ open, onClose, apiKey, course, onSaved 
 
   const isVirtual = (course.formatType ?? "").toLowerCase().includes("virtual");
 
-  // Seed form from course whenever the panel opens
+  // Seed form from course when panel opens
   useEffect(() => {
     if (!open) return;
-    setForm({
-      name: course.title ?? "",
-      trainerName: course.trainerName ?? undefined,
-      startDate: toDateInput(course.startDate),
-      endDate: toDateInput(course.endDate ?? course.startDate),
-      capacity: course.capacity ?? undefined,
-      price: course.price ?? undefined,
-      invoiceReference: course.invoiceReference ?? undefined,
-      venueAddress: course.venueAddress ?? undefined,
-      meetingUrl: course.meetingUrl ?? undefined,
-      meetingId: course.meetingId ?? undefined,
-      meetingPasscode: course.meetingPasscode ?? undefined,
-      notes: course.notes ?? undefined,
-    });
     setError("");
+    setNameOverridden(true);
+    setRefOverridden(true);
+
+    setCourseName(course.title ?? "");
+    setTrainerName(course.trainerName ?? undefined);
+    setStartDate(toDateInput(course.startDate));
+    setEndDate(toDateInput(course.endDate ?? course.startDate));
+    setCapacity(course.capacity ?? undefined);
+    setPrice(course.price ?? undefined);
+    setInvoiceRef(course.invoiceReference ?? "");
+    setVenueAddress(course.venueAddress ?? "");
+    setMeetingUrl(course.meetingUrl ?? "");
+    setMeetingId(course.meetingId ?? "");
+    setMeetingPasscode(course.meetingPasscode ?? "");
+    setNotes(course.notes ?? "");
+
+    // Pre-populate org from existing data
+    if (course.clientOrganisationId && course.clientOrganisationName) {
+      setOrg({
+        id: course.clientOrganisationId,
+        name: course.clientOrganisationName,
+        acronym: course.clientOrganisationAcronym ?? null,
+        partnerType: null,
+        ptnTier: null,
+      });
+    } else {
+      setOrg(null);
+    }
   }, [open, course]);
 
-  function update(field: keyof UpdatePrivateCourseRequest, value: string | number | undefined) {
-    setForm((f) => ({ ...f, [field]: value }));
-  }
+  // Auto-generate course name when not overridden
+  useEffect(() => {
+    if (nameOverridden) return;
+    setCourseName(generateCourseName(course.courseCode ?? "", org?.name ?? "", course.formatType ?? "virtual"));
+  }, [org, nameOverridden, course.courseCode, course.formatType]);
+
+  // Auto-generate invoice ref when not overridden
+  useEffect(() => {
+    if (refOverridden) return;
+    setInvoiceRef(generateInvoiceRef(course.courseCode ?? "", org?.acronym ?? "", startDate));
+  }, [org, startDate, refOverridden, course.courseCode]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.name || !form.startDate || !form.endDate) {
-      setError("Name, start date, and end date are required");
+    if (!courseName || !startDate || !endDate) {
+      setError("Course name, start date, and end date are required");
       return;
     }
     setSaving(true);
     setError("");
     try {
-      await updatePrivateCourse(apiKey, course.id, form);
+      const payload: UpdatePrivateCourseRequest = {
+        name: courseName,
+        trainerName: trainerName || undefined,
+        startDate,
+        endDate,
+        capacity,
+        price,
+        clientOrganisationId: org?.id ?? undefined,
+        invoiceReference: invoiceRef || undefined,
+        venueAddress: venueAddress || undefined,
+        meetingUrl: meetingUrl || undefined,
+        meetingId: meetingId || undefined,
+        meetingPasscode: meetingPasscode || undefined,
+        notes: notes || undefined,
+      };
+      await updatePrivateCourse(apiKey, course.id, payload);
       onSaved();
       onClose();
     } catch {
@@ -85,13 +139,39 @@ export function EditPrivateCoursePanel({ open, onClose, apiKey, course, onSaved 
       {error && <div className="mb-4"><AlertBanner variant="danger">{error}</AlertBanner></div>}
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Name */}
+
+        {/* Organisation */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Course Name</label>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Client Organisation</label>
+          <OrganisationTypeAhead
+            apiKey={apiKey}
+            value={org}
+            onSelect={(selected) => {
+              setOrg(selected);
+              // When org changes, offer to regenerate name and ref if they haven't been manually edited
+            }}
+            placeholder="Search or create organisation…"
+          />
+          {org && !nameOverridden && (
+            <p className="mt-1 text-xs text-gray-400">Course name will update to reflect this org.</p>
+          )}
+        </div>
+
+        {/* Course name — pre-populated, editable, can reset to auto */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-xs font-medium text-gray-700">Course Name</label>
+            {nameOverridden && (
+              <button type="button" onClick={() => setNameOverridden(false)}
+                className="flex items-center gap-1 text-xs text-gray-400 hover:text-brand-600">
+                <RotateCcw className="w-3 h-3" /> Regenerate from org
+              </button>
+            )}
+          </div>
           <input
             type="text"
-            value={form.name}
-            onChange={(e) => update("name", e.target.value)}
+            value={courseName}
+            onChange={(e) => { setCourseName(e.target.value); setNameOverridden(true); }}
             required
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
           />
@@ -101,24 +181,15 @@ export function EditPrivateCoursePanel({ open, onClose, apiKey, course, onSaved 
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">Trainer</label>
           {trainers.length > 0 ? (
-            <select
-              value={form.trainerName ?? ""}
-              onChange={(e) => update("trainerName", e.target.value || undefined)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
-            >
+            <select value={trainerName ?? ""} onChange={(e) => setTrainerName(e.target.value || undefined)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
               <option value="">— Select trainer —</option>
-              {trainers.map((t) => (
-                <option key={t.id} value={t.name}>{t.name}</option>
-              ))}
+              {trainers.map((t) => <option key={t.id} value={t.name}>{t.name}</option>)}
             </select>
           ) : (
-            <input
-              type="text"
-              value={form.trainerName ?? ""}
-              onChange={(e) => update("trainerName", e.target.value || undefined)}
+            <input type="text" value={trainerName ?? ""} onChange={(e) => setTrainerName(e.target.value || undefined)}
               placeholder="Alex Brown"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-            />
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
           )}
         </div>
 
@@ -126,23 +197,13 @@ export function EditPrivateCoursePanel({ open, onClose, apiKey, course, onSaved 
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Start Date</label>
-            <input
-              type="date"
-              value={form.startDate}
-              onChange={(e) => update("startDate", e.target.value)}
-              required
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-            />
+            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">End Date</label>
-            <input
-              type="date"
-              value={form.endDate}
-              onChange={(e) => update("endDate", e.target.value)}
-              required
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-            />
+            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} required
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
           </div>
         </div>
 
@@ -150,34 +211,33 @@ export function EditPrivateCoursePanel({ open, onClose, apiKey, course, onSaved 
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Capacity</label>
-            <input
-              type="number"
-              value={form.capacity ?? ""}
-              onChange={(e) => update("capacity", e.target.value ? Number(e.target.value) : undefined)}
-              placeholder="20"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-            />
+            <input type="number" value={capacity ?? ""} onChange={(e) => setCapacity(e.target.value ? Number(e.target.value) : undefined)}
+              placeholder="20" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Price (total £)</label>
-            <input
-              type="number"
-              value={form.price ?? ""}
-              onChange={(e) => update("price", e.target.value ? Number(e.target.value) : undefined)}
-              placeholder="5000"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-            />
+            <input type="number" value={price ?? ""} onChange={(e) => setPrice(e.target.value ? Number(e.target.value) : undefined)}
+              placeholder="5000" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
           </div>
         </div>
 
-        {/* Invoice Reference */}
+        {/* Invoice reference — editable with option to regenerate */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Invoice Reference (Xero)</label>
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-xs font-medium text-gray-700">Invoice Reference (Xero)</label>
+            {refOverridden && org && startDate && (
+              <button type="button" onClick={() => setRefOverridden(false)}
+                className="flex items-center gap-1 text-xs text-gray-400 hover:text-brand-600">
+                <RotateCcw className="w-3 h-3" /> Regenerate from org + date
+              </button>
+            )}
+          </div>
           <input
             type="text"
-            value={form.invoiceReference ?? ""}
-            onChange={(e) => update("invoiceReference", e.target.value || undefined)}
-            placeholder="INV-00123"
+            value={invoiceRef}
+            onChange={(e) => { setInvoiceRef(e.target.value); setRefOverridden(true); }}
+            onBlur={(e) => { if (!e.target.value.trim()) setRefOverridden(false); }}
+            placeholder="e.g. PSM-FNC-270426"
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
           />
         </div>
@@ -188,34 +248,22 @@ export function EditPrivateCoursePanel({ open, onClose, apiKey, course, onSaved 
             <p className="text-xs font-semibold text-blue-800 uppercase tracking-wide">Meeting Details</p>
             <div>
               <label className="block text-xs font-medium text-blue-700 mb-1">Zoom/Teams URL</label>
-              <input
-                type="url"
-                value={form.meetingUrl ?? ""}
-                onChange={(e) => update("meetingUrl", e.target.value || undefined)}
+              <input type="url" value={meetingUrl} onChange={(e) => setMeetingUrl(e.target.value)}
                 placeholder="https://zoom.us/j/..."
-                className="w-full border border-blue-200 rounded-lg px-3 py-2 text-sm bg-white"
-              />
+                className="w-full border border-blue-200 rounded-lg px-3 py-2 text-sm bg-white" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium text-blue-700 mb-1">Meeting ID</label>
-                <input
-                  type="text"
-                  value={form.meetingId ?? ""}
-                  onChange={(e) => update("meetingId", e.target.value || undefined)}
+                <input type="text" value={meetingId} onChange={(e) => setMeetingId(e.target.value)}
                   placeholder="123 456 7890"
-                  className="w-full border border-blue-200 rounded-lg px-3 py-2 text-sm bg-white"
-                />
+                  className="w-full border border-blue-200 rounded-lg px-3 py-2 text-sm bg-white" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-blue-700 mb-1">Passcode</label>
-                <input
-                  type="text"
-                  value={form.meetingPasscode ?? ""}
-                  onChange={(e) => update("meetingPasscode", e.target.value || undefined)}
+                <input type="text" value={meetingPasscode} onChange={(e) => setMeetingPasscode(e.target.value)}
                   placeholder="abc123"
-                  className="w-full border border-blue-200 rounded-lg px-3 py-2 text-sm bg-white"
-                />
+                  className="w-full border border-blue-200 rounded-lg px-3 py-2 text-sm bg-white" />
               </div>
             </div>
           </div>
@@ -227,13 +275,10 @@ export function EditPrivateCoursePanel({ open, onClose, apiKey, course, onSaved 
             <p className="text-xs font-semibold text-amber-800 uppercase tracking-wide">Venue Details</p>
             <div>
               <label className="block text-xs font-medium text-amber-700 mb-1">Venue Address</label>
-              <textarea
-                value={form.venueAddress ?? ""}
-                onChange={(e) => update("venueAddress", e.target.value || undefined)}
+              <textarea value={venueAddress} onChange={(e) => setVenueAddress(e.target.value)}
                 placeholder="Conference Room 3, 10 Downing Street, London SW1A 2AA"
                 rows={2}
-                className="w-full border border-amber-200 rounded-lg px-3 py-2 text-sm bg-white"
-              />
+                className="w-full border border-amber-200 rounded-lg px-3 py-2 text-sm bg-white" />
             </div>
           </div>
         )}
@@ -241,13 +286,10 @@ export function EditPrivateCoursePanel({ open, onClose, apiKey, course, onSaved 
         {/* Notes */}
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">Notes</label>
-          <textarea
-            value={form.notes ?? ""}
-            onChange={(e) => update("notes", e.target.value || undefined)}
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
             placeholder="Any additional details..."
             rows={2}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-          />
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
         </div>
 
         {/* Actions */}

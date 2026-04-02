@@ -1,11 +1,23 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { SlideOver } from "@/components/ui/SlideOver";
 import { Button } from "@/components/ui/Button";
 import { AlertBanner } from "@/components/ui/AlertBanner";
-import { createPrivateCourse, addPrivateAttendees, getScheduleConflicts, CreatePrivateCourseRequest, AttendeeInput, ScheduleConflict, Trainer, getTrainers } from "@/lib/api";
-import { Trash2, UserPlus, Copy, FileJson } from "lucide-react";
+import { OrganisationTypeAhead } from "@/components/ui/OrganisationTypeAhead";
+import {
+  createPrivateCourse,
+  addPrivateAttendees,
+  getScheduleConflicts,
+  CreatePrivateCourseRequest,
+  AttendeeInput,
+  ScheduleConflict,
+  Trainer,
+  getTrainers,
+  OrgSummary,
+} from "@/lib/api";
+import { generateCourseName, generateInvoiceRef } from "@/lib/privateCourseHelpers";
+import { Trash2, UserPlus, Copy, FileJson, RotateCcw } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -14,10 +26,11 @@ interface Props {
   onCreated: () => void;
 }
 
-const COURSE_CODES = ["PSM", "PSPO", "PSPOAI", "PSPOA", "PAL", "PALE", "PSK", "PSMA", "PSMAI", "PSFS", "APS", "EBM"];
+const COURSE_CODES = ["PSM", "PSPO", "PSPOAI", "PSPOA", "PALE", "PSK", "PSMA", "PSMAI", "PSFS", "APS", "EBM", "PSU"];
 
 const JSON_TEMPLATE = `{
-  "name": "PSM - Company Name",
+  "organisationName": "Frazer-Nash Consultancy Ltd",
+  "organisationAcronym": "FNC",
   "courseCode": "PSM",
   "startDate": "2026-04-15",
   "endDate": "2026-04-16",
@@ -25,7 +38,6 @@ const JSON_TEMPLATE = `{
   "trainerName": "Alex Brown",
   "capacity": 20,
   "price": 5000,
-  "invoiceReference": "INV-00123",
   "meetingUrl": "https://zoom.us/j/123456789",
   "meetingId": "123 456 789",
   "meetingPasscode": "abc123",
@@ -41,14 +53,38 @@ const emptyAttendee = (): AttendeeInput => ({ firstName: "", lastName: "", email
 
 export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: Props) {
   const [mode, setMode] = useState("form");
-  const [form, setForm] = useState<CreatePrivateCourseRequest>({
-    name: "", courseCode: "PSM", startDate: "", endDate: "", formatType: "virtual",
-  });
+
+  // Selected organisation
+  const [org, setOrg] = useState<OrgSummary | null>(null);
+
+  // Core form fields
+  const [courseCode, setCourseCode] = useState("PSM");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [formatType, setFormatType] = useState("virtual");
+  const [trainerName, setTrainerName] = useState<string | undefined>();
+  const [capacity, setCapacity] = useState<number | undefined>();
+  const [price, setPrice] = useState<number | undefined>();
+  const [meetingUrl, setMeetingUrl] = useState("");
+  const [meetingId, setMeetingId] = useState("");
+  const [meetingPasscode, setMeetingPasscode] = useState("");
+  const [venueAddress, setVenueAddress] = useState("");
+  const [notes, setNotes] = useState("");
+
+  // Auto-generated fields with override flags
+  const [courseName, setCourseName] = useState("");
+  const [nameOverridden, setNameOverridden] = useState(false);
+  const [invoiceRef, setInvoiceRef] = useState("");
+  const [refOverridden, setRefOverridden] = useState(false);
+
   const [attendees, setAttendees] = useState<AttendeeInput[]>([]);
   const [jsonText, setJsonText] = useState("");
-  const [jsonParsed, setJsonParsed] = useState<{ course: CreatePrivateCourseRequest; attendees: AttendeeInput[] } | null>(null);
+  const [jsonParsed, setJsonParsed] = useState<{ course: CreatePrivateCourseRequest; attendees: AttendeeInput[]; org?: OrgSummary } | null>(null);
   const [conflicts, setConflicts] = useState<ScheduleConflict[]>([]);
   const [trainers, setTrainers] = useState<Trainer[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
 
   // Load trainers once apiKey is available
   useEffect(() => {
@@ -56,10 +92,7 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
     getTrainers(apiKey)
       .then((list) => {
         setTrainers(list);
-        // Default to first trainer if none selected yet
-        if (list.length > 0 && !form.trainerName) {
-          setForm((f) => ({ ...f, trainerName: list[0].name }));
-        }
+        if (list.length > 0 && !trainerName) setTrainerName(list[0].name);
       })
       .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -67,39 +100,65 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
 
   // Check for conflicts when dates change
   useEffect(() => {
-    if (!apiKey || !form.startDate || !form.endDate) { setConflicts([]); return; }
+    if (!apiKey || !startDate || !endDate) { setConflicts([]); return; }
     const timer = setTimeout(() => {
-      getScheduleConflicts(apiKey, form.startDate, form.endDate, form.trainerName)
+      getScheduleConflicts(apiKey, startDate, endDate, trainerName)
         .then(setConflicts)
         .catch(() => setConflicts([]));
     }, 500);
     return () => clearTimeout(timer);
-  }, [apiKey, form.startDate, form.endDate, form.trainerName]);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [copied, setCopied] = useState(false);
+  }, [apiKey, startDate, endDate, trainerName]);
 
-  function update(field: string, value: string | number | undefined) {
-    setForm((f) => ({ ...f, [field]: value }));
+  // Auto-generate course name
+  useEffect(() => {
+    if (nameOverridden) return;
+    setCourseName(generateCourseName(courseCode, org?.name ?? "", formatType));
+  }, [courseCode, org, formatType, nameOverridden]);
+
+  // Auto-generate invoice reference
+  useEffect(() => {
+    if (refOverridden) return;
+    setInvoiceRef(generateInvoiceRef(courseCode, org?.acronym ?? "", startDate));
+  }, [courseCode, org, startDate, refOverridden]);
+
+  function resetForm() {
+    setOrg(null);
+    setCourseCode("PSM");
+    setStartDate("");
+    setEndDate("");
+    setFormatType("virtual");
+    setTrainerName(trainers.length > 0 ? trainers[0].name : undefined);
+    setCapacity(undefined);
+    setPrice(undefined);
+    setMeetingUrl("");
+    setMeetingId("");
+    setMeetingPasscode("");
+    setVenueAddress("");
+    setNotes("");
+    setCourseName("");
+    setNameOverridden(false);
+    setInvoiceRef("");
+    setRefOverridden(false);
+    setAttendees([]);
+    setJsonText("");
+    setJsonParsed(null);
+    setError("");
   }
 
-  function addAttendeeRow() {
-    setAttendees((a) => [...a, emptyAttendee()]);
+  function addAttendeeRow() { setAttendees((a) => [...a, emptyAttendee()]); }
+  function updateAttendee(i: number, f: keyof AttendeeInput, v: string) {
+    setAttendees((rows) => rows.map((r, idx) => idx === i ? { ...r, [f]: v } : r));
   }
-
-  function updateAttendee(index: number, field: keyof AttendeeInput, value: string) {
-    setAttendees((rows) => rows.map((r, i) => i === index ? { ...r, [field]: value } : r));
-  }
-
-  function removeAttendee(index: number) {
-    setAttendees((rows) => rows.filter((_, i) => i !== index));
-  }
+  function removeAttendee(i: number) { setAttendees((rows) => rows.filter((_, idx) => idx !== i)); }
 
   function parseJson() {
     try {
       const data = JSON.parse(jsonText);
+      const orgFromJson: OrgSummary | undefined = data.organisationName
+        ? { id: 0, name: data.organisationName, acronym: data.organisationAcronym ?? null, partnerType: null, ptnTier: null }
+        : undefined;
       const course: CreatePrivateCourseRequest = {
-        name: data.name || "",
+        name: data.name || generateCourseName(data.courseCode || "PSM", data.organisationName || "", data.formatType || "virtual"),
         courseCode: data.courseCode || "PSM",
         startDate: data.startDate || "",
         endDate: data.endDate || "",
@@ -107,7 +166,7 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
         trainerName: data.trainerName,
         capacity: data.capacity,
         price: data.price,
-        invoiceReference: data.invoiceReference,
+        invoiceReference: data.invoiceReference || generateInvoiceRef(data.courseCode || "PSM", data.organisationAcronym || "", data.startDate || ""),
         meetingUrl: data.meetingUrl,
         meetingId: data.meetingId,
         meetingPasscode: data.meetingPasscode,
@@ -118,7 +177,7 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
         firstName: a.firstName || "", lastName: a.lastName || "", email: a.email || "",
         company: a.company, country: a.country,
       }));
-      setJsonParsed({ course, attendees: atts });
+      setJsonParsed({ course, attendees: atts, org: orgFromJson });
       setError("");
     } catch {
       setError("Invalid JSON — check the format and try again");
@@ -126,32 +185,26 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
     }
   }
 
-  async function handleSubmit(courseData: CreatePrivateCourseRequest, attendeeList: AttendeeInput[]) {
-    if (!apiKey) {
-      setError("API key not loaded — please refresh and try again");
-      return;
-    }
+  async function handleSubmit(courseData: CreatePrivateCourseRequest, attendeeList: AttendeeInput[], submitOrg?: OrgSummary | null) {
+    if (!apiKey) { setError("API key not loaded — please refresh and try again"); return; }
     if (!courseData.name || !courseData.startDate || !courseData.endDate) {
-      setError("Name, start date, and end date are required");
-      return;
+      setError("Course name, start date, and end date are required"); return;
     }
     setError("");
     setSaving(true);
     try {
-      const created = await createPrivateCourse(apiKey, courseData);
+      const payload: CreatePrivateCourseRequest = {
+        ...courseData,
+        clientOrganisationId: submitOrg?.id && submitOrg.id > 0 ? submitOrg.id : undefined,
+      };
+      const created = await createPrivateCourse(apiKey, payload);
 
-      // Add attendees if any
       if (attendeeList.length > 0) {
-        const validAttendees = attendeeList.filter((a) => a.email.trim());
-        if (validAttendees.length > 0) {
-          await addPrivateAttendees(apiKey, created.id, validAttendees);
-        }
+        const valid = attendeeList.filter((a) => a.email.trim());
+        if (valid.length > 0) await addPrivateAttendees(apiKey, created.id, valid);
       }
 
-      setForm({ name: "", courseCode: "PSM", startDate: "", endDate: "", formatType: "virtual" });
-      setAttendees([]);
-      setJsonText("");
-      setJsonParsed(null);
+      resetForm();
       onCreated();
       onClose();
       window.location.href = `/courses/${created.id}`;
@@ -162,19 +215,38 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
     }
   }
 
+  function formToRequest(): CreatePrivateCourseRequest {
+    return {
+      name: courseName,
+      courseCode,
+      startDate,
+      endDate,
+      formatType,
+      trainerName,
+      capacity,
+      price,
+      invoiceReference: invoiceRef || undefined,
+      meetingUrl: meetingUrl || undefined,
+      meetingId: meetingId || undefined,
+      meetingPasscode: meetingPasscode || undefined,
+      venueAddress: venueAddress || undefined,
+      notes: notes || undefined,
+    };
+  }
+
   function copyTemplate() {
     navigator.clipboard.writeText(JSON_TEMPLATE);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
 
-  const isVirtual = form.formatType === "virtual";
+  const isVirtual = formatType === "virtual";
 
   return (
     <SlideOver open={open} onClose={onClose} title="Create Private Course" subtitle="Add a new private/corporate course" wide>
       {error && <div className="mb-4"><AlertBanner variant="danger">{error}</AlertBanner></div>}
 
-      {/* ── JSON Import Mode (advanced) ────────────────── */}
+      {/* ── JSON Import Mode ───────────────────────────────── */}
       {mode !== "json" && (
         <div className="mb-4">
           <button onClick={() => setMode("json")}
@@ -185,7 +257,6 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
       )}
       {mode === "json" && (
         <div className="space-y-4">
-          {/* Template */}
           <div className="bg-gray-50 rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">JSON Template</p>
@@ -196,14 +267,12 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
               </button>
             </div>
             <p className="text-xs text-gray-500 mb-2">
-              Copy this template, give it to Claude or any AI with the client's details, then paste the result below.
+              Copy this template, fill in the client details, then paste below.
             </p>
             <pre className="bg-gray-900 text-gray-300 rounded-lg p-3 text-xs overflow-x-auto max-h-40 overflow-y-auto">
               {JSON_TEMPLATE}
             </pre>
           </div>
-
-          {/* Paste area */}
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Paste JSON</label>
             <textarea
@@ -214,17 +283,16 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono"
             />
             <Button variant="secondary" size="sm" onClick={parseJson} className="mt-2">
-              <FileJson className="w-3.5 h-3.5" /> Parse & Preview
+              <FileJson className="w-3.5 h-3.5" /> Parse and Preview
             </Button>
           </div>
-
-          {/* Preview */}
           {jsonParsed && (
             <div className="bg-green-50 rounded-lg p-4 space-y-3">
               <p className="text-xs font-semibold text-green-800 uppercase tracking-wide">Preview</p>
               <div className="text-sm text-green-900 space-y-1">
                 <p><strong>{jsonParsed.course.name}</strong></p>
                 <p>{jsonParsed.course.courseCode} — {jsonParsed.course.formatType} — {jsonParsed.course.startDate} to {jsonParsed.course.endDate}</p>
+                {jsonParsed.org && <p>Organisation: {jsonParsed.org.name}{jsonParsed.org.acronym ? ` (${jsonParsed.org.acronym})` : ""}</p>}
                 {jsonParsed.course.trainerName && <p>Trainer: {jsonParsed.course.trainerName}</p>}
                 {jsonParsed.course.invoiceReference && <p>Invoice: {jsonParsed.course.invoiceReference}</p>}
                 {jsonParsed.attendees.length > 0 && (
@@ -239,7 +307,7 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
                 )}
               </div>
               <div className="flex gap-3 pt-3 border-t border-green-200">
-                <Button onClick={() => handleSubmit(jsonParsed.course, jsonParsed.attendees)} disabled={saving || !apiKey}>
+                <Button onClick={() => handleSubmit(jsonParsed.course, jsonParsed.attendees, jsonParsed.org)} disabled={saving || !apiKey}>
                   {saving ? "Creating..." : `Create Course${jsonParsed.attendees.length > 0 ? ` + ${jsonParsed.attendees.length} Attendees` : ""}`}
                 </Button>
               </div>
@@ -251,27 +319,33 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
         </div>
       )}
 
-      {/* ── Form Mode ───────────────────────────────────── */}
+      {/* ── Form Mode ──────────────────────────────────────── */}
       {mode === "form" && (
-        <form onSubmit={(e) => { e.preventDefault(); handleSubmit(form, attendees); }} className="space-y-5">
-          {/* Course basics */}
+        <form onSubmit={(e) => { e.preventDefault(); handleSubmit(formToRequest(), attendees, org); }} className="space-y-5">
+
+          {/* Organisation type-ahead */}
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Client Organisation</label>
+            <OrganisationTypeAhead
+              apiKey={apiKey}
+              value={org}
+              onSelect={setOrg}
+              placeholder="Start typing to search or create…"
+            />
+          </div>
+
+          {/* Course type + format */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
-              <label className="block text-xs font-medium text-gray-700 mb-1">Course Name</label>
-              <input type="text" value={form.name} onChange={(e) => update("name", e.target.value)}
-                placeholder="e.g. PSM - Acme Corp" required
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500" />
-            </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Course Type</label>
-              <select value={form.courseCode} onChange={(e) => update("courseCode", e.target.value)}
+              <select value={courseCode} onChange={(e) => setCourseCode(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
                 {COURSE_CODES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Format</label>
-              <select value={form.formatType} onChange={(e) => update("formatType", e.target.value)}
+              <select value={formatType} onChange={(e) => setFormatType(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
                 <option value="virtual">Virtual</option>
                 <option value="in_person">In-person</option>
@@ -279,16 +353,38 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
             </div>
           </div>
 
+          {/* Course name — auto-generated, editable */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-medium text-gray-700">Course Name</label>
+              {nameOverridden && (
+                <button type="button" onClick={() => { setNameOverridden(false); }}
+                  className="flex items-center gap-1 text-xs text-gray-400 hover:text-brand-600">
+                  <RotateCcw className="w-3 h-3" /> Reset to auto
+                </button>
+              )}
+            </div>
+            <input
+              type="text"
+              value={courseName}
+              onChange={(e) => { setCourseName(e.target.value); setNameOverridden(e.target.value !== ""); }}
+              onBlur={(e) => { if (!e.target.value.trim()) setNameOverridden(false); }}
+              required
+              placeholder="Auto-generated from course type, org, and format"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+            />
+          </div>
+
           {/* Dates */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Start Date</label>
-              <input type="date" value={form.startDate} onChange={(e) => update("startDate", e.target.value)} required
+              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">End Date</label>
-              <input type="date" value={form.endDate} onChange={(e) => update("endDate", e.target.value)} required
+              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} required
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
             </div>
           </div>
@@ -318,42 +414,53 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Trainer</label>
               {trainers.length > 0 ? (
-                <select
-                  value={form.trainerName ?? ""}
-                  onChange={(e) => update("trainerName", e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
-                >
+                <select value={trainerName ?? ""} onChange={(e) => setTrainerName(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
                   <option value="">— Select trainer —</option>
-                  {trainers.map((t) => (
-                    <option key={t.id} value={t.name}>{t.name}</option>
-                  ))}
+                  {trainers.map((t) => <option key={t.id} value={t.name}>{t.name}</option>)}
                 </select>
               ) : (
-                <input type="text" value={form.trainerName || ""} onChange={(e) => update("trainerName", e.target.value)}
+                <input type="text" value={trainerName || ""} onChange={(e) => setTrainerName(e.target.value)}
                   placeholder="Alex Brown"
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
               )}
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Capacity</label>
-              <input type="number" value={form.capacity || ""} onChange={(e) => update("capacity", e.target.value ? Number(e.target.value) : undefined)}
+              <input type="number" value={capacity || ""} onChange={(e) => setCapacity(e.target.value ? Number(e.target.value) : undefined)}
                 placeholder="20"
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Price (total)</label>
-              <input type="number" value={form.price || ""} onChange={(e) => update("price", e.target.value ? Number(e.target.value) : undefined)}
+              <input type="number" value={price || ""} onChange={(e) => setPrice(e.target.value ? Number(e.target.value) : undefined)}
                 placeholder="5000"
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
             </div>
           </div>
 
-          {/* Invoice reference */}
+          {/* Invoice reference — auto-generated, editable */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Invoice Reference (Xero)</label>
-            <input type="text" value={form.invoiceReference || ""} onChange={(e) => update("invoiceReference", e.target.value)}
-              placeholder="INV-00123"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-medium text-gray-700">Invoice Reference (Xero)</label>
+              {refOverridden && (
+                <button type="button" onClick={() => setRefOverridden(false)}
+                  className="flex items-center gap-1 text-xs text-gray-400 hover:text-brand-600">
+                  <RotateCcw className="w-3 h-3" /> Reset to auto
+                </button>
+              )}
+            </div>
+            <input
+              type="text"
+              value={invoiceRef}
+              onChange={(e) => {
+                setInvoiceRef(e.target.value);
+                setRefOverridden(true);
+              }}
+              onBlur={(e) => { if (!e.target.value.trim()) setRefOverridden(false); }}
+              placeholder="Auto-generated e.g. PSM-FNC-270426"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            />
           </div>
 
           {/* Virtual: meeting details */}
@@ -362,20 +469,20 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
               <p className="text-xs font-semibold text-blue-800 uppercase tracking-wide">Meeting Details</p>
               <div>
                 <label className="block text-xs font-medium text-blue-700 mb-1">Zoom/Teams URL</label>
-                <input type="url" value={form.meetingUrl || ""} onChange={(e) => update("meetingUrl", e.target.value)}
+                <input type="url" value={meetingUrl} onChange={(e) => setMeetingUrl(e.target.value)}
                   placeholder="https://zoom.us/j/..."
                   className="w-full border border-blue-200 rounded-lg px-3 py-2 text-sm bg-white" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-blue-700 mb-1">Meeting ID</label>
-                  <input type="text" value={form.meetingId || ""} onChange={(e) => update("meetingId", e.target.value)}
+                  <input type="text" value={meetingId} onChange={(e) => setMeetingId(e.target.value)}
                     placeholder="123 456 7890"
                     className="w-full border border-blue-200 rounded-lg px-3 py-2 text-sm bg-white" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-blue-700 mb-1">Passcode</label>
-                  <input type="text" value={form.meetingPasscode || ""} onChange={(e) => update("meetingPasscode", e.target.value)}
+                  <input type="text" value={meetingPasscode} onChange={(e) => setMeetingPasscode(e.target.value)}
                     placeholder="abc123"
                     className="w-full border border-blue-200 rounded-lg px-3 py-2 text-sm bg-white" />
                 </div>
@@ -389,7 +496,7 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
               <p className="text-xs font-semibold text-amber-800 uppercase tracking-wide">Venue Details</p>
               <div>
                 <label className="block text-xs font-medium text-amber-700 mb-1">Venue Address</label>
-                <textarea value={form.venueAddress || ""} onChange={(e) => update("venueAddress", e.target.value)}
+                <textarea value={venueAddress} onChange={(e) => setVenueAddress(e.target.value)}
                   placeholder="Conference Room 3, 10 Downing Street, London SW1A 2AA"
                   rows={2}
                   className="w-full border border-amber-200 rounded-lg px-3 py-2 text-sm bg-white" />
@@ -400,7 +507,7 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
           {/* Notes */}
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Notes</label>
-            <textarea value={form.notes || ""} onChange={(e) => update("notes", e.target.value)}
+            <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
               placeholder="Any additional details..."
               rows={2}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
@@ -416,7 +523,7 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
               </button>
             </div>
             {attendees.length === 0 && (
-              <p className="text-xs text-gray-400">No attendees yet — you can add them now or later from the course detail page.</p>
+              <p className="text-xs text-gray-400">No attendees yet — add them now or later from the course page.</p>
             )}
             {attendees.map((row, i) => (
               <div key={i} className="flex gap-2 items-start mb-2">

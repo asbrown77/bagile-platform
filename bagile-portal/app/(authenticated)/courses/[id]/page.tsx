@@ -184,7 +184,10 @@ export default function CourseDetail() {
     ...(inactive.length > 0 ? [{ id: "history", label: "Transferred / Refunded", count: inactive.length }] : []),
   ];
 
-  const clientName = isPrivate ? parseClientFromTitle(course?.title) : null;
+  // Prefer the structured org relationship over title parsing (Sprint 23+)
+  const clientName = isPrivate
+    ? (course?.clientOrganisationName ?? parseClientFromTitle(course?.title))
+    : null;
   const hasAttendees = active.length > 0;
 
   return (
@@ -389,7 +392,16 @@ export default function CourseDetail() {
                     <span className="flex items-center gap-1.5 text-gray-500">
                       <Building2 className="w-3.5 h-3.5 text-gray-400" /> Client
                     </span>
-                    <span className="text-gray-700">{clientName}</span>
+                    {course?.clientOrganisationName ? (
+                      <a
+                        href={`/organisations/${encodeURIComponent(course.clientOrganisationName)}`}
+                        className="text-brand-600 hover:text-brand-700 hover:underline font-medium"
+                      >
+                        {clientName}
+                      </a>
+                    ) : (
+                      <span className="text-gray-700">{clientName}</span>
+                    )}
                   </div>
                 )}
               </>
