@@ -171,6 +171,10 @@ export default function CalendarPage() {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth()); // 0-indexed
   const [weekStart, setWeekStart] = useState(() => getWeekStart(now));
+  /** Trainer filter: "AB" | "CB" | "all" */
+  const [trainerFilter, setTrainerFilter] = useState<"AB" | "CB" | "all">("all");
+  /** Whether to show cancelled courses (default: hidden). */
+  const [showCancelled, setShowCancelled] = useState(false);
   const { minEnrolments } = loadConfig();
 
   // Restore persisted view mode after mount (avoids SSR mismatch)
@@ -235,7 +239,18 @@ export default function CalendarPage() {
     return courses.filter((c) => {
       const start = (c.startDate || "").split("T")[0];
       const end = (c.endDate || c.startDate || "").split("T")[0];
-      return dateStr >= start && dateStr <= end;
+      if (dateStr < start || dateStr > end) return false;
+
+      // Cancelled filter — hide unless toggled on
+      if (!showCancelled && c.status === "cancelled") return false;
+
+      // Trainer filter
+      if (trainerFilter !== "all") {
+        const initials = trainerInitials(c.trainerName);
+        if (initials !== trainerFilter) return false;
+      }
+
+      return true;
     });
   }
 
@@ -277,24 +292,53 @@ export default function CalendarPage() {
 
       {error && <div className="mb-4"><AlertBanner variant="danger">{error}</AlertBanner></div>}
 
-      {/* Toolbar: view toggle + navigation */}
+      {/* Toolbar: view toggle + filters + navigation */}
       <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
-        {/* View mode toggle */}
-        <div className="flex rounded-lg border border-gray-200 overflow-hidden">
-          <button
-            onClick={() => switchView("week")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors
-              ${viewMode === "week" ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
-          >
-            <CalendarDays className="w-3.5 h-3.5" /> Week
-          </button>
-          <button
-            onClick={() => switchView("month")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border-l border-gray-200 transition-colors
-              ${viewMode === "month" ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
-          >
-            <CalendarRange className="w-3.5 h-3.5" /> Month
-          </button>
+        {/* Left group: view toggle + trainer filter + cancelled toggle */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* View mode toggle */}
+          <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+            <button
+              onClick={() => switchView("week")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors
+                ${viewMode === "week" ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+            >
+              <CalendarDays className="w-3.5 h-3.5" /> Week
+            </button>
+            <button
+              onClick={() => switchView("month")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border-l border-gray-200 transition-colors
+                ${viewMode === "month" ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+            >
+              <CalendarRange className="w-3.5 h-3.5" /> Month
+            </button>
+          </div>
+
+          {/* Trainer filter */}
+          <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+            {(["all", "AB", "CB"] as const).map((t, i) => (
+              <button
+                key={t}
+                onClick={() => setTrainerFilter(t)}
+                className={`px-3 py-1.5 text-xs font-medium transition-colors
+                  ${trainerFilter === t ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}
+                  ${i > 0 ? "border-l border-gray-200" : ""}`}
+              >
+                {t === "all" ? "Both" : t}
+              </button>
+            ))}
+          </div>
+
+          {/* Cancelled toggle */}
+          <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={showCancelled}
+              onChange={(e) => setShowCancelled(e.target.checked)}
+              className="rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+            />
+            Show cancelled
+          </label>
         </div>
 
         {/* Navigation */}
