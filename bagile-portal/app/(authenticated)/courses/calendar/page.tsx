@@ -126,7 +126,7 @@ function CourseTile({ course, minEnrolments, compact = false, cellDate }: Course
           )}
         </div>
 
-        {/* Bottom row: trainer avatar · enrolment · date (hidden in compact) */}
+        {/* Bottom row: trainer avatar · format · enrolment · date (hidden in compact) */}
         <div className="flex items-center gap-1 mt-0.5 flex-wrap">
           {/* Trainer avatar */}
           {course.trainerName && (
@@ -135,6 +135,20 @@ function CourseTile({ course, minEnrolments, compact = false, cellDate }: Course
               style={{ backgroundColor: avatarColour, width: 14, height: 14, fontSize: 8 }}
             >
               {initials}
+            </span>
+          )}
+
+          {/* Format indicator: V = virtual, F = face-to-face */}
+          {course.formatType && (
+            <span
+              className={`shrink-0 text-[9px] font-bold rounded px-0.5 leading-tight ${
+                course.formatType.toLowerCase().includes("virtual")
+                  ? "bg-blue-100 text-blue-600"
+                  : "bg-gray-100 text-gray-600"
+              }`}
+              title={course.formatType}
+            >
+              {course.formatType.toLowerCase().includes("virtual") ? "V" : "F2F"}
             </span>
           )}
 
@@ -372,6 +386,8 @@ export default function CalendarPage() {
         <div className="flex items-center gap-1.5"><div className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-white text-[8px] font-bold" style={{ backgroundColor: "#6366F1" }}>CB</div><span>Chris</span></div>
         <span className="text-gray-400">▲ = at risk</span>
         <span className="text-gray-400">P = private</span>
+        <div className="flex items-center gap-1"><span className="bg-blue-100 text-blue-600 text-[9px] font-bold rounded px-0.5">V</span><span>virtual</span></div>
+        <div className="flex items-center gap-1"><span className="bg-gray-100 text-gray-600 text-[9px] font-bold rounded px-0.5">F2F</span><span>in-person</span></div>
         <span className="text-gray-400">enrolled/{minEnrolments} = enrolments/min</span>
       </div>
 
