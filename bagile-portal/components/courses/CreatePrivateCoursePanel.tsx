@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { SlideOver } from "@/components/ui/SlideOver";
 import { Button } from "@/components/ui/Button";
 import { AlertBanner } from "@/components/ui/AlertBanner";
-import { createPrivateCourse, addPrivateAttendees, getScheduleConflicts, CreatePrivateCourseRequest, AttendeeInput, ScheduleConflict } from "@/lib/api";
+import { createPrivateCourse, addPrivateAttendees, getScheduleConflicts, CreatePrivateCourseRequest, AttendeeInput, ScheduleConflict, Trainer, getTrainers } from "@/lib/api";
 import { Trash2, UserPlus, Copy, FileJson } from "lucide-react";
 
 interface Props {
@@ -48,6 +48,22 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
   const [jsonText, setJsonText] = useState("");
   const [jsonParsed, setJsonParsed] = useState<{ course: CreatePrivateCourseRequest; attendees: AttendeeInput[] } | null>(null);
   const [conflicts, setConflicts] = useState<ScheduleConflict[]>([]);
+  const [trainers, setTrainers] = useState<Trainer[]>([]);
+
+  // Load trainers once apiKey is available
+  useEffect(() => {
+    if (!apiKey) return;
+    getTrainers(apiKey)
+      .then((list) => {
+        setTrainers(list);
+        // Default to first trainer if none selected yet
+        if (list.length > 0 && !form.trainerName) {
+          setForm((f) => ({ ...f, trainerName: list[0].name }));
+        }
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apiKey]);
 
   // Check for conflicts when dates change
   useEffect(() => {
@@ -301,9 +317,22 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
           <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Trainer</label>
-              <input type="text" value={form.trainerName || ""} onChange={(e) => update("trainerName", e.target.value)}
-                placeholder="Alex Brown"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+              {trainers.length > 0 ? (
+                <select
+                  value={form.trainerName ?? ""}
+                  onChange={(e) => update("trainerName", e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+                >
+                  <option value="">— Select trainer —</option>
+                  {trainers.map((t) => (
+                    <option key={t.id} value={t.name}>{t.name}</option>
+                  ))}
+                </select>
+              ) : (
+                <input type="text" value={form.trainerName || ""} onChange={(e) => update("trainerName", e.target.value)}
+                  placeholder="Alex Brown"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Capacity</label>

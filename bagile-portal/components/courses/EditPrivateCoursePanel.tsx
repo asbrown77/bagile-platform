@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { SlideOver } from "@/components/ui/SlideOver";
 import { Button } from "@/components/ui/Button";
 import { AlertBanner } from "@/components/ui/AlertBanner";
-import { CourseScheduleDetail, UpdatePrivateCourseRequest, updatePrivateCourse } from "@/lib/api";
+import { CourseScheduleDetail, UpdatePrivateCourseRequest, updatePrivateCourse, Trainer, getTrainers } from "@/lib/api";
 
 interface Props {
   open: boolean;
@@ -27,6 +27,13 @@ export function EditPrivateCoursePanel({ open, onClose, apiKey, course, onSaved 
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [trainers, setTrainers] = useState<Trainer[]>([]);
+
+  // Load trainers once on mount
+  useEffect(() => {
+    if (!apiKey) return;
+    getTrainers(apiKey).then(setTrainers).catch(() => {});
+  }, [apiKey]);
 
   const isVirtual = (course.formatType ?? "").toLowerCase().includes("virtual");
 
@@ -93,13 +100,26 @@ export function EditPrivateCoursePanel({ open, onClose, apiKey, course, onSaved 
         {/* Trainer */}
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">Trainer</label>
-          <input
-            type="text"
-            value={form.trainerName ?? ""}
-            onChange={(e) => update("trainerName", e.target.value || undefined)}
-            placeholder="Alex Brown"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-          />
+          {trainers.length > 0 ? (
+            <select
+              value={form.trainerName ?? ""}
+              onChange={(e) => update("trainerName", e.target.value || undefined)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+            >
+              <option value="">— Select trainer —</option>
+              {trainers.map((t) => (
+                <option key={t.id} value={t.name}>{t.name}</option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type="text"
+              value={form.trainerName ?? ""}
+              onChange={(e) => update("trainerName", e.target.value || undefined)}
+              placeholder="Alex Brown"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            />
+          )}
         </div>
 
         {/* Dates */}
