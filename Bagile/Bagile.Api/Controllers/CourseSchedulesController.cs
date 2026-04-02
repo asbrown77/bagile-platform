@@ -9,6 +9,8 @@ using Bagile.Application.CourseSchedules.Queries.GetScheduleConflicts;
 using Bagile.Application.CourseSchedules.Commands.CancelCourse;
 using Bagile.Application.CourseSchedules.Commands.CreatePrivateCourse;
 using Bagile.Application.CourseSchedules.Commands.AddPrivateAttendees;
+using Bagile.Application.CourseSchedules.Commands.UpdatePrivateCourse;
+using Bagile.Application.CourseSchedules.Commands.RemovePrivateAttendee;
 
 namespace Bagile.Api.Controllers;
 
@@ -165,6 +167,45 @@ public class CourseSchedulesController : ControllerBase
         };
         var result = await _mediator.Send(command);
         return Ok(result);
+    }
+
+    /// <summary>
+    /// Update mutable fields of a private course.
+    /// Returns 404 if the course does not exist or is a public course.
+    /// </summary>
+    [HttpPut("{id}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdatePrivateCourse(
+        long id,
+        [FromBody] UpdatePrivateCourseCommand request)
+    {
+        var command = request with { Id = id };
+        var result = await _mediator.Send(command);
+
+        if (result == null)
+            return NotFound(new { error = $"Private course {id} not found" });
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Remove (cancel) an attendee from a private course.
+    /// Returns 404 if the enrolment doesn't exist, is already cancelled,
+    /// or doesn't belong to this private course.
+    /// </summary>
+    [HttpDelete("{id}/attendees/{enrolmentId}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RemovePrivateAttendee(long id, long enrolmentId)
+    {
+        var command = new RemovePrivateAttendeeCommand(id, enrolmentId);
+        var removed = await _mediator.Send(command);
+
+        if (!removed)
+            return NotFound(new { error = $"Active enrolment {enrolmentId} not found on private course {id}" });
+
+        return NoContent();
     }
 
     [HttpPost("parse-attendees")]

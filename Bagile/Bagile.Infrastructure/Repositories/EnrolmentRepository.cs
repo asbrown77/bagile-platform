@@ -230,6 +230,30 @@ namespace Bagile.Infrastructure.Repositories
             await conn.ExecuteAsync(sql, new { id = enrolmentId });
         }
 
+        /// <summary>
+        /// Cancels an enrolment only if it belongs to the specified course schedule
+        /// and that schedule is a private course. Returns true if a row was updated.
+        /// </summary>
+        public async Task<bool> CancelPrivateEnrolmentAsync(long enrolmentId, long courseScheduleId)
+        {
+            const string sql = @"
+        UPDATE bagile.enrolments e
+        SET is_cancelled = TRUE,
+            status = 'cancelled',
+            cancelled_at = NOW(),
+            updated_at = NOW()
+        FROM bagile.course_schedules cs
+        WHERE e.id = @enrolmentId
+          AND e.course_schedule_id = @courseScheduleId
+          AND e.course_schedule_id = cs.id
+          AND cs.is_public = false
+          AND e.status NOT IN ('cancelled', 'transferred');";
+
+            await using var conn = new NpgsqlConnection(_conn);
+            var rows = await conn.ExecuteAsync(sql, new { enrolmentId, courseScheduleId });
+            return rows > 0;
+        }
+
         public async Task<long> InsertWithoutOrderAsync(
             long studentId, long courseScheduleId, string source)
         {
