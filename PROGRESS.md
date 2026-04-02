@@ -94,6 +94,44 @@
 - ~~Template UI editor (settings page) not yet built~~ **RESOLVED Sprint 18**
 - No send history/log yet — if retransmission needed, no record of what was sent
 
+## Sprint 19 (1 Apr 2026) — Private Course Polish
+
+### What was built (3 commits)
+
+**Commit 1 — API: PUT /course-schedules/{id} + DELETE /course-schedules/{id}/attendees/{enrolmentId}**
+- `UpdatePrivateCourseFields` value object in domain layer
+- `UpdatePrivateCourseAsync` in repository (SQL WHERE guards `is_public = false`)
+- `UpdatePrivateCourseCommand` + handler (CQRS, re-fetches and returns refreshed DTO)
+- `CancelPrivateEnrolmentAsync` with SQL JOIN guard: validates enrolment belongs to the course AND course is private — returns false (→ 404) if not
+- `RemovePrivateAttendeeCommand` + handler using the safe cancel method
+- `PUT {id}` and `DELETE {id}/attendees/{enrolmentId}` wired in `CourseSchedulesController`
+
+**Commit 2 — Frontend: EditPrivateCoursePanel + API client functions**
+- `UpdatePrivateCourseRequest` type and `updatePrivateCourse()` in `lib/api.ts`
+- `removePrivateAttendee()` helper in `lib/api.ts`
+- `EditPrivateCoursePanel` slide-over: seeds from current course, virtual/in-person conditional sections, calls PUT on save
+
+**Commit 3 — Frontend: Course detail page polish (items 2-6)**
+- Remove Attendee: Trash2 icon, confirm dialog, `handleRemoveAttendee` with loading state
+- Transfer/Refund hidden on private courses; Edit + Remove shown
+- Table simplified for private (3 cols: Name, Email, Actions); public unchanged (6 cols)
+- Client org parsed from title suffix after " - " (Building2 icon in info bar)
+- Over-capacity: `{active}/{capacity} ⚠️` in red when active > capacity
+- Edit Course button in header (secondary, pencil icon, private only)
+
+### Needs testing
+- PUT /api/course-schedules/{id} — only updates is_public=false rows (test on a public course id: should be a no-op / 404)
+- DELETE /api/course-schedules/{id}/attendees/{enrolmentId} — confirm enrolment moves to "cancelled" in DB, reappears in History tab
+- Verify: Transfer and Refund buttons absent on private course attendee rows
+- Verify: Organisation/Country columns absent on private course table
+- Verify: Client name appears in header for "PSM - Acme Corp" format titles
+- Verify: Over-capacity warning shows red when attendee count exceeds capacity
+- Deploy: no DB migration needed (no schema changes)
+
+### Technical debt
+- Client org is parsed from title — fragile for free-form titles. Long-term: use `client_organisation_id` FK + org name lookup. Tracked in P2.5 item 2.
+- PUT endpoint does not validate `StartDate <= EndDate` — relies on frontend form validation only.
+
 ## Sprint 18 (1 Apr 2026) — Post-Course Emails End-to-End
 
 ### What was built (4 commits)

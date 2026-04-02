@@ -16,7 +16,7 @@ _"I can see revenue, partner value, course demand, and make scheduling decisions
 
 ## Sprint Queue
 
-*All sprints through 14 complete.*
+*All sprints through 19 complete.*
 
 ### Sprint 11: Course Management Hub
 **Goal:** The course detail page is a trainer's daily tool — everything needed to run a course in one place.
