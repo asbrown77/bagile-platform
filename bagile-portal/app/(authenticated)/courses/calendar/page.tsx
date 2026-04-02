@@ -10,6 +10,9 @@ import { ChevronLeft, ChevronRight, List, CalendarDays, CalendarRange } from "lu
 import Link from "next/link";
 import { getCourseDisplayStatus, type CourseDisplayStatus } from "@/lib/courseStatus";
 import { loadConfig } from "@/lib/config";
+import {
+  getCourseColour, getTrainerColour, trainerInitials,
+} from "@/lib/courseColours";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June",
@@ -17,14 +20,15 @@ const MONTH_NAMES = ["January", "February", "March", "April", "May", "June",
 
 type ViewMode = "week" | "month";
 
-const STATUS_COLORS: Record<string, string> = {
-  running: "bg-blue-500 text-white",
-  completed: "bg-gray-300 text-gray-700",
-  cancel: "bg-red-700 text-white",
-  "at risk": "bg-red-500 text-white",
-  guaranteed: "bg-green-500 text-white",
-  monitor: "bg-amber-400 text-amber-900",
-  cancelled: "bg-gray-200 text-gray-400 line-through",
+/** Background tint applied to the whole tile body, keyed by display status. */
+const STATUS_BG: Record<string, string> = {
+  running:   "bg-blue-50 border-gray-200",
+  completed: "bg-gray-50 border-gray-200",
+  cancel:    "bg-red-50 border-red-200",
+  "at risk": "bg-red-50 border-red-200",
+  guaranteed:"bg-green-50 border-gray-200",
+  monitor:   "bg-amber-50 border-gray-200",
+  cancelled: "bg-gray-50 border-gray-100 opacity-50",
 };
 
 function getViewMode(): ViewMode {
@@ -60,29 +64,99 @@ interface CourseTileProps {
   course: CourseScheduleItem;
   minEnrolments: number;
   compact?: boolean;
+  /** ISO date string for the cell this tile is rendered in (for multi-day day index). */
+  cellDate?: string;
 }
 
-function CourseTile({ course, minEnrolments, compact = false }: CourseTileProps) {
+function CourseTile({ course, minEnrolments, compact = false, cellDate }: CourseTileProps) {
   const status = getCourseDisplayStatus(course);
-  const colorClass = STATUS_COLORS[status] || STATUS_COLORS.monitor;
-  const code = course.courseCode?.split("-")[0] || "";
-  const trainer = course.trainerName?.split(" ").map((n) => n[0]).join("") || "";
+  const bgClass = STATUS_BG[status] || STATUS_BG.monitor;
+  const isCancelled = status === "cancelled";
+  const isAtRisk = status === "at risk" || status === "cancel";
   const isPrivate = course.type === "private";
+
+  // Course type prefix for display (e.g. "PSMAI" → "PSM-AI" is kept as-is from API)
+  const firstSegment = course.courseCode?.split("-")[0] || "";
+  const borderColour = getCourseColour(course.courseCode || "");
+
+  // Trainer avatar
+  const initials = trainerInitials(course.trainerName);
+  const avatarColour = getTrainerColour(initials);
+
+  // Multi-day: determine day index (1-based) and total span
+  const startStr = (course.startDate || "").split("T")[0];
+  const endStr = (course.endDate || course.startDate || "").split("T")[0];
+  const spanDays = startStr && endStr
+    ? Math.round((new Date(endStr).getTime() - new Date(startStr).getTime()) / 86400000) + 1
+    : 1;
+  const isMultiDay = spanDays > 1;
+  const dayIndex = cellDate && startStr
+    ? Math.round((new Date(cellDate).getTime() - new Date(startStr).getTime()) / 86400000) + 1
+    : 1;
+  const isDay1 = dayIndex === 1;
+
+  // Enrolment display
   const enrolDisplay = `${course.currentEnrolmentCount}/${minEnrolments}`;
+
+  // Date display for non-compact tiles
+  const dateLabel = course.startDate
+    ? new Date(course.startDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
+    : "";
 
   return (
     <Link
       href={`/courses/${course.id}`}
-      className={`block px-1.5 py-0.5 rounded text-[10px] md:text-xs font-medium ${colorClass} hover:opacity-80 transition-opacity`}
-      title={`${course.title} — ${course.currentEnrolmentCount} enrolled${isPrivate ? " (private)" : ""}`}
+      title={`${course.title} — ${course.currentEnrolmentCount} enrolled${isPrivate ? " (private)" : ""}${isCancelled ? " — CANCELLED" : ""}`}
+      className={`block rounded border text-[10px] md:text-xs font-medium transition-opacity hover:opacity-80
+        ${bgClass}
+        ${isCancelled ? "opacity-50" : ""}
+        ${isMultiDay && !isDay1 ? "border-dashed" : "border-solid"}`}
+      style={{ borderLeftWidth: 3, borderLeftColor: borderColour, borderLeftStyle: isMultiDay && !isDay1 ? "dashed" : "solid" }}
     >
-      <span className="truncate block">
-        {code}
-        {trainer && <span className="opacity-75 ml-1">{trainer}</span>}
-        {isPrivate && <span className="opacity-75 ml-1">P</span>}
-        {!compact && <span className="float-right opacity-75 ml-1">{enrolDisplay}</span>}
-        {compact && <span className="float-right opacity-75 ml-1">{course.currentEnrolmentCount}</span>}
-      </span>
+      <div className="px-1.5 py-1 min-w-0">
+        {/* Top row: course code + private badge */}
+        <div className="flex items-center gap-1 min-w-0">
+          <span className={`font-semibold truncate text-gray-800 ${isCancelled ? "line-through" : ""}`}>
+            {isMultiDay
+              ? `${firstSegment} (${dayIndex}/${spanDays})`
+              : firstSegment}
+          </span>
+          {isPrivate && (
+            <span className="shrink-0 text-[9px] bg-amber-100 text-amber-700 rounded px-1 py-0 leading-tight font-bold">P</span>
+          )}
+        </div>
+
+        {/* Bottom row: trainer avatar · enrolment · date (hidden in compact) */}
+        <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+          {/* Trainer avatar */}
+          {course.trainerName && (
+            <span
+              className="inline-flex items-center justify-center rounded-full text-white font-bold leading-none shrink-0"
+              style={{ backgroundColor: avatarColour, width: 14, height: 14, fontSize: 8 }}
+            >
+              {initials}
+            </span>
+          )}
+
+          {/* At-risk indicator */}
+          {isAtRisk && (
+            <span className="shrink-0 text-amber-500" title="At risk / cancel">▲</span>
+          )}
+
+          {/* Enrolment */}
+          {!compact && (
+            <span className="text-gray-500 shrink-0">{enrolDisplay}</span>
+          )}
+          {compact && (
+            <span className="text-gray-500 shrink-0">{course.currentEnrolmentCount}</span>
+          )}
+
+          {/* Date — only in full (non-compact) mode */}
+          {!compact && dateLabel && (
+            <span className="text-gray-400 shrink-0 hidden sm:inline">{dateLabel}</span>
+          )}
+        </div>
+      </div>
     </Link>
   );
 }
@@ -248,17 +322,13 @@ export default function CalendarPage() {
       </div>
 
       {/* Legend */}
-      <div className="flex gap-3 mb-4 flex-wrap items-center">
-        {(Object.entries(STATUS_COLORS) as [string, string][])
-          .filter(([s]) => s !== "cancelled")
-          .map(([status, cls]) => (
-            <div key={status} className="flex items-center gap-1.5">
-              <div className={`w-3 h-3 rounded ${cls.split(" ")[0]}`} />
-              <span className="text-xs text-gray-500 capitalize">{status}</span>
-            </div>
-          ))}
-        <span className="text-xs text-gray-400 ml-2">P = private</span>
-        <span className="text-xs text-gray-400">count/{minEnrolments} = enrolments/min</span>
+      <div className="flex gap-3 mb-4 flex-wrap items-center text-xs text-gray-500">
+        <div className="flex items-center gap-1.5"><div className="w-2.5 h-3 rounded-sm" style={{ backgroundColor: "#82A53F" }} /><span>Course colour = type</span></div>
+        <div className="flex items-center gap-1.5"><div className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-white text-[8px] font-bold" style={{ backgroundColor: "#E8792B" }}>AB</div><span>Alex</span></div>
+        <div className="flex items-center gap-1.5"><div className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-white text-[8px] font-bold" style={{ backgroundColor: "#6366F1" }}>CB</div><span>Chris</span></div>
+        <span className="text-gray-400">▲ = at risk</span>
+        <span className="text-gray-400">P = private</span>
+        <span className="text-gray-400">enrolled/{minEnrolments} = enrolments/min</span>
       </div>
 
       {/* ── WEEK VIEW ───────────────────────────────────────────────────────── */}
@@ -301,7 +371,7 @@ export default function CalendarPage() {
                     <p className="text-xs text-gray-400 col-span-7 p-2">Loading...</p>
                   )}
                   {dayCourses.map((c) => (
-                    <CourseTile key={c.id} course={c} minEnrolments={minEnrolments} />
+                    <CourseTile key={c.id} course={c} minEnrolments={minEnrolments} cellDate={ds} />
                   ))}
                   {dayCourses.length === 0 && !loading && (
                     <div className="h-full" />
@@ -346,7 +416,7 @@ export default function CalendarPage() {
                     </div>
                     <div className="space-y-0.5">
                       {dayCourses.slice(0, 3).map((c) => (
-                        <CourseTile key={c.id} course={c} minEnrolments={minEnrolments} compact />
+                        <CourseTile key={c.id} course={c} minEnrolments={minEnrolments} compact cellDate={dateStr} />
                       ))}
                       {dayCourses.length > 3 && (
                         <p className="text-[10px] text-gray-400 px-1">+{dayCourses.length - 3} more</p>
