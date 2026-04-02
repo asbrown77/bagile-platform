@@ -6,7 +6,7 @@ import { useApiKey } from "@/lib/hooks/useApiKey";
 import {
   CourseAttendee, CourseScheduleDetail, TransfersByCourse, PostCourseTemplate,
   getCourseAttendees, getCourseScheduleDetail, getTransfersByCourse,
-  getPostCourseTemplate,
+  getPostCourseTemplate, removePrivateAttendee,
   formatCurrency, formatDate,
 } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
@@ -20,7 +20,8 @@ import { Badge, statusBadge } from "@/components/ui/Badge";
 import { AddAttendeesPanel } from "@/components/courses/AddAttendeesPanel";
 import { SendFollowUpPanel } from "@/components/courses/SendFollowUpPanel";
 import { EditAttendeeModal } from "@/components/courses/EditAttendeeModal";
-import { Download, Mail, Users, Calendar, User, UserPlus, Video, MapPin, FileText, ExternalLink, Send, Pencil } from "lucide-react";
+import { EditPrivateCoursePanel } from "@/components/courses/EditPrivateCoursePanel";
+import { Download, Mail, Users, Calendar, User, UserPlus, Video, MapPin, FileText, ExternalLink, Send, Pencil, Trash2, Building2 } from "lucide-react";
 import Link from "next/link";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.bagile.co.uk";
@@ -37,10 +38,12 @@ export default function CourseDetail() {
   const [activeTab, setActiveTab] = useState("attendees");
   const [showAddAttendees, setShowAddAttendees] = useState(false);
   const [showSendFollowUp, setShowSendFollowUp] = useState(false);
+  const [showEditCourse, setShowEditCourse] = useState(false);
   const [transfers, setTransfers] = useState<TransfersByCourse | null>(null);
   const [followUpTemplate, setFollowUpTemplate] = useState<PostCourseTemplate | null>(null);
   const [templateMissing, setTemplateMissing] = useState(false);
   const [editingAttendee, setEditingAttendee] = useState<CourseAttendee | null>(null);
+  const [removingEnrolmentId, setRemovingEnrolmentId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!apiKey || !courseId) return;
@@ -110,12 +113,30 @@ export default function CourseDetail() {
     loadData();
   }
 
+  async function handleRemoveAttendee(attendee: CourseAttendee) {
+    const name = `${attendee.firstName} ${attendee.lastName}`;
+    if (!confirm(`Remove ${name} from this course?`)) return;
+    setRemovingEnrolmentId(attendee.enrolmentId);
+    try {
+      await removePrivateAttendee(apiKey, courseId, attendee.enrolmentId);
+      setSuccessMsg(`${name} removed`);
+      loadData();
+    } catch {
+      setError("Failed to remove attendee — please try again");
+    } finally {
+      setRemovingEnrolmentId(null);
+    }
+  }
+
   const isPrivate = course?.type === "private";
   const isVirtual = course?.formatType?.toLowerCase().includes("virtual");
   const active = attendees.filter((a) => a.status === "active");
   const inactive = attendees.filter((a) => a.status !== "active");
   const orders = [...new Map(active.map((a) => [a.orderNumber, a])).values()].filter((a) => a.orderNumber);
   const totalRevenue = orders.reduce((s, o) => s + (o.orderAmount || 0), 0);
+
+  // Over-capacity: attendees vs stated capacity
+  const isOverCapacity = isPrivate && course?.capacity != null && active.length > course.capacity;
 
   const transferCount = (transfers?.totalTransfersIn ?? 0) + (transfers?.totalTransfersOut ?? 0);
   const tabs = [
@@ -143,6 +164,17 @@ export default function CourseDetail() {
     window.open(`mailto:${emails}?subject=${encodeURIComponent(`Joining Details: ${courseName}`)}&body=${encodeURIComponent(body)}`);
   }
 
+  // Derive client org name from course title (e.g. "PSM - Frazer-Nash (Bristol)" → "Frazer-Nash (Bristol)")
+  function parseClientFromTitle(title: string | null | undefined): string | null {
+    if (!title) return null;
+    const dashIdx = title.indexOf(" - ");
+    if (dashIdx === -1) return null;
+    const after = title.slice(dashIdx + 3).trim();
+    return after || null;
+  }
+
+  const clientName = isPrivate ? parseClientFromTitle(course?.title) : null;
+
   return (
     <>
       {/* Panels & modals */}
@@ -168,6 +200,19 @@ export default function CourseDetail() {
         />
       )}
 
+      {course && (
+        <EditPrivateCoursePanel
+          open={showEditCourse}
+          onClose={() => setShowEditCourse(false)}
+          apiKey={apiKey}
+          course={course}
+          onSaved={() => {
+            setSuccessMsg("Course updated");
+            loadData();
+          }}
+        />
+      )}
+
       {editingAttendee && (
         <EditAttendeeModal
           attendee={editingAttendee}
@@ -190,9 +235,14 @@ export default function CourseDetail() {
         actions={
           <div className="flex gap-2 flex-wrap">
             {isPrivate && (
-              <Button size="sm" onClick={() => setShowAddAttendees(true)}>
-                <UserPlus className="w-3.5 h-3.5" /> Add Attendees
-              </Button>
+              <>
+                <Button variant="secondary" size="sm" onClick={() => setShowEditCourse(true)}>
+                  <Pencil className="w-3.5 h-3.5" /> Edit Course
+                </Button>
+                <Button size="sm" onClick={() => setShowAddAttendees(true)}>
+                  <UserPlus className="w-3.5 h-3.5" /> Add Attendees
+                </Button>
+              </>
             )}
             {active.length > 0 && (
               <>
@@ -251,15 +301,24 @@ export default function CourseDetail() {
                   {formatCurrency(course.price)} {isPrivate ? "total" : "per person"}
                 </span>
               )}
-              {course.capacity && (
-                <span className="text-gray-500">
-                  Capacity: {course.capacity}
+              {course.capacity != null && (
+                <span className={`font-medium ${isOverCapacity ? "text-red-600" : "text-gray-500"}`}>
+                  Capacity: {isPrivate
+                    ? <>{active.length}/{course.capacity}{isOverCapacity && " ⚠️"}</>
+                    : course.capacity}
                 </span>
               )}
               {course.invoiceReference && (
                 <span className="flex items-center gap-1.5 text-gray-600">
                   <FileText className="w-3.5 h-3.5 text-gray-400" />
                   Invoice: {course.invoiceReference}
+                </span>
+              )}
+              {/* Client org derived from course title */}
+              {clientName && (
+                <span className="flex items-center gap-1.5 text-gray-600">
+                  <Building2 className="w-3.5 h-3.5 text-gray-400" />
+                  Client: {clientName}
                 </span>
               )}
             </div>
@@ -317,24 +376,39 @@ export default function CourseDetail() {
               <tr>
                 <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Name</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Email</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Organisation</th>
-                {!isPrivate && <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase hidden lg:table-cell">Payment</th>}
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Country</th>
+                {/* Organisation and Country columns — public courses only */}
+                {!isPrivate && (
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Organisation</th>
+                )}
+                {!isPrivate && (
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase hidden lg:table-cell">Payment</th>
+                )}
+                {!isPrivate && (
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Country</th>
+                )}
                 <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {loading && Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} cols={isPrivate ? 5 : 6} />)}
+              {loading && Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} cols={isPrivate ? 3 : 6} />)}
               {!loading && active.map((a) => (
                 <tr key={a.enrolmentId} className="border-t border-gray-100 hover:bg-gray-50">
                   <td className="px-4 py-2.5 font-medium text-gray-900">{a.firstName} {a.lastName}</td>
                   <td className="px-4 py-2.5">
                     <a href={`mailto:${a.email}?subject=${encodeURIComponent(course?.title || "")}`} className="text-brand-600 hover:underline">{a.email}</a>
                   </td>
-                  <td className="px-4 py-2.5 text-gray-600 hidden md:table-cell">{a.billingCompany || a.organisation || "—"}</td>
-                  {!isPrivate && <td className="px-4 py-2.5 text-gray-500 text-xs hidden lg:table-cell">{a.paymentMethod || "—"}</td>}
-                  <td className="px-4 py-2.5 text-gray-500 hidden md:table-cell">{a.country || "—"}</td>
+                  {/* Public-only columns */}
+                  {!isPrivate && (
+                    <td className="px-4 py-2.5 text-gray-600 hidden md:table-cell">{a.billingCompany || a.organisation || "—"}</td>
+                  )}
+                  {!isPrivate && (
+                    <td className="px-4 py-2.5 text-gray-500 text-xs hidden lg:table-cell">{a.paymentMethod || "—"}</td>
+                  )}
+                  {!isPrivate && (
+                    <td className="px-4 py-2.5 text-gray-500 hidden md:table-cell">{a.country || "—"}</td>
+                  )}
                   <td className="px-4 py-2.5 space-x-2">
+                    {/* Edit attendee — always visible */}
                     <button
                       onClick={() => setEditingAttendee(a)}
                       className="text-gray-400 hover:text-brand-600 text-xs font-medium inline-flex items-center gap-1"
@@ -342,13 +416,29 @@ export default function CourseDetail() {
                     >
                       <Pencil className="w-3 h-3" />
                     </button>
-                    <button onClick={() => markTransfer(a.enrolmentId)} className="text-amber-600 hover:text-amber-800 text-xs font-medium">Transfer</button>
-                    {!isPrivate && <button onClick={() => markRefund(a.enrolmentId)} className="text-red-600 hover:text-red-800 text-xs font-medium">Refund</button>}
+                    {/* Transfer + Refund — public courses only */}
+                    {!isPrivate && (
+                      <button onClick={() => markTransfer(a.enrolmentId)} className="text-amber-600 hover:text-amber-800 text-xs font-medium">Transfer</button>
+                    )}
+                    {!isPrivate && (
+                      <button onClick={() => markRefund(a.enrolmentId)} className="text-red-600 hover:text-red-800 text-xs font-medium">Refund</button>
+                    )}
+                    {/* Remove — private courses only */}
+                    {isPrivate && (
+                      <button
+                        onClick={() => handleRemoveAttendee(a)}
+                        disabled={removingEnrolmentId === a.enrolmentId}
+                        className="text-red-400 hover:text-red-600 disabled:opacity-40 inline-flex items-center gap-1"
+                        title={`Remove ${a.firstName} ${a.lastName}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
               {!loading && active.length === 0 && (
-                <tr><td colSpan={isPrivate ? 5 : 6}>
+                <tr><td colSpan={isPrivate ? 3 : 6}>
                   <EmptyState icon={<Users className="w-10 h-10" />} title="No attendees" description="No active enrolments for this course" />
                 </td></tr>
               )}
