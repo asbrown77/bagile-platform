@@ -90,9 +90,56 @@
 - Verify ETL does not overwrite an overridden email field after next sync cycle
 
 ### Technical debt logged
-- Item 5 (MCP tools: update_student, send_post_course_email) deferred — straightforward to add
-- Template UI editor (settings page) not yet built — templates editable via `PUT` API for now
+- ~~Item 5 (MCP tools: update_student, send_post_course_email) deferred~~ **RESOLVED Sprint 18**
+- ~~Template UI editor (settings page) not yet built~~ **RESOLVED Sprint 18**
 - No send history/log yet — if retransmission needed, no record of what was sent
+
+## Sprint 18 (1 Apr 2026) — Post-Course Emails End-to-End
+
+### What was built (4 commits)
+
+**Commit 1 — Monitoring API: CourseStatus field**
+- Added `CourseStatus` to `CourseMonitoringDto` — exposes raw WP status (publish, cancelled, sold_out, draft)
+- Handler maps `course.Status` → `CourseStatus` alongside computed `MonitoringStatus`
+- Portal can now distinguish cancelled courses from healthy ones on dashboard
+
+**Commit 2 — V39 migration: seed all remaining post-course templates**
+- Full templates (resources, books, assessment details) for: PSM, PSPO-A, PSU, PAL-EBM
+- Placeholder templates (marked "needs customising"): PSM-AI, PSPO-AI, PSK, PAL-E, PSM-A, PSFS, APS-SD
+- All inserts use `ON CONFLICT (course_type) DO NOTHING` — safe to re-run
+- Template for PSM includes: 8 stances, Tech Debt Simulator, Retromat, Planning Poker, Liberating Structures
+- PSPO-A includes 9 recommended books: Impact Mapping, Lean UX, BVSSH, Good to Great, Extreme Ownership, etc.
+- PAL-EBM includes: EBM Guide, OKRs, Turn the Ship Around video, What Matters
+
+**Commit 3 — Portal: Post-Course Templates editor in Settings**
+- New `PostCourseTemplatesEditor` component in `settings/page.tsx`
+- Lists all templates; "needs customising" amber badge on placeholders
+- Click Edit → form with subject (+ variable hint) and HTML textarea (24 rows)
+- Save calls `PUT /api/templates/post-course/{courseType}`, shows last updated timestamp
+- Reads API key from localStorage (same pattern as rest of portal)
+
+**Commit 4 — MCP: update_student + send_post_course_email tools**
+- `update_student` — PUT /api/students/{id}, all fields optional, override note, ETL-safe
+- `send_post_course_email` — POST /api/templates/post-course/send/{id}, supports delayNote and courseTypeOverride
+- Added `apiPut()` helper to api-client (mirrors apiPost but uses PUT method)
+- TypeScript build passes clean
+
+### Item 5: Favicon — already resolved
+- `bagile-portal/public/favicon.png` exists (9096 bytes, copied in Sprint 15)
+- `layout.tsx` already references `/favicon.png` via Next.js metadata icons API
+- No code changes needed
+
+### Item 1: SMTP — already wired, ops action needed
+- `SmtpEmailService` registered in DI via `AddInfrastructureServices` since Sprint 16
+- `appsettings.json` has correct `Smtp:Host/Port/User/Pass/From` keys
+- **Ops action required:** Populate SMTP env vars on production API server (same values as ETL service)
+
+### Needs testing
+- Deploy V39 migration (`flyway migrate` or `deploy_db.sh`)
+- Populate SMTP env vars on API server, test send on a completed course
+- Verify template editor in Settings loads and saves correctly
+- Test MCP tools: `update_student` (check ETL doesn't overwrite on next sync), `send_post_course_email`
+- Verify `courseStatus` field appears in monitoring API response
 
 ## Operational Tips
 - Check bagile.co.uk/c-wiki for operational docs (Coda — needs login, not accessible from Claude)
