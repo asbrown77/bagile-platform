@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { AlertBanner } from "@/components/ui/AlertBanner";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Key, Plus, Settings2, FileText, ChevronLeft, Save } from "lucide-react";
+import { Key, Plus, Settings2, FileText, ChevronLeft, Save, Eye, Code } from "lucide-react";
 import { loadConfig, saveConfig, type PortalConfig } from "@/lib/config";
 
 export default function Settings() {
@@ -372,6 +372,7 @@ function PostCourseTemplatesEditor() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => {
     const key = localStorage.getItem("bagile_api_key") ?? "";
@@ -398,6 +399,7 @@ function PostCourseTemplatesEditor() {
     setEditBody(template.htmlBody);
     setSaveError("");
     setSaveSuccess(false);
+    setShowPreview(false);
     setState({ view: "edit", template });
   }
 
@@ -528,16 +530,57 @@ function PostCourseTemplatesEditor() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              HTML Body
-            </label>
-            <textarea
-              value={editBody}
-              onChange={(e) => setEditBody(e.target.value)}
-              rows={24}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
-              spellCheck={false}
-            />
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-sm font-medium text-gray-700">
+                HTML Body
+              </label>
+              {/* Source / Preview toggle */}
+              <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setShowPreview(false)}
+                  className={`flex items-center gap-1 px-2.5 py-1 text-xs font-medium transition-colors
+                    ${!showPreview ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+                >
+                  <Code className="w-3 h-3" /> Source
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowPreview(true)}
+                  className={`flex items-center gap-1 px-2.5 py-1 text-xs font-medium border-l border-gray-200 transition-colors
+                    ${showPreview ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+                >
+                  <Eye className="w-3 h-3" /> Preview
+                </button>
+              </div>
+            </div>
+
+            {!showPreview ? (
+              <textarea
+                value={editBody}
+                onChange={(e) => setEditBody(e.target.value)}
+                rows={24}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                spellCheck={false}
+              />
+            ) : (
+              <div className="border border-gray-300 rounded-lg overflow-auto bg-white" style={{ minHeight: "24rem" }}>
+                {editBody.trim() ? (
+                  <iframe
+                    srcDoc={editBody}
+                    className="w-full border-0"
+                    style={{ minHeight: "24rem" }}
+                    title="Template preview"
+                    sandbox="allow-same-origin"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-48 text-sm text-gray-400">
+                    Nothing to preview — add some HTML in Source mode.
+                  </div>
+                )}
+              </div>
+            )}
+
             <p className="text-xs text-gray-400 mt-1">
               Variables: <code>{"{{greeting}}"}</code>, <code>{"{{trainer_name}}"}</code>,{" "}
               <code>{"{{course_dates}}"}</code>, <code>{"{{delay_note}}"}</code>
