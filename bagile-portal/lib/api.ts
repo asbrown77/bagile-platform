@@ -925,8 +925,8 @@ export async function sendPreCourseEmail(
 export async function sendPreCourseTestEmail(
   apiKey: string,
   courseScheduleId: number,
-  data?: { htmlBodyOverride?: string },
-): Promise<{ sentTo: string }> {
+  data?: { htmlBodyOverride?: string; recipientEmail?: string },
+): Promise<{ recipientEmail: string }> {
   return apiRequest(`/api/templates/pre-course/test/${courseScheduleId}`, apiKey, { method: "POST", body: data ?? {} });
 }
 

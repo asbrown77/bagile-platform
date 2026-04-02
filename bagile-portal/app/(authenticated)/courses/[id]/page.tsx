@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useApiKey } from "@/lib/hooks/useApiKey";
 import {
@@ -21,31 +21,15 @@ import { Badge, statusBadge } from "@/components/ui/Badge";
 import { AddAttendeesPanel } from "@/components/courses/AddAttendeesPanel";
 import { SendFollowUpPanel } from "@/components/courses/SendFollowUpPanel";
 import { SendJoiningDetailsPanel } from "@/components/courses/SendJoiningDetailsPanel";
+import { EmailSection } from "@/components/courses/EmailSection";
 import { CourseBadge } from "@/components/courses/CourseBadge";
 import { EditAttendeeModal } from "@/components/courses/EditAttendeeModal";
 import { EditPrivateCoursePanel } from "@/components/courses/EditPrivateCoursePanel";
 import { CourseContactsSection } from "@/components/courses/CourseContactsSection";
-import { ChevronDown, ChevronUp, Download, Mail, Users, Calendar, User, UserPlus, Video, MapPin, FileText, ExternalLink, Send, Pencil, Trash2, Building2 } from "lucide-react";
+import { Download, Users, Calendar, User, UserPlus, Video, MapPin, FileText, ExternalLink, Pencil, Trash2, Building2 } from "lucide-react";
 import Link from "next/link";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.bagile.co.uk";
-
-// ── Smart primary send action ────────────────────────────────────────────────
-// Returns which send action should be the primary button based on course state.
-type SendAction = "joining" | "follow-up" | "email-all";
-
-function derivePrimaryAction(course: CourseScheduleDetail): SendAction {
-  if (!course.startDate) return "email-all";
-  const start = new Date(course.startDate);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const dayAfterTomorrow = new Date(today);
-  dayAfterTomorrow.setDate(today.getDate() + 2);
-
-  if (start > dayAfterTomorrow) return "joining";       // clearly in the future
-  if (start <= today) return "follow-up";               // today or past
-  return "joining";                                     // tomorrow — still pre-course
-}
 
 // ── Capacity progress bar ────────────────────────────────────────────────────
 function CapacityBar({ enrolled, capacity }: { enrolled: number; capacity: number }) {
@@ -65,66 +49,6 @@ function CapacityBar({ enrolled, capacity }: { enrolled: number; capacity: numbe
   );
 }
 
-// ── Send dropdown ────────────────────────────────────────────────────────────
-interface SendDropdownProps {
-  onJoining: () => void;
-  onFollowUp: () => void;
-  onEmailAll: () => void;
-  disabled?: boolean;
-}
-
-function SendDropdown({ onJoining, onFollowUp, onEmailAll, disabled }: SendDropdownProps) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
-
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen((v) => !v)}
-        disabled={disabled}
-        className="inline-flex items-center gap-1 px-2.5 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 disabled:opacity-40"
-        aria-haspopup="true"
-        aria-expanded={open}
-      >
-        Send <ChevronDown className="w-3.5 h-3.5" />
-      </button>
-      {open && (
-        <div className="absolute right-0 z-20 mt-1 w-64 bg-white border border-gray-200 rounded-md shadow-lg py-1 text-sm">
-          <button
-            onClick={() => { onJoining(); setOpen(false); }}
-            className="w-full text-left px-4 py-2.5 hover:bg-gray-50"
-          >
-            <span className="block font-medium text-gray-700">Send Joining Details</span>
-            <span className="block text-xs text-gray-400 mt-0.5">Pre-course info, venue, agenda</span>
-          </button>
-          <button
-            onClick={() => { onFollowUp(); setOpen(false); }}
-            className="w-full text-left px-4 py-2.5 hover:bg-gray-50"
-          >
-            <span className="block font-medium text-gray-700">Send Follow-Up</span>
-            <span className="block text-xs text-gray-400 mt-0.5">Post-course assessment, resources</span>
-          </button>
-          <button
-            onClick={() => { onEmailAll(); setOpen(false); }}
-            className="w-full text-left px-4 py-2.5 hover:bg-gray-50"
-          >
-            <span className="block font-medium text-gray-700">Email All</span>
-            <span className="block text-xs text-gray-400 mt-0.5">Quick email to all attendees</span>
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function CourseDetail() {
   const apiKey = useApiKey();
   const params = useParams();
@@ -139,9 +63,8 @@ export default function CourseDetail() {
   const [showSendFollowUp, setShowSendFollowUp] = useState(false);
   const [showSendJoining, setShowSendJoining] = useState(false);
   const [showEditCourse, setShowEditCourse] = useState(false);
-  const [sendHistory, setSendHistory] = useState<EmailSendLog[]>([]);
-  const [showSendHistory, setShowSendHistory] = useState(false);
-  const [sendHistoryLoading, setSendHistoryLoading] = useState(false);
+  const [emailLog, setEmailLog] = useState<EmailSendLog[]>([]);
+  const [emailLogLoading, setEmailLogLoading] = useState(false);
   const [transfers, setTransfers] = useState<TransfersByCourse | null>(null);
   const [followUpTemplate, setFollowUpTemplate] = useState<PostCourseTemplate | null>(null);
   const [templateMissing, setTemplateMissing] = useState(false);
@@ -154,6 +77,7 @@ export default function CourseDetail() {
   }, [apiKey, courseId]);
 
   async function loadData() {
+    setEmailLogLoading(true);
     try {
       const [detail, atts, xfers] = await Promise.all([
         getCourseScheduleDetail(apiKey, courseId),
@@ -171,8 +95,15 @@ export default function CourseDetail() {
           .then((t) => { setFollowUpTemplate(t); setTemplateMissing(false); })
           .catch(() => { setFollowUpTemplate(null); setTemplateMissing(true); });
       }
+
+      // Load email send log for the EmailSection status display
+      getEmailSendLog(apiKey, courseId)
+        .then(setEmailLog)
+        .catch(() => setEmailLog([]))
+        .finally(() => setEmailLogLoading(false));
     } catch {
       setError("Failed to load course data");
+      setEmailLogLoading(false);
     } finally {
       setLoading(false);
     }
@@ -191,11 +122,6 @@ export default function CourseDetail() {
         setSuccessMsg("CSV exported");
         setTimeout(() => setSuccessMsg(""), 3000);
       });
-  }
-
-  function emailAll() {
-    const emails = active.map((a) => a.email).join(",");
-    window.open(`mailto:${emails}?subject=${encodeURIComponent(course?.title || "")}`);
   }
 
   async function markRefund(enrolmentId: number) {
@@ -231,24 +157,6 @@ export default function CourseDetail() {
     }
   }
 
-  function openJoiningPanel() {
-    setShowSendJoining(true);
-  }
-
-  async function loadSendHistory() {
-    if (!apiKey || !courseId) return;
-    setSendHistoryLoading(true);
-    try {
-      const log = await getEmailSendLog(apiKey, courseId);
-      setSendHistory(log);
-    } catch {
-      // Log endpoint may not exist yet — fail silently
-      setSendHistory([]);
-    } finally {
-      setSendHistoryLoading(false);
-    }
-  }
-
   // Derive client org name from course title (e.g. "PSM - Frazer-Nash (Bristol)" → "Frazer-Nash (Bristol)")
   function parseClientFromTitle(title: string | null | undefined): string | null {
     if (!title) return null;
@@ -277,19 +185,7 @@ export default function CourseDetail() {
   ];
 
   const clientName = isPrivate ? parseClientFromTitle(course?.title) : null;
-  const primaryAction = course ? derivePrimaryAction(course) : null;
   const hasAttendees = active.length > 0;
-  const hasSendTarget = course?.meetingUrl || course?.venueAddress;
-
-  // Label + handler for the smart primary send button
-  const primarySendLabel = primaryAction === "joining" ? "Send Joining Details"
-    : primaryAction === "follow-up" ? "Send Follow-Up"
-    : "Email All";
-  function handlePrimarySend() {
-    if (primaryAction === "joining") openJoiningPanel();
-    else if (primaryAction === "follow-up") setShowSendFollowUp(true);
-    else emailAll();
-  }
 
   return (
     <>
@@ -537,30 +433,18 @@ export default function CourseDetail() {
         </div>
       )}
 
-      {/* ── Actions: smart primary send + dropdown ── */}
-      {!loading && course && hasAttendees && (
-        <div className="flex items-center gap-2 mb-4 flex-wrap">
-          <Button
-            size="sm"
-            onClick={handlePrimarySend}
-            title={
-              primaryAction === "follow-up" && templateMissing
-                ? `No template for ${course.courseCode?.split("-")[0]?.toUpperCase()}`
-                : undefined
-            }
-          >
-            <Send className="w-3.5 h-3.5" /> {primarySendLabel}
-          </Button>
-          <SendDropdown
-            onJoining={openJoiningPanel}
-            onFollowUp={() => setShowSendFollowUp(true)}
-            onEmailAll={emailAll}
-            disabled={!hasSendTarget && primaryAction !== "follow-up" && primaryAction !== "email-all"}
-          />
-        </div>
+      {/* ── Emails section — two side-by-side cards ── */}
+      {!loading && course && (
+        <EmailSection
+          emailLog={emailLog}
+          logLoading={emailLogLoading}
+          hasAttendees={hasAttendees}
+          onOpenJoining={() => setShowSendJoining(true)}
+          onOpenFollowUp={() => setShowSendFollowUp(true)}
+        />
       )}
 
-      {/* ── Contacts (private only) — between actions and attendee table ── */}
+      {/* ── Contacts (private only) — between emails and attendee table ── */}
       {!loading && isPrivate && (
         <CourseContactsSection apiKey={apiKey} courseId={courseId} />
       )}
@@ -793,74 +677,53 @@ export default function CourseDetail() {
         </div>
       )}
 
-      {/* ── Email Send History ── */}
-      {!loading && course && (
+      {/* ── Email Send History — collapsible audit log ── */}
+      {!loading && course && emailLog.length > 0 && (
         <div className="mt-6 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <button
-            type="button"
-            className="w-full flex items-center justify-between px-5 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            onClick={() => {
-              const next = !showSendHistory;
-              setShowSendHistory(next);
-              if (next && sendHistory.length === 0) loadSendHistory();
-            }}
-          >
-            <span className="flex items-center gap-2">
-              <Mail className="w-4 h-4 text-gray-400" />
-              Send History
-              {sendHistory.length > 0 && (
-                <span className="text-xs text-gray-400 font-normal">({sendHistory.length})</span>
-              )}
-            </span>
-            {showSendHistory ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
-          </button>
-
-          {showSendHistory && (
+          <details>
+            <summary className="w-full flex items-center justify-between px-5 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer list-none">
+              <span className="flex items-center gap-2">
+                Send History
+                <span className="text-xs text-gray-400 font-normal">({emailLog.length})</span>
+              </span>
+            </summary>
             <div className="border-t border-gray-200">
-              {sendHistoryLoading ? (
-                <div className="p-4 text-center text-sm text-gray-400">Loading...</div>
-              ) : sendHistory.length === 0 ? (
-                <div className="p-4 text-center text-sm text-gray-400">No emails sent for this course yet.</div>
-              ) : (
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Date</th>
-                      <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Type</th>
-                      <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Subject</th>
-                      <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Sent by</th>
-                      <th className="text-center px-4 py-2 text-xs font-medium text-gray-500 uppercase">Recipients</th>
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Date</th>
+                    <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Type</th>
+                    <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Subject</th>
+                    <th className="text-center px-4 py-2 text-xs font-medium text-gray-500 uppercase">Recipients</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {emailLog.map((log) => (
+                    <tr key={log.id} className="border-t border-gray-100">
+                      <td className="px-4 py-2.5 text-gray-600 whitespace-nowrap">
+                        {new Date(log.sentAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                        <span className="text-gray-400 text-xs ml-1">
+                          {new Date(log.sentAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className={`text-xs font-medium ${log.templateType === "pre_course" ? "text-blue-700" : "text-purple-700"}`}>
+                            {log.templateType === "pre_course" ? "Joining Details" : "Follow-Up"}
+                          </span>
+                          {log.isTest && (
+                            <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium">[TEST]</span>
+                          )}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5 text-gray-500 text-xs hidden md:table-cell truncate max-w-xs">{log.subject}</td>
+                      <td className="px-4 py-2.5 text-center text-gray-700">{log.isTest ? "—" : log.recipientCount}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {sendHistory.map((log) => (
-                      <tr key={log.id} className="border-t border-gray-100">
-                        <td className="px-4 py-2.5 text-gray-600 whitespace-nowrap">
-                          {new Date(log.sentAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
-                          <span className="text-gray-400 text-xs ml-1">
-                            {new Date(log.sentAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
-                          </span>
-                        </td>
-                        <td className="px-4 py-2.5">
-                          <span className="inline-flex items-center gap-1.5">
-                            <span className={`text-xs font-medium ${log.templateType === "pre-course" ? "text-blue-700" : "text-purple-700"}`}>
-                              {log.templateType === "pre-course" ? "Pre-Course" : "Post-Course"}
-                            </span>
-                            {log.isTest && (
-                              <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium">[TEST]</span>
-                            )}
-                          </span>
-                        </td>
-                        <td className="px-4 py-2.5 text-gray-500 text-xs hidden md:table-cell truncate max-w-xs">{log.subject}</td>
-                        <td className="px-4 py-2.5 text-gray-500 hidden md:table-cell">{log.sentBy}</td>
-                        <td className="px-4 py-2.5 text-center text-gray-700">{log.recipientCount}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+                  ))}
+                </tbody>
+              </table>
             </div>
-          )}
+          </details>
         </div>
       )}
     </>

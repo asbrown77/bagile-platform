@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SlideOver } from "@/components/ui/SlideOver";
 import { Button } from "@/components/ui/Button";
 import { AlertBanner } from "@/components/ui/AlertBanner";
@@ -8,11 +8,13 @@ import {
   CourseScheduleDetail,
   CourseAttendee,
   PostCourseTemplate,
+  Trainer,
   sendFollowUpEmail,
   sendFollowUpTestEmail,
+  getTrainers,
   SendFollowUpResult,
 } from "@/lib/api";
-import { Mail, Users, FlaskConical } from "lucide-react";
+import { FlaskConical, Mail, Users } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -40,6 +42,29 @@ export function SendFollowUpPanel({
   const [result, setResult] = useState<SendFollowUpResult | null>(null);
   const [testSentTo, setTestSentTo] = useState<string | null>(null);
   const [error, setError] = useState("");
+
+  // Test recipient selection
+  const [trainers, setTrainers] = useState<Trainer[]>([]);
+  const [testRecipient, setTestRecipient] = useState<string>("");
+  const [customEmail, setCustomEmail] = useState("");
+  const CUSTOM_VALUE = "__custom__";
+  const INFO_EMAIL = "info@bagile.co.uk";
+
+  useEffect(() => {
+    if (!open || !apiKey) return;
+    getTrainers(apiKey)
+      .then((list) => {
+        const active = list.filter((t) => t.isActive);
+        setTrainers(active);
+        const match = active.find(
+          (t) => course.trainerName &&
+            t.name.trim().toLowerCase() === course.trainerName.trim().toLowerCase()
+        );
+        setTestRecipient(match?.email ?? active[0]?.email ?? INFO_EMAIL);
+      })
+      .catch(() => setTestRecipient(INFO_EMAIL));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, apiKey]);
 
   const activeAttendees = attendees.filter((a) => a.status === "active");
 
@@ -69,9 +94,16 @@ export function SendFollowUpPanel({
     setError("");
     setTestSentTo(null);
     setSendingTest(true);
+    const recipientEmail = testRecipient === CUSTOM_VALUE ? customEmail.trim() : testRecipient;
+    if (!recipientEmail) {
+      setError("Enter a custom email address for the test send.");
+      setSendingTest(false);
+      return;
+    }
     try {
       const res = await sendFollowUpTestEmail(apiKey, course.id, {
         courseTypeOverride: courseTypeOverride.trim() || undefined,
+        recipientEmail,
       });
       setTestSentTo(res.recipientEmail);
     } catch (e: any) {
@@ -87,6 +119,7 @@ export function SendFollowUpPanel({
     setResult(null);
     setTestSentTo(null);
     setError("");
+    setCustomEmail("");
     onClose();
   }
 
@@ -201,21 +234,44 @@ export function SendFollowUpPanel({
 
           {/* Send buttons */}
           <div className="pt-2 border-t border-gray-200 space-y-3">
-            {/* Test send */}
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={handleSendTest}
-                disabled={sendingTest || templateMissing}
-                className="inline-flex items-center gap-1.5 text-sm text-brand-600 hover:text-brand-700 disabled:opacity-40 disabled:cursor-not-allowed font-medium"
-              >
-                <FlaskConical className="w-3.5 h-3.5" />
-                {sendingTest ? "Sending test..." : "Send test to me first"}
-              </button>
+            {/* Test send — dropdown + button */}
+            <div>
+              <p className="text-xs font-medium text-gray-600 mb-1.5">Send test to:</p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <select
+                  value={testRecipient}
+                  onChange={(e) => setTestRecipient(e.target.value)}
+                  className="border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm text-gray-700 bg-white"
+                >
+                  {trainers.map((t) => (
+                    <option key={t.email} value={t.email}>{t.name} ({t.email})</option>
+                  ))}
+                  <option value={INFO_EMAIL}>info@bagile.co.uk</option>
+                  <option value={CUSTOM_VALUE}>Custom…</option>
+                </select>
+                {testRecipient === CUSTOM_VALUE && (
+                  <input
+                    type="email"
+                    value={customEmail}
+                    onChange={(e) => setCustomEmail(e.target.value)}
+                    placeholder="email@example.com"
+                    className="border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm w-52"
+                  />
+                )}
+                <button
+                  type="button"
+                  onClick={handleSendTest}
+                  disabled={sendingTest || templateMissing}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <FlaskConical className="w-3.5 h-3.5" />
+                  {sendingTest ? "Sending…" : "Send Test"}
+                </button>
+              </div>
               {testSentTo && (
-                <span className="text-xs text-green-700 bg-green-50 border border-green-200 rounded px-2 py-0.5">
-                  Test sent to {testSentTo} — check your inbox
-                </span>
+                <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded px-2 py-0.5 mt-2 inline-block">
+                  Test sent to {testSentTo} — check inbox
+                </p>
               )}
             </div>
 
