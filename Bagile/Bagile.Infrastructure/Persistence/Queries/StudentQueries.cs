@@ -31,7 +31,10 @@ public class StudentQueries : IStudentQueries
                 s.last_name AS LastName,
                 CONCAT(s.first_name, ' ', s.last_name) AS FullName,
                 s.company AS Company,
-                s.created_at AS CreatedAt
+                s.created_at AS CreatedAt,
+                (s.overridden_fields <> '{}') AS IsOverridden,
+                s.updated_by AS UpdatedBy,
+                s.override_note AS OverrideNote
             FROM bagile.students s
             " + (courseCode != null ? @"
             JOIN bagile.enrolments e ON e.student_id = s.id
@@ -92,7 +95,7 @@ public class StudentQueries : IStudentQueries
         CancellationToken ct = default)
     {
         var sql = @"
-            SELECT 
+            SELECT
                 s.id AS Id,
                 s.email AS Email,
                 s.first_name AS FirstName,
@@ -101,13 +104,18 @@ public class StudentQueries : IStudentQueries
                 s.company AS Company,
                 s.created_at AS CreatedAt,
                 s.updated_at AS UpdatedAt,
+                (s.overridden_fields <> '{}') AS IsOverridden,
+                s.updated_by AS UpdatedBy,
+                s.override_note AS OverrideNote,
                 COUNT(e.id) AS TotalEnrolments,
                 MAX(cs.start_date) AS LastCourseDate
             FROM bagile.students s
             LEFT JOIN bagile.enrolments e ON e.student_id = s.id
             LEFT JOIN bagile.course_schedules cs ON e.course_schedule_id = cs.id
             WHERE s.id = @studentId
-            GROUP BY s.id, s.email, s.first_name, s.last_name, s.company, s.created_at, s.updated_at;";
+            GROUP BY s.id, s.email, s.first_name, s.last_name, s.company,
+                     s.created_at, s.updated_at, s.overridden_fields,
+                     s.updated_by, s.override_note;";
 
         await using var conn = new NpgsqlConnection(_connectionString);
         return await conn.QueryFirstOrDefaultAsync<StudentDetailDto>(sql, new { studentId });

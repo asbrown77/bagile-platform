@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useApiKey } from "@/lib/hooks/useApiKey";
 import {
-  CourseAttendee, CourseScheduleDetail, TransfersByCourse,
+  CourseAttendee, CourseScheduleDetail, TransfersByCourse, PostCourseTemplate,
   getCourseAttendees, getCourseScheduleDetail, getTransfersByCourse,
+  getPostCourseTemplate,
   formatCurrency, formatDate,
 } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
@@ -17,7 +18,9 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { SkeletonCard, SkeletonRow } from "@/components/ui/Skeleton";
 import { Badge, statusBadge } from "@/components/ui/Badge";
 import { AddAttendeesPanel } from "@/components/courses/AddAttendeesPanel";
-import { Download, Mail, Users, Calendar, User, UserPlus, Video, MapPin, FileText, ExternalLink, Send } from "lucide-react";
+import { SendFollowUpPanel } from "@/components/courses/SendFollowUpPanel";
+import { EditAttendeeModal } from "@/components/courses/EditAttendeeModal";
+import { Download, Mail, Users, Calendar, User, UserPlus, Video, MapPin, FileText, ExternalLink, Send, Pencil } from "lucide-react";
 import Link from "next/link";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.bagile.co.uk";
@@ -33,7 +36,11 @@ export default function CourseDetail() {
   const [successMsg, setSuccessMsg] = useState("");
   const [activeTab, setActiveTab] = useState("attendees");
   const [showAddAttendees, setShowAddAttendees] = useState(false);
+  const [showSendFollowUp, setShowSendFollowUp] = useState(false);
   const [transfers, setTransfers] = useState<TransfersByCourse | null>(null);
+  const [followUpTemplate, setFollowUpTemplate] = useState<PostCourseTemplate | null>(null);
+  const [templateMissing, setTemplateMissing] = useState(false);
+  const [editingAttendee, setEditingAttendee] = useState<CourseAttendee | null>(null);
 
   useEffect(() => {
     if (!apiKey || !courseId) return;
@@ -50,6 +57,14 @@ export default function CourseDetail() {
       setCourse(detail);
       setAttendees(atts);
       setTransfers(xfers);
+
+      // Load follow-up template based on course code prefix
+      const courseType = detail?.courseCode?.split("-")[0]?.toUpperCase();
+      if (courseType) {
+        getPostCourseTemplate(apiKey, courseType)
+          .then((t) => { setFollowUpTemplate(t); setTemplateMissing(false); })
+          .catch(() => { setFollowUpTemplate(null); setTemplateMissing(true); });
+      }
     } catch {
       setError("Failed to load course data");
     } finally {
@@ -130,7 +145,7 @@ export default function CourseDetail() {
 
   return (
     <>
-      {/* Add attendees panel */}
+      {/* Panels & modals */}
       <AddAttendeesPanel
         open={showAddAttendees}
         onClose={() => setShowAddAttendees(false)}
@@ -138,6 +153,30 @@ export default function CourseDetail() {
         courseId={courseId}
         onAdded={loadData}
       />
+
+      {course && (
+        <SendFollowUpPanel
+          open={showSendFollowUp}
+          onClose={() => setShowSendFollowUp(false)}
+          apiKey={apiKey}
+          course={course}
+          attendees={attendees}
+          template={followUpTemplate}
+          templateMissing={templateMissing}
+        />
+      )}
+
+      {editingAttendee && (
+        <EditAttendeeModal
+          attendee={editingAttendee}
+          apiKey={apiKey}
+          onSaved={() => {
+            setSuccessMsg("Attendee updated");
+            loadData();
+          }}
+          onClose={() => setEditingAttendee(null)}
+        />
+      )}
 
       <div className="mb-2">
         <Link href="/courses" className="text-sm text-brand-600 hover:text-brand-700">&larr; Courses</Link>
@@ -162,6 +201,13 @@ export default function CourseDetail() {
                     <Send className="w-3.5 h-3.5" /> Send Joining Details
                   </Button>
                 )}
+                <Button
+                  size="sm"
+                  onClick={() => setShowSendFollowUp(true)}
+                  title={templateMissing ? `No template for ${course?.courseCode?.split("-")[0]?.toUpperCase()}` : "Send post-course follow-up email"}
+                >
+                  <Mail className="w-3.5 h-3.5" /> Send Follow-Up
+                </Button>
               </>
             )}
           </div>
@@ -287,6 +333,13 @@ export default function CourseDetail() {
                   {!isPrivate && <td className="px-4 py-2.5 text-gray-500 text-xs hidden lg:table-cell">{a.paymentMethod || "—"}</td>}
                   <td className="px-4 py-2.5 text-gray-500 hidden md:table-cell">{a.country || "—"}</td>
                   <td className="px-4 py-2.5 space-x-2">
+                    <button
+                      onClick={() => setEditingAttendee(a)}
+                      className="text-gray-400 hover:text-brand-600 text-xs font-medium inline-flex items-center gap-1"
+                      title="Edit attendee details"
+                    >
+                      <Pencil className="w-3 h-3" />
+                    </button>
                     <button onClick={() => markTransfer(a.enrolmentId)} className="text-amber-600 hover:text-amber-800 text-xs font-medium">Transfer</button>
                     {!isPrivate && <button onClick={() => markRefund(a.enrolmentId)} className="text-red-600 hover:text-red-800 text-xs font-medium">Refund</button>}
                   </td>

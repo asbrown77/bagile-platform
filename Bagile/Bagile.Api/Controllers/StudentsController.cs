@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Bagile.Application.Students.Queries.GetStudents;
 using Bagile.Application.Students.Queries.GetStudentById;
 using Bagile.Application.Students.Queries.GetStudentEnrolments;
+using Bagile.Application.Students.Commands.UpdateStudent;
 
 namespace Bagile.Api.Controllers;
 
@@ -72,4 +73,52 @@ public class StudentsController : ControllerBase
         var result = await _mediator.Send(query);
         return Ok(result);
     }
+
+    /// <summary>
+    /// Manually override student details (email, name, company).
+    /// Overridden fields survive ETL re-syncs — the ETL will not overwrite them.
+    /// Use this for PTN/partner orders where the registered email belongs to the partner,
+    /// not the actual attendee. Portal-only change — no effect on FooEvents tickets.
+    /// </summary>
+    [HttpPut("{id}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> UpdateStudent(long id, [FromBody] UpdateStudentRequest request)
+    {
+        if (request.Email is null && request.FirstName is null &&
+            request.LastName is null && request.Company is null)
+        {
+            return BadRequest(new { error = "Provide at least one field to update (email, firstName, lastName, or company)" });
+        }
+
+        var command = new UpdateStudentCommand
+        {
+            Id           = id,
+            Email        = request.Email,
+            FirstName    = request.FirstName,
+            LastName     = request.LastName,
+            Company      = request.Company,
+            UpdatedBy    = request.UpdatedBy,
+            OverrideNote = request.OverrideNote
+        };
+
+        var result = await _mediator.Send(command);
+        if (result is null)
+            return NotFound(new { error = $"Student {id} not found" });
+
+        return Ok(result);
+    }
+}
+
+// ── Request models ──────────────────────────────────────────
+
+public record UpdateStudentRequest
+{
+    public string? Email { get; init; }
+    public string? FirstName { get; init; }
+    public string? LastName { get; init; }
+    public string? Company { get; init; }
+    public string? UpdatedBy { get; init; }
+    public string? OverrideNote { get; init; }
 }
