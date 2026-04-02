@@ -33,6 +33,7 @@ public static class DependencyInjection
         services.AddScoped<ITrainerRepository>(_ => new TrainerRepository(connectionString));
         services.AddScoped<IPreCourseTemplateRepository>(_ => new PreCourseTemplateRepository(connectionString));
         services.AddScoped<IEmailSendLogRepository>(_ => new EmailSendLogRepository(connectionString));
+        services.AddScoped<IOrganisationRepository>(_ => new OrganisationRepository(connectionString));
 
         // Email service (SMTP — see Smtp:* in appsettings)
         services.AddScoped<IEmailService, SmtpEmailService>();

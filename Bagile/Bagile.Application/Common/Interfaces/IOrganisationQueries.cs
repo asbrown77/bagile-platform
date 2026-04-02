@@ -5,6 +5,14 @@ namespace Bagile.Application.Common.Interfaces;
 public interface IOrganisationQueries
 {
     /// <summary>
+    /// Search the organisations table by name (case-insensitive, partial match).
+    /// Also matches against aliases. Returns up to 10 results for type-ahead.
+    /// </summary>
+    Task<IEnumerable<OrganisationSummaryDto>> SearchOrganisationsAsync(
+        string q,
+        CancellationToken ct = default);
+
+    /// <summary>
     /// Get paginated list of organisations (derived from billing_company and email domains)
     /// </summary>
     Task<IEnumerable<OrganisationDto>> GetOrganisationsAsync(

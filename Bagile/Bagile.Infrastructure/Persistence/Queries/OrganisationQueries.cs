@@ -14,6 +14,35 @@ public class OrganisationQueries : IOrganisationQueries
         _connectionString = connectionString;
     }
 
+    public async Task<IEnumerable<OrganisationSummaryDto>> SearchOrganisationsAsync(
+        string q,
+        CancellationToken ct = default)
+    {
+        // Match on name OR any alias. Aliases are a TEXT[] column.
+        // We use ILIKE for partial matching on name and array_to_string for aliases.
+        const string sql = @"
+            SELECT id        AS Id,
+                   name      AS Name,
+                   acronym   AS Acronym,
+                   partner_type AS PartnerType,
+                   ptn_tier  AS PtnTier
+            FROM bagile.organisations
+            WHERE name ILIKE @pattern
+               OR array_to_string(aliases, ' ') ILIKE @pattern
+            ORDER BY
+                -- Exact-prefix matches first
+                CASE WHEN name ILIKE @prefix THEN 0 ELSE 1 END,
+                name
+            LIMIT 10;";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        return await conn.QueryAsync<OrganisationSummaryDto>(sql, new
+        {
+            pattern = $"%{q}%",
+            prefix  = $"{q}%",
+        });
+    }
+
     public async Task<IEnumerable<OrganisationDto>> GetOrganisationsAsync(
         string? name,
         string? domain,
