@@ -28,6 +28,7 @@ public class SmtpEmailService : IEmailService
         IEnumerable<string>? cc = null,
         string? fromName = null,
         string? fromEmail = null,
+        string? replyTo = null,
         CancellationToken ct = default)
     {
         var host     = _config["Smtp:Host"];
@@ -76,11 +77,15 @@ public class SmtpEmailService : IEmailService
             foreach (var addr in ccList)
                 msg.CC.Add(addr);
 
+            if (!string.IsNullOrWhiteSpace(replyTo))
+                msg.ReplyToList.Add(new MailAddress(replyTo));
+
             await client.SendMailAsync(msg, ct);
 
             _logger.LogInformation(
-                "SmtpEmailService: sent '{Subject}' to {Count} recipient(s)",
-                subject, toList.Count);
+                "SmtpEmailService: sent '{Subject}' to {Count} recipient(s){ReplyTo}",
+                subject, toList.Count,
+                replyTo is not null ? $" [reply-to: {replyTo}]" : "");
         }
         catch (Exception ex)
         {

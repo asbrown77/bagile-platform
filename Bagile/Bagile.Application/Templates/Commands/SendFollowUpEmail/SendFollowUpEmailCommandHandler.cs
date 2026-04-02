@@ -14,6 +14,7 @@ public class SendFollowUpEmailCommandHandler
     private readonly ICourseScheduleQueries        _scheduleQueries;
     private readonly IPostCourseTemplateRepository _templateRepo;
     private readonly IEmailSendLogRepository       _logRepo;
+    private readonly ITrainerRepository            _trainerRepo;
     private readonly IEmailService                 _emailService;
     private readonly ILogger<SendFollowUpEmailCommandHandler> _logger;
 
@@ -21,12 +22,14 @@ public class SendFollowUpEmailCommandHandler
         ICourseScheduleQueries scheduleQueries,
         IPostCourseTemplateRepository templateRepo,
         IEmailSendLogRepository logRepo,
+        ITrainerRepository trainerRepo,
         IEmailService emailService,
         ILogger<SendFollowUpEmailCommandHandler> logger)
     {
         _scheduleQueries = scheduleQueries;
         _templateRepo    = templateRepo;
         _logRepo         = logRepo;
+        _trainerRepo     = trainerRepo;
         _emailService    = emailService;
         _logger          = logger;
     }
@@ -81,7 +84,10 @@ public class SendFollowUpEmailCommandHandler
         var subject  = ApplyVariables(template.SubjectTemplate, variables);
         var htmlBody = ApplyVariables(template.HtmlBody, variables);
 
-        // 6. Send
+        // 6. Resolve trainer email for Reply-To (best-effort — fallback to null)
+        var replyTo = await ResolveTrainerEmailAsync(course.TrainerName, ct);
+
+        // 7. Send
         _logger.LogInformation(
             "Sending follow-up email for course {CourseId} ({CourseCode}) to {Count} recipients",
             request.CourseScheduleId, course.CourseCode, toEmails.Count);
@@ -91,9 +97,10 @@ public class SendFollowUpEmailCommandHandler
             subject:  subject,
             htmlBody: htmlBody,
             cc:       [CcAddress],
+            replyTo:  replyTo,
             ct:       ct);
 
-        // 7. Audit log
+        // 8. Audit log
         await _logRepo.LogAsync(new EmailSendLog
         {
             CourseScheduleId = (int)request.CourseScheduleId,
@@ -114,6 +121,21 @@ public class SendFollowUpEmailCommandHandler
     }
 
     // ── Helpers ──────────────────────────────────────────────
+
+    /// <summary>
+    /// Resolve the trainer's email from the trainers table by matching on trainer name.
+    /// Returns null if not found — callers treat null as "no Reply-To header".
+    /// </summary>
+    private async Task<string?> ResolveTrainerEmailAsync(string? trainerName, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(trainerName)) return null;
+
+        var trainers = await _trainerRepo.GetAllActiveAsync(ct);
+        var match = trainers.FirstOrDefault(t =>
+            string.Equals(t.Name.Trim(), trainerName.Trim(), StringComparison.OrdinalIgnoreCase));
+
+        return match?.Email;
+    }
 
     private static string DeriveCourseType(string courseCode)
     {

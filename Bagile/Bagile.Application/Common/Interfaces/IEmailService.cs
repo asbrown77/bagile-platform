@@ -15,6 +15,10 @@ public interface IEmailService
     /// <param name="cc">Optional CC recipients.</param>
     /// <param name="fromName">Display name for the From address (defaults to config value).</param>
     /// <param name="fromEmail">From address (defaults to config value).</param>
+    /// <param name="replyTo">
+    /// Optional Reply-To address. When set, replies from attendees go to this address
+    /// (typically the trainer's email) rather than the From address.
+    /// </param>
     Task SendAsync(
         IEnumerable<string> to,
         string subject,
@@ -22,5 +26,6 @@ public interface IEmailService
         IEnumerable<string>? cc = null,
         string? fromName = null,
         string? fromEmail = null,
+        string? replyTo = null,
         CancellationToken ct = default);
 }

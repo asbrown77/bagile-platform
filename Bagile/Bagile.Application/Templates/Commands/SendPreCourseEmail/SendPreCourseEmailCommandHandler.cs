@@ -12,22 +12,25 @@ public class SendPreCourseEmailCommandHandler
     private const string CcAddress    = "info@bagile.co.uk";
     private const string DefaultTimes = "09:00 – 17:00";
 
-    private readonly ICourseScheduleQueries    _scheduleQueries;
+    private readonly ICourseScheduleQueries      _scheduleQueries;
     private readonly IPreCourseTemplateRepository _templateRepo;
-    private readonly IEmailSendLogRepository   _logRepo;
-    private readonly IEmailService             _emailService;
+    private readonly IEmailSendLogRepository     _logRepo;
+    private readonly ITrainerRepository          _trainerRepo;
+    private readonly IEmailService               _emailService;
     private readonly ILogger<SendPreCourseEmailCommandHandler> _logger;
 
     public SendPreCourseEmailCommandHandler(
         ICourseScheduleQueries scheduleQueries,
         IPreCourseTemplateRepository templateRepo,
         IEmailSendLogRepository logRepo,
+        ITrainerRepository trainerRepo,
         IEmailService emailService,
         ILogger<SendPreCourseEmailCommandHandler> logger)
     {
         _scheduleQueries = scheduleQueries;
         _templateRepo    = templateRepo;
         _logRepo         = logRepo;
+        _trainerRepo     = trainerRepo;
         _emailService    = emailService;
         _logger          = logger;
     }
@@ -73,7 +76,10 @@ public class SendPreCourseEmailCommandHandler
         var bodyTemplate = request.HtmlBodyOverride ?? template!.HtmlBody;
         var htmlBody = TemplateVariableSubstitution.Apply(bodyTemplate, variables);
 
-        // 7. Send
+        // 7. Resolve trainer email for Reply-To (best-effort — fallback to null)
+        var replyTo = await ResolveTrainerEmailAsync(course.TrainerName, ct);
+
+        // 8. Send
         _logger.LogInformation(
             "Sending pre-course email for course {CourseId} ({CourseCode}) format={Format} to {Count} recipients",
             request.CourseScheduleId, course.CourseCode, format, toEmails.Count);
@@ -83,9 +89,10 @@ public class SendPreCourseEmailCommandHandler
             subject:  subject,
             htmlBody: htmlBody,
             cc:       [CcAddress],
+            replyTo:  replyTo,
             ct:       ct);
 
-        // 8. Audit log
+        // 9. Audit log
         await _logRepo.LogAsync(new EmailSendLog
         {
             CourseScheduleId = (int)request.CourseScheduleId,
@@ -107,6 +114,21 @@ public class SendPreCourseEmailCommandHandler
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Resolve the trainer's email from the trainers table by matching on trainer name.
+    /// Returns null if not found — callers treat null as "no Reply-To header".
+    /// </summary>
+    private async Task<string?> ResolveTrainerEmailAsync(string? trainerName, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(trainerName)) return null;
+
+        var trainers = await _trainerRepo.GetAllActiveAsync(ct);
+        var match = trainers.FirstOrDefault(t =>
+            string.Equals(t.Name.Trim(), trainerName.Trim(), StringComparison.OrdinalIgnoreCase));
+
+        return match?.Email;
+    }
 
     // Multi-segment course type prefixes that must be preserved intact.
     // Order matters: longer/more-specific prefixes must come before shorter ones

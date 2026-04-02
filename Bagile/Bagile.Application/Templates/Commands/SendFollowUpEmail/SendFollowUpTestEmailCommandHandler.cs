@@ -66,7 +66,7 @@ public class SendFollowUpTestEmailCommandHandler
         var subject  = $"[TEST] {ApplyVariables(template.SubjectTemplate, variables)}";
         var htmlBody = ApplyVariables(template.HtmlBody, variables);
 
-        // 6. Send to single test recipient (no CC)
+        // 6. Send to single test recipient (no CC; reply-to = same recipient)
         _logger.LogInformation(
             "Sending test follow-up email for course {CourseId} ({CourseCode}) to {Recipient}",
             request.CourseScheduleId, course.CourseCode, recipientEmail);
@@ -76,6 +76,7 @@ public class SendFollowUpTestEmailCommandHandler
             subject:  subject,
             htmlBody: htmlBody,
             cc:       [],
+            replyTo:  recipientEmail,
             ct:       ct);
 
         return new SendFollowUpTestEmailResult

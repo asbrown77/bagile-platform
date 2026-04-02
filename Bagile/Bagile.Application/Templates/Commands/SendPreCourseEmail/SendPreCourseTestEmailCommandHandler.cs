@@ -62,7 +62,7 @@ public class SendPreCourseTestEmailCommandHandler
         var bodyTemplate = request.HtmlBodyOverride ?? template!.HtmlBody;
         var htmlBody = TemplateVariableSubstitution.Apply(bodyTemplate, variables);
 
-        // 7. Send to single recipient (no CC for test)
+        // 7. Send to single recipient (no CC for test; reply-to = same recipient)
         _logger.LogInformation(
             "Sending pre-course test email for course {CourseId} ({CourseCode}) format={Format} to {Recipient}",
             request.CourseScheduleId, course.CourseCode, format, recipientEmail);
@@ -72,6 +72,7 @@ public class SendPreCourseTestEmailCommandHandler
             subject:  subject,
             htmlBody: htmlBody,
             cc:       [],
+            replyTo:  recipientEmail,
             ct:       ct);
 
         // 8. Audit log
