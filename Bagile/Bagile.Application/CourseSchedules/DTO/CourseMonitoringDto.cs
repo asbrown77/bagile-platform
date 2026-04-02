@@ -13,6 +13,8 @@ public record CourseMonitoringDto
     public int MinimumRequired { get; init; }
     public double FillPercentage { get; init; }
     public string MonitoringStatus { get; init; } = "";  // healthy, at_risk, critical, cancelled
+    /// <summary>Raw WooCommerce/platform status (publish, cancelled, sold_out, draft, etc.)</summary>
+    public string? CourseStatus { get; init; }
     public DateTime? DecisionDeadline { get; init; }
     public int DaysUntilStart { get; init; }
     public int DaysUntilDecision { get; init; }

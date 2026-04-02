@@ -60,6 +60,7 @@ public class GetCourseMonitoringQueryHandler
                 MinimumRequired = minimum,
                 FillPercentage = fillPct,
                 MonitoringStatus = status,
+                CourseStatus = course.Status,
                 DecisionDeadline = deadline,
                 DaysUntilStart = daysUntilStart,
                 DaysUntilDecision = daysUntilDecision,
