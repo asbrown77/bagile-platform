@@ -99,7 +99,7 @@ export function Sidebar({ pendingTransfers = 0, atRiskCourses = 0, onClose }: Si
 
       {/* Version */}
       <div className="px-5 py-3 border-t border-gray-800">
-        <p className="text-[10px] text-gray-600">BAgile Portal v3.0</p>
+        <p className="text-[10px] text-gray-600">BAgile Portal {process.env.NEXT_PUBLIC_APP_VERSION}</p>
       </div>
     </aside>
   );

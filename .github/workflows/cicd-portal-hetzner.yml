@@ -21,10 +21,12 @@ jobs:
       - name: Extract version from tag
         id: vars
         run: |
-          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+          if [[ "${GITHUB_REF}" == refs/tags/portal-v* ]]; then
+            TAG="${GITHUB_REF#refs/tags/portal-}"
+          elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             TAG="${GITHUB_REF#refs/tags/}"
           else
-            TAG="portal-vdev-${GITHUB_SHA::7}"
+            TAG="dev-${GITHUB_SHA::7}"
           fi
           echo "version=${TAG}" >> $GITHUB_OUTPUT
 
@@ -44,6 +46,7 @@ jobs:
           build-args: |
             NEXT_PUBLIC_GOOGLE_CLIENT_ID=${{ secrets.PORTAL_GOOGLE_CLIENT_ID }}
             NEXT_PUBLIC_API_URL=https://api.bagile.co.uk
+            APP_VERSION=${{ steps.vars.outputs.version }}
           tags: |
             ghcr.io/${{ github.repository_owner }}/bagile-portal:latest
             ghcr.io/${{ github.repository_owner }}/bagile-portal:${{ steps.vars.outputs.version }}
