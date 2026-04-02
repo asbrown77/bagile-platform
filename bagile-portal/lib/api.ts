@@ -886,3 +886,62 @@ export async function deleteTrainer(apiKey: string, id: number): Promise<void> {
   });
   if (!res.ok) throw new Error(`API error: ${res.status}`);
 }
+
+// ── Pre-Course Templates ──────────────────────────────────
+
+export interface PreCourseTemplate {
+  id: number;
+  courseType: string;
+  format: string;
+  subjectTemplate: string;
+  htmlBody: string;
+  updatedAt: string;
+}
+
+export async function getPreCourseTemplates(apiKey: string): Promise<PreCourseTemplate[]> {
+  return apiRequest("/api/templates/pre-course", apiKey);
+}
+
+export async function getPreCourseTemplate(apiKey: string, courseType: string, format: string): Promise<PreCourseTemplate> {
+  return apiRequest(`/api/templates/pre-course/${courseType}?format=${encodeURIComponent(format)}`, apiKey);
+}
+
+export async function updatePreCourseTemplate(
+  apiKey: string,
+  courseType: string,
+  data: { format: string; subjectTemplate: string; htmlBody: string },
+): Promise<void> {
+  return apiRequest(`/api/templates/pre-course/${courseType}`, apiKey, { method: "PUT", body: data });
+}
+
+export async function sendPreCourseEmail(
+  apiKey: string,
+  courseScheduleId: number,
+  data?: { htmlBodyOverride?: string },
+): Promise<{ recipientCount: number }> {
+  return apiRequest(`/api/templates/pre-course/send/${courseScheduleId}`, apiKey, { method: "POST", body: data ?? {} });
+}
+
+export async function sendPreCourseTestEmail(
+  apiKey: string,
+  courseScheduleId: number,
+  data?: { htmlBodyOverride?: string },
+): Promise<{ sentTo: string }> {
+  return apiRequest(`/api/templates/pre-course/test/${courseScheduleId}`, apiKey, { method: "POST", body: data ?? {} });
+}
+
+// ── Email Send Log ────────────────────────────────────────
+
+export interface EmailSendLog {
+  id: number;
+  templateType: string;
+  sentBy: string;
+  recipientCount: number;
+  subject: string;
+  isTest: boolean;
+  sentAt: string;
+}
+
+export async function getEmailSendLog(apiKey: string, courseScheduleId: number): Promise<EmailSendLog[]> {
+  return apiRequest(`/api/course-schedules/${courseScheduleId}/email-log`, apiKey);
+}
