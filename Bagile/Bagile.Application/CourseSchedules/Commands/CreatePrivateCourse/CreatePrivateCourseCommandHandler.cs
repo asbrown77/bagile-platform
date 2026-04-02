@@ -32,9 +32,15 @@ public class CreatePrivateCourseCommandHandler
             sku = $"{request.CourseCode}-PRIV-{request.StartDate:ddMMyy}-{suffix}";
         }
 
+        // Accept either "name" or "title" — the response DTO uses "title" so some
+        // callers naturally send that field name back. Title is the fallback.
+        var resolvedName = !string.IsNullOrWhiteSpace(request.Name)
+            ? request.Name
+            : request.Title;
+
         var schedule = new CourseSchedule
         {
-            Name = request.Name,
+            Name = resolvedName,
             Sku = sku,
             StartDate = request.StartDate,
             EndDate = request.EndDate,
