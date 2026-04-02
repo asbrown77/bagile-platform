@@ -1,5 +1,6 @@
 ﻿using Bagile.Application.Common.Interfaces;
 using Bagile.Domain.Repositories;
+using Bagile.Infrastructure.Email;
 using Bagile.Infrastructure.Persistence.Queries;
 using Bagile.Infrastructure.Repositories;
 using Microsoft.Extensions.Configuration;
@@ -27,6 +28,10 @@ public static class DependencyInjection
         services.AddScoped<ICourseScheduleRepository>(_ => new CourseScheduleRepository(connectionString));
         services.AddScoped<IStudentRepository>(_ => new StudentRepository(connectionString));
         services.AddScoped<IEnrolmentRepository>(_ => new EnrolmentRepository(connectionString));
+        services.AddScoped<IPostCourseTemplateRepository>(_ => new PostCourseTemplateRepository(connectionString));
+
+        // Email service (SMTP — see Smtp:* in appsettings)
+        services.AddScoped<IEmailService, SmtpEmailService>();
 
         return services;
     }
