@@ -112,7 +112,7 @@ public class CourseScheduleQueries : ICourseScheduleQueries
         CancellationToken ct = default)
     {
         var sql = @"
-            SELECT 
+            SELECT
                 cs.id AS Id,
                 COALESCE(cs.sku, '') AS CourseCode,
                 cs.name AS Title,
@@ -129,6 +129,9 @@ public class CourseScheduleQueries : ICourseScheduleQueries
                 cs.source_system AS SourceSystem,
                 cs.source_product_id AS SourceProductId,
                 cs.last_synced AS LastSynced,
+                cs.client_organisation_id AS ClientOrganisationId,
+                org.name AS ClientOrganisationName,
+                org.acronym AS ClientOrganisationAcronym,
                 cs.invoice_reference AS InvoiceReference,
                 cs.meeting_url AS MeetingUrl,
                 cs.meeting_id AS MeetingId,
@@ -144,11 +147,13 @@ public class CourseScheduleQueries : ICourseScheduleQueries
                     ELSE false
                 END AS NeedsAttention
             FROM bagile.course_schedules cs
+            LEFT JOIN bagile.organisations org ON org.id = cs.client_organisation_id
             LEFT JOIN bagile.enrolments e ON e.course_schedule_id = cs.id AND e.status NOT IN ('cancelled', 'transferred')
             WHERE cs.id = @scheduleId
             GROUP BY cs.id, cs.sku, cs.name, cs.start_date, cs.end_date, cs.format_type,
                      cs.is_public, cs.status, cs.capacity, cs.price, cs.trainer_name,
                      cs.source_system, cs.source_product_id, cs.last_synced,
+                     cs.client_organisation_id, org.name, org.acronym,
                      cs.invoice_reference, cs.meeting_url, cs.meeting_id,
                      cs.meeting_passcode, cs.venue_address, cs.notes;";
 

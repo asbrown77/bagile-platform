@@ -10,6 +10,9 @@ public record CourseScheduleDetailDto : CourseScheduleDto
     public string? SourceSystem { get; init; }
     public long? SourceProductId { get; init; }
     public DateTime? LastSynced { get; init; }
+    public long? ClientOrganisationId { get; init; }
+    public string? ClientOrganisationName { get; init; }
+    public string? ClientOrganisationAcronym { get; init; }
     public string? InvoiceReference { get; init; }
     public string? MeetingUrl { get; init; }
     public string? MeetingId { get; init; }

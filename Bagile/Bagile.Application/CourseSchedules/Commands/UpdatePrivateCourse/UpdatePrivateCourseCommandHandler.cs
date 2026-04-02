@@ -30,6 +30,7 @@ public class UpdatePrivateCourseCommandHandler
             EndDate: request.EndDate,
             Capacity: request.Capacity,
             Price: request.Price,
+            ClientOrganisationId: request.ClientOrganisationId,
             InvoiceReference: request.InvoiceReference,
             VenueAddress: request.VenueAddress,
             MeetingUrl: request.MeetingUrl,

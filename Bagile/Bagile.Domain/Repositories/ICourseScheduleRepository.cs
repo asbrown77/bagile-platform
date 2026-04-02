@@ -25,6 +25,7 @@ public record UpdatePrivateCourseFields(
     DateTime EndDate,
     int? Capacity,
     decimal? Price,
+    long? ClientOrganisationId,
     string? InvoiceReference,
     string? VenueAddress,
     string? MeetingUrl,

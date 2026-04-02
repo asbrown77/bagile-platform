@@ -179,19 +179,20 @@ public class CourseScheduleRepository : ICourseScheduleRepository
     {
         const string sql = @"
             UPDATE bagile.course_schedules
-            SET name              = @Name,
-                trainer_name      = @TrainerName,
-                start_date        = @StartDate,
-                end_date          = @EndDate,
-                capacity          = @Capacity,
-                price             = @Price,
-                invoice_reference = @InvoiceReference,
-                venue_address     = @VenueAddress,
-                meeting_url       = @MeetingUrl,
-                meeting_id        = @MeetingId,
-                meeting_passcode  = @MeetingPasscode,
-                notes             = @Notes,
-                last_synced       = now()
+            SET name                   = @Name,
+                trainer_name           = @TrainerName,
+                start_date             = @StartDate,
+                end_date               = @EndDate,
+                capacity               = @Capacity,
+                price                  = @Price,
+                client_organisation_id = @ClientOrganisationId,
+                invoice_reference      = @InvoiceReference,
+                venue_address          = @VenueAddress,
+                meeting_url            = @MeetingUrl,
+                meeting_id             = @MeetingId,
+                meeting_passcode       = @MeetingPasscode,
+                notes                  = @Notes,
+                last_synced            = now()
             WHERE id = @Id
               AND is_public = false;";
 
@@ -205,6 +206,7 @@ public class CourseScheduleRepository : ICourseScheduleRepository
             f.EndDate,
             f.Capacity,
             f.Price,
+            f.ClientOrganisationId,
             f.InvoiceReference,
             f.VenueAddress,
             f.MeetingUrl,

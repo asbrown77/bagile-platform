@@ -12,6 +12,7 @@ public record UpdatePrivateCourseCommand : IRequest<CourseScheduleDetailDto?>
     public DateTime EndDate { get; init; }
     public int? Capacity { get; init; }
     public decimal? Price { get; init; }
+    public long? ClientOrganisationId { get; init; }
     public string? InvoiceReference { get; init; }
     public string? VenueAddress { get; init; }
     public string? MeetingUrl { get; init; }
