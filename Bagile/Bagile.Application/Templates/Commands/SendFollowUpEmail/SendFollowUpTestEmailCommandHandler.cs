@@ -8,28 +8,22 @@ namespace Bagile.Application.Templates.Commands.SendFollowUpEmail;
 public class SendFollowUpTestEmailCommandHandler
     : IRequestHandler<SendFollowUpTestEmailCommand, SendFollowUpTestEmailResult>
 {
-    // Known trainer name → email mappings.
-    // Extend here if additional trainers are added.
-    private static readonly Dictionary<string, string> TrainerEmails =
-        new(StringComparer.OrdinalIgnoreCase)
-        {
-            ["Alex Brown"]  = "alexbrown@bagile.co.uk",
-            ["Chris Bexon"] = "chrisbexon@bagile.co.uk",
-        };
-
-    private readonly ICourseScheduleQueries _scheduleQueries;
+    private readonly ICourseScheduleQueries        _scheduleQueries;
     private readonly IPostCourseTemplateRepository _templateRepo;
-    private readonly IEmailService _emailService;
+    private readonly ITrainerRepository            _trainerRepo;
+    private readonly IEmailService                 _emailService;
     private readonly ILogger<SendFollowUpTestEmailCommandHandler> _logger;
 
     public SendFollowUpTestEmailCommandHandler(
         ICourseScheduleQueries scheduleQueries,
         IPostCourseTemplateRepository templateRepo,
+        ITrainerRepository trainerRepo,
         IEmailService emailService,
         ILogger<SendFollowUpTestEmailCommandHandler> logger)
     {
         _scheduleQueries = scheduleQueries;
         _templateRepo    = templateRepo;
+        _trainerRepo     = trainerRepo;
         _emailService    = emailService;
         _logger          = logger;
     }
@@ -51,8 +45,8 @@ public class SendFollowUpTestEmailCommandHandler
                 $"No post-course template found for course type '{courseType}'. " +
                 $"Create one via PUT /api/templates/post-course/{courseType}.");
 
-        // 4. Resolve recipient — explicit override, then trainer lookup, then fallback
-        var recipientEmail = ResolveRecipient(request.RecipientEmail, course.TrainerName);
+        // 4. Resolve recipient — explicit override, then trainer table lookup, then fallback
+        var recipientEmail = await ResolveRecipientAsync(request.RecipientEmail, course.TrainerName, ct);
 
         // 5. Build variable map with placeholder attendee data so the template renders sensibly
         var courseDates = BuildCourseDates(course.StartDate, course.EndDate);
@@ -94,16 +88,32 @@ public class SendFollowUpTestEmailCommandHandler
 
     // ── Helpers ─────────────────────────────────────────────────────────────
 
-    private static string ResolveRecipient(string? explicitEmail, string? trainerName)
+    /// <summary>
+    /// Resolve the test recipient email.
+    /// Priority: explicit override → trainers table lookup by name → first active trainer → hardcoded fallback.
+    /// </summary>
+    private async Task<string> ResolveRecipientAsync(
+        string? explicitEmail,
+        string? trainerName,
+        CancellationToken ct)
     {
         if (!string.IsNullOrWhiteSpace(explicitEmail))
             return explicitEmail.Trim();
 
-        if (trainerName is not null && TrainerEmails.TryGetValue(trainerName.Trim(), out var mapped))
-            return mapped;
+        var trainers = await _trainerRepo.GetAllActiveAsync(ct);
+        var trainerList = trainers.ToList();
 
-        // Fallback — always reaches a real inbox
-        return "alexbrown@bagile.co.uk";
+        if (!string.IsNullOrWhiteSpace(trainerName))
+        {
+            var match = trainerList.FirstOrDefault(t =>
+                string.Equals(t.Name.Trim(), trainerName.Trim(), StringComparison.OrdinalIgnoreCase));
+
+            if (match is not null)
+                return match.Email;
+        }
+
+        // Fallback: first active trainer, then hardcoded safety net
+        return trainerList.FirstOrDefault()?.Email ?? "alexbrown@bagile.co.uk";
     }
 
     private static string DeriveCourseType(string courseCode)

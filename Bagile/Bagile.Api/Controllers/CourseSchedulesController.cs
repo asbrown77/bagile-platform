@@ -12,6 +12,7 @@ using Bagile.Application.CourseSchedules.Commands.AddPrivateAttendees;
 using Bagile.Application.CourseSchedules.Commands.UpdatePrivateCourse;
 using Bagile.Application.CourseSchedules.Commands.RemovePrivateAttendee;
 using Bagile.Application.CourseSchedules.Commands.ManageCourseContacts;
+using Bagile.Application.Templates.Queries;
 
 namespace Bagile.Api.Controllers;
 
@@ -269,6 +270,20 @@ public class CourseSchedulesController : ControllerBase
             return NotFound(new { error = $"Contact {contactId} not found on course {id}" });
 
         return NoContent();
+    }
+
+    // ── Email send log ───────────────────────────────────
+
+    /// <summary>
+    /// Get the email send history for a course schedule.
+    /// Includes both pre-course and post-course sends, test and real.
+    /// </summary>
+    [HttpGet("{id}/email-log")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetEmailLog(long id, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetEmailSendLogQuery((int)id), ct);
+        return Ok(result);
     }
 
     // ── Conflicts ────────────────────────────────────────

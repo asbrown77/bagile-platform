@@ -1,4 +1,5 @@
 using Bagile.Application.Common.Interfaces;
+using Bagile.Domain.Entities;
 using Bagile.Domain.Repositories;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -10,19 +11,22 @@ public class SendFollowUpEmailCommandHandler
 {
     private const string CcAddress = "info@bagile.co.uk";
 
-    private readonly ICourseScheduleQueries _scheduleQueries;
+    private readonly ICourseScheduleQueries        _scheduleQueries;
     private readonly IPostCourseTemplateRepository _templateRepo;
-    private readonly IEmailService _emailService;
+    private readonly IEmailSendLogRepository       _logRepo;
+    private readonly IEmailService                 _emailService;
     private readonly ILogger<SendFollowUpEmailCommandHandler> _logger;
 
     public SendFollowUpEmailCommandHandler(
         ICourseScheduleQueries scheduleQueries,
         IPostCourseTemplateRepository templateRepo,
+        IEmailSendLogRepository logRepo,
         IEmailService emailService,
         ILogger<SendFollowUpEmailCommandHandler> logger)
     {
         _scheduleQueries = scheduleQueries;
         _templateRepo    = templateRepo;
+        _logRepo         = logRepo;
         _emailService    = emailService;
         _logger          = logger;
     }
@@ -88,6 +92,17 @@ public class SendFollowUpEmailCommandHandler
             htmlBody: htmlBody,
             cc:       [CcAddress],
             ct:       ct);
+
+        // 7. Audit log
+        await _logRepo.LogAsync(new EmailSendLog
+        {
+            CourseScheduleId = (int)request.CourseScheduleId,
+            TemplateType     = "post_course",
+            RecipientCount   = toEmails.Count,
+            Recipients       = string.Join(", ", toEmails),
+            Subject          = subject,
+            IsTest           = false
+        }, ct);
 
         return new SendFollowUpEmailResult
         {
