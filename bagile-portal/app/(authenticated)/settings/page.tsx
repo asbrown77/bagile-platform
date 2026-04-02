@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState, useRef } from "react";
-import { ApiKey, CreateKeyResponse, loginWithGoogle, listKeys, createKey, revokeKey } from "@/lib/api";
+import { ApiKey, CreateKeyResponse, loginWithGoogle, listKeys, createKey, revokeKey, PostCourseTemplate, listPostCourseTemplates, upsertPostCourseTemplate } from "@/lib/api";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { AlertBanner } from "@/components/ui/AlertBanner";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Key, Plus, Settings2 } from "lucide-react";
+import { Key, Plus, Settings2, FileText, ChevronLeft, Save } from "lucide-react";
 import { loadConfig, saveConfig, type PortalConfig } from "@/lib/config";
 
 export default function Settings() {
@@ -270,6 +270,9 @@ export default function Settings() {
 
       {/* Course Risk Thresholds */}
       <CourseThresholds />
+
+      {/* Post-Course Email Templates */}
+      <PostCourseTemplatesEditor />
     </>
   );
 }
@@ -346,6 +349,221 @@ function CourseThresholds() {
         Courses within <strong>{config.atRiskDays} day{config.atRiskDays !== 1 ? "s" : ""}</strong> with
         fewer than <strong>{config.minEnrolments}</strong> enrolments → "At Risk".
       </div>
+    </div>
+  );
+}
+
+// ── Post-Course Templates Editor ──────────────────────────────
+
+type EditorState =
+  | { view: "list" }
+  | { view: "edit"; template: PostCourseTemplate };
+
+function PostCourseTemplatesEditor() {
+  const [apiKey, setApiKey] = useState<string>("");
+  const [templates, setTemplates] = useState<PostCourseTemplate[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [state, setState] = useState<EditorState>({ view: "list" });
+  const [editSubject, setEditSubject] = useState("");
+  const [editBody, setEditBody] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  useEffect(() => {
+    const key = localStorage.getItem("bagile_api_key") ?? "";
+    setApiKey(key);
+  }, []);
+
+  const loadTemplates = useCallback(async () => {
+    if (!apiKey) return;
+    setLoading(true);
+    try {
+      const data = await listPostCourseTemplates(apiKey);
+      setTemplates(data);
+    } catch {
+      // silently skip — api key may not be set yet
+    } finally {
+      setLoading(false);
+    }
+  }, [apiKey]);
+
+  useEffect(() => { loadTemplates(); }, [loadTemplates]);
+
+  function openEdit(template: PostCourseTemplate) {
+    setEditSubject(template.subjectTemplate);
+    setEditBody(template.htmlBody);
+    setSaveError("");
+    setSaveSuccess(false);
+    setState({ view: "edit", template });
+  }
+
+  async function handleSave() {
+    if (state.view !== "edit") return;
+    setSaving(true);
+    setSaveError("");
+    setSaveSuccess(false);
+    try {
+      await upsertPostCourseTemplate(apiKey, state.template.courseType, editSubject, editBody);
+      setSaveSuccess(true);
+      await loadTemplates();
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err: any) {
+      setSaveError(err.message ?? "Failed to save template");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const isPlaceholder = (t: PostCourseTemplate) =>
+    t.htmlBody.includes("needs customising");
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mt-6">
+      <div className="px-5 py-3 border-b border-gray-200 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-blue-50 rounded-lg">
+            <FileText className="w-5 h-5 text-blue-600" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Post-Course Email Templates</h2>
+            <p className="text-sm text-gray-500">Edit the follow-up emails sent after each course type</p>
+          </div>
+        </div>
+        {state.view === "edit" && (
+          <button
+            onClick={() => setState({ view: "list" })}
+            className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900"
+          >
+            <ChevronLeft className="w-4 h-4" /> Back to list
+          </button>
+        )}
+      </div>
+
+      {state.view === "list" && (
+        <div>
+          {loading && (
+            <div className="p-6 text-center text-sm text-gray-400">Loading templates...</div>
+          )}
+          {!loading && !apiKey && (
+            <div className="p-6 text-center text-sm text-gray-400">
+              Set your API key above to manage templates.
+            </div>
+          )}
+          {!loading && apiKey && templates.length === 0 && (
+            <EmptyState
+              icon={<FileText className="w-10 h-10" />}
+              title="No templates found"
+              description="Run the V39 migration to seed templates, then reload."
+            />
+          )}
+          {!loading && templates.length > 0 && (
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Course Type</th>
+                  <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Subject</th>
+                  <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Last Updated</th>
+                  <th className="px-4 py-2"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {templates.map((t) => (
+                  <tr key={t.courseType} className="border-t border-gray-100 hover:bg-gray-50">
+                    <td className="px-4 py-3 font-medium">
+                      {t.courseType}
+                      {isPlaceholder(t) && (
+                        <span className="ml-2 text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">
+                          needs customising
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">{t.subjectTemplate}</td>
+                    <td className="px-4 py-3 text-gray-400 hidden md:table-cell">
+                      {new Date(t.updatedAt).toLocaleDateString("en-GB", {
+                        day: "numeric", month: "short", year: "numeric",
+                      })}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        onClick={() => openEdit(t)}
+                        className="text-brand-600 hover:text-brand-700 text-xs font-medium"
+                      >
+                        Edit
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {state.view === "edit" && (
+        <div className="p-5 space-y-5">
+          <div>
+            <label className="block text-xs font-medium text-gray-500 uppercase mb-1">
+              Course Type (read-only)
+            </label>
+            <div className="text-sm font-semibold text-gray-900">{state.template.courseType}</div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Email Subject
+            </label>
+            <input
+              type="text"
+              value={editSubject}
+              onChange={(e) => setEditSubject(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              You can use <code>{"{{course_dates}}"}</code> and <code>{"{{trainer_name}}"}</code> as variables.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              HTML Body
+            </label>
+            <textarea
+              value={editBody}
+              onChange={(e) => setEditBody(e.target.value)}
+              rows={24}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+              spellCheck={false}
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Variables: <code>{"{{greeting}}"}</code>, <code>{"{{trainer_name}}"}</code>,{" "}
+              <code>{"{{course_dates}}"}</code>, <code>{"{{delay_note}}"}</code>
+            </p>
+          </div>
+
+          {saveError && (
+            <AlertBanner variant="danger" onDismiss={() => setSaveError("")}>{saveError}</AlertBanner>
+          )}
+
+          <div className="flex items-center gap-3 pt-1">
+            <Button onClick={handleSave} disabled={saving}>
+              <Save className="w-4 h-4" />
+              {saving ? "Saving..." : "Save template"}
+            </Button>
+            <Button variant="secondary" onClick={() => setState({ view: "list" })}>
+              Cancel
+            </Button>
+            {saveSuccess && (
+              <span className="text-sm text-green-600 font-medium">Saved!</span>
+            )}
+          </div>
+
+          <div className="p-3 bg-gray-50 rounded-lg text-xs text-gray-500">
+            <strong>Last updated:</strong>{" "}
+            {new Date(state.template.updatedAt).toLocaleString("en-GB")}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
