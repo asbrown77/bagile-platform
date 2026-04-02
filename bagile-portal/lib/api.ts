@@ -832,3 +832,40 @@ export async function deleteCourseContact(
   });
   if (!res.ok) throw new Error(`API error: ${res.status}`);
 }
+
+// ── Trainers ──────────────────────────────────────────────
+
+export interface Trainer {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string;
+  isActive: boolean;
+}
+
+export async function getTrainers(apiKey: string): Promise<Trainer[]> {
+  return apiRequest("/api/trainers", apiKey);
+}
+
+export async function createTrainer(
+  apiKey: string,
+  payload: { name: string; email: string; phone?: string },
+): Promise<Trainer> {
+  return apiRequest("/api/trainers", apiKey, { method: "POST", body: payload });
+}
+
+export async function updateTrainer(
+  apiKey: string,
+  id: number,
+  payload: { name: string; email: string; phone?: string },
+): Promise<Trainer> {
+  return apiRequest(`/api/trainers/${id}`, apiKey, { method: "PUT", body: payload });
+}
+
+export async function deleteTrainer(apiKey: string, id: number): Promise<void> {
+  const res = await fetch(`${API_URL}/api/trainers/${id}`, {
+    method: "DELETE",
+    headers: { "X-Api-Key": apiKey },
+  });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+}

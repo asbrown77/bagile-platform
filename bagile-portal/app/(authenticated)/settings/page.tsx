@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState, useRef } from "react";
-import { ApiKey, CreateKeyResponse, loginWithGoogle, listKeys, createKey, revokeKey, PostCourseTemplate, listPostCourseTemplates, upsertPostCourseTemplate } from "@/lib/api";
+import { ApiKey, CreateKeyResponse, loginWithGoogle, listKeys, createKey, revokeKey, PostCourseTemplate, listPostCourseTemplates, upsertPostCourseTemplate, Trainer, getTrainers, createTrainer, updateTrainer, deleteTrainer } from "@/lib/api";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { AlertBanner } from "@/components/ui/AlertBanner";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Key, Plus, Settings2, FileText, ChevronLeft, Save, Eye, Code } from "lucide-react";
+import { Key, Plus, Settings2, FileText, ChevronLeft, Save, Eye, Code, Users, Pencil, Trash2, X, Check } from "lucide-react";
 import { loadConfig, saveConfig, type PortalConfig } from "@/lib/config";
 
 export default function Settings() {
@@ -103,9 +103,10 @@ export default function Settings() {
           <div ref={btnRef} className="flex justify-center" />
           {error && <p className="mt-4 text-red-600 text-sm">{error}</p>}
         </div>
-        {/* Course thresholds and templates are accessible without Google auth */}
+        {/* Course thresholds, templates, and trainers are accessible without Google auth */}
         <CourseThresholds />
         <PostCourseTemplatesEditor />
+        <TrainersEditor />
       </>
     );
   }
@@ -276,6 +277,9 @@ export default function Settings() {
 
       {/* Post-Course Email Templates */}
       <PostCourseTemplatesEditor />
+
+      {/* Trainers */}
+      <TrainersEditor />
     </>
   );
 }
@@ -636,6 +640,292 @@ function PostCourseTemplatesEditor() {
             {new Date(state.template.updatedAt).toLocaleString("en-GB")}
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+// ── Trainers Editor ───────────────────────────────────────
+
+type TrainerFormState = { name: string; email: string; phone: string };
+const emptyTrainerForm = (): TrainerFormState => ({ name: "", email: "", phone: "" });
+
+function TrainersEditor() {
+  const [apiKey, setApiKey] = useState("");
+  const [trainers, setTrainers] = useState<Trainer[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  // Inline add form
+  const [showAdd, setShowAdd] = useState(false);
+  const [addForm, setAddForm] = useState<TrainerFormState>(emptyTrainerForm());
+  const [adding, setAdding] = useState(false);
+
+  // Inline edit state: maps trainer id → form values
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState<TrainerFormState>(emptyTrainerForm());
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setApiKey(localStorage.getItem("bagile_api_key") ?? "");
+  }, []);
+
+  const loadTrainers = useCallback(async () => {
+    if (!apiKey) return;
+    setLoading(true);
+    try {
+      setTrainers(await getTrainers(apiKey));
+    } catch {
+      // api key may not be set yet
+    } finally {
+      setLoading(false);
+    }
+  }, [apiKey]);
+
+  useEffect(() => { loadTrainers(); }, [loadTrainers]);
+
+  function startEdit(t: Trainer) {
+    setEditingId(t.id);
+    setEditForm({ name: t.name, email: t.email, phone: t.phone ?? "" });
+    setError("");
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setError("");
+  }
+
+  async function handleSave(id: number) {
+    if (!editForm.name.trim() || !editForm.email.trim()) {
+      setError("Name and email are required");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    try {
+      await updateTrainer(apiKey, id, {
+        name: editForm.name.trim(),
+        email: editForm.email.trim(),
+        phone: editForm.phone.trim() || undefined,
+      });
+      setEditingId(null);
+      await loadTrainers();
+    } catch {
+      setError("Failed to save — please try again");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleAdd() {
+    if (!addForm.name.trim() || !addForm.email.trim()) {
+      setError("Name and email are required");
+      return;
+    }
+    setAdding(true);
+    setError("");
+    try {
+      await createTrainer(apiKey, {
+        name: addForm.name.trim(),
+        email: addForm.email.trim(),
+        phone: addForm.phone.trim() || undefined,
+      });
+      setAddForm(emptyTrainerForm());
+      setShowAdd(false);
+      await loadTrainers();
+    } catch {
+      setError("Failed to add trainer — email may already be in use");
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  async function handleDelete(id: number, name: string) {
+    if (!confirm(`Remove ${name} from the trainers list?`)) return;
+    try {
+      await deleteTrainer(apiKey, id);
+      await loadTrainers();
+    } catch {
+      setError("Failed to remove trainer");
+    }
+  }
+
+  const inputCls = "border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500";
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mt-6">
+      <div className="px-5 py-3 border-b border-gray-200 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-green-50 rounded-lg">
+            <Users className="w-5 h-5 text-green-600" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Trainers</h2>
+            <p className="text-sm text-gray-500">Manage the trainer list used across private courses</p>
+          </div>
+        </div>
+        {apiKey && (
+          <Button size="sm" onClick={() => { setShowAdd(true); setError(""); }}>
+            <Plus className="w-4 h-4" /> Add Trainer
+          </Button>
+        )}
+      </div>
+
+      {error && (
+        <div className="px-5 pt-3">
+          <AlertBanner variant="danger" onDismiss={() => setError("")}>{error}</AlertBanner>
+        </div>
+      )}
+
+      {loading && (
+        <div className="p-6 text-center text-sm text-gray-400">Loading trainers...</div>
+      )}
+      {!loading && !apiKey && (
+        <div className="p-6 text-center text-sm text-gray-400">
+          Set your API key above to manage trainers.
+        </div>
+      )}
+
+      {!loading && apiKey && (
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Name</th>
+              <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Email</th>
+              <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Phone</th>
+              <th className="px-4 py-2 w-24"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {trainers.map((t) =>
+              editingId === t.id ? (
+                <tr key={t.id} className="border-t border-gray-100 bg-blue-50">
+                  <td className="px-4 py-2">
+                    <input
+                      className={inputCls}
+                      value={editForm.name}
+                      onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                      placeholder="Name"
+                    />
+                  </td>
+                  <td className="px-4 py-2">
+                    <input
+                      className={inputCls}
+                      value={editForm.email}
+                      onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+                      placeholder="Email"
+                    />
+                  </td>
+                  <td className="px-4 py-2 hidden md:table-cell">
+                    <input
+                      className={inputCls}
+                      value={editForm.phone}
+                      onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
+                      placeholder="Phone (optional)"
+                    />
+                  </td>
+                  <td className="px-4 py-2 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => handleSave(t.id)}
+                        disabled={saving}
+                        title="Save"
+                        className="text-green-600 hover:text-green-800 disabled:opacity-50"
+                      >
+                        <Check className="w-4 h-4" />
+                      </button>
+                      <button onClick={cancelEdit} title="Cancel" className="text-gray-400 hover:text-gray-600">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                <tr key={t.id} className="border-t border-gray-100 hover:bg-gray-50">
+                  <td className="px-4 py-3 font-medium">{t.name}</td>
+                  <td className="px-4 py-3 text-gray-600">{t.email}</td>
+                  <td className="px-4 py-3 text-gray-400 hidden md:table-cell">{t.phone ?? "—"}</td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-3">
+                      <button
+                        onClick={() => startEdit(t)}
+                        title="Edit"
+                        className="text-gray-400 hover:text-brand-600"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(t.id, t.name)}
+                        title="Remove"
+                        className="text-gray-400 hover:text-red-500"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              )
+            )}
+
+            {/* Inline add row */}
+            {showAdd && (
+              <tr className="border-t border-gray-100 bg-green-50">
+                <td className="px-4 py-2">
+                  <input
+                    className={inputCls}
+                    value={addForm.name}
+                    onChange={(e) => setAddForm((f) => ({ ...f, name: e.target.value }))}
+                    placeholder="Name"
+                    autoFocus
+                  />
+                </td>
+                <td className="px-4 py-2">
+                  <input
+                    className={inputCls}
+                    value={addForm.email}
+                    onChange={(e) => setAddForm((f) => ({ ...f, email: e.target.value }))}
+                    placeholder="Email"
+                  />
+                </td>
+                <td className="px-4 py-2 hidden md:table-cell">
+                  <input
+                    className={inputCls}
+                    value={addForm.phone}
+                    onChange={(e) => setAddForm((f) => ({ ...f, phone: e.target.value }))}
+                    placeholder="Phone (optional)"
+                  />
+                </td>
+                <td className="px-4 py-2 text-right">
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      onClick={handleAdd}
+                      disabled={adding}
+                      title="Add"
+                      className="text-green-600 hover:text-green-800 disabled:opacity-50"
+                    >
+                      <Check className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => { setShowAdd(false); setAddForm(emptyTrainerForm()); setError(""); }}
+                      title="Cancel"
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            )}
+
+            {!showAdd && trainers.length === 0 && (
+              <tr>
+                <td colSpan={4} className="px-4 py-8 text-center text-sm text-gray-400">
+                  No active trainers — run the V41 migration to seed Alex and Chris, then reload.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       )}
     </div>
   );
