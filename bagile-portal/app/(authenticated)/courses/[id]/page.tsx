@@ -152,6 +152,8 @@ export default function CourseDetail() {
         apiKey={apiKey}
         courseId={courseId}
         onAdded={loadData}
+        capacity={course?.capacity}
+        currentAttendeeCount={active.length}
       />
 
       {course && (

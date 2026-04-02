@@ -14,11 +14,13 @@ interface Props {
   apiKey: string;
   courseId: number;
   onAdded: () => void;
+  capacity?: number | null;
+  currentAttendeeCount?: number;
 }
 
 const emptyAttendee = (): AttendeeInput => ({ firstName: "", lastName: "", email: "" });
 
-export function AddAttendeesPanel({ open, onClose, apiKey, courseId, onAdded }: Props) {
+export function AddAttendeesPanel({ open, onClose, apiKey, courseId, onAdded, capacity, currentAttendeeCount = 0 }: Props) {
   const [mode, setMode] = useState("paste");
   const [rawText, setRawText] = useState("");
   const [parsed, setParsed] = useState<AttendeeInput[]>([]);
@@ -26,6 +28,7 @@ export function AddAttendeesPanel({ open, onClose, apiKey, courseId, onAdded }: 
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<AddAttendeesResult | null>(null);
   const [error, setError] = useState("");
+  const [capacityWarningAcknowledged, setCapacityWarningAcknowledged] = useState(false);
 
   async function handleParse() {
     if (!rawText.trim()) return;
@@ -73,9 +76,21 @@ export function AddAttendeesPanel({ open, onClose, apiKey, courseId, onAdded }: 
     return manualRows.filter((r) => r.email.trim());
   }
 
+  function wouldExceedCapacity(): boolean {
+    if (!capacity) return false;
+    const attendees = getAttendees();
+    return (currentAttendeeCount + attendees.length) > capacity;
+  }
+
   async function handleSubmit() {
     const attendees = getAttendees();
     if (attendees.length === 0) { setError("No attendees to add"); return; }
+
+    if (wouldExceedCapacity() && !capacityWarningAcknowledged) {
+      setCapacityWarningAcknowledged(true);
+      return;
+    }
+
     setError("");
     setSaving(true);
     try {
@@ -95,6 +110,7 @@ export function AddAttendeesPanel({ open, onClose, apiKey, courseId, onAdded }: 
     setManualRows([emptyAttendee()]);
     setResult(null);
     setError("");
+    setCapacityWarningAcknowledged(false);
     onClose();
   }
 
@@ -222,11 +238,23 @@ export function AddAttendeesPanel({ open, onClose, apiKey, courseId, onAdded }: 
 
           {/* Submit */}
           {getAttendees().length > 0 && (
-            <div className="flex gap-3 pt-4 mt-4 border-t border-gray-200">
-              <Button onClick={handleSubmit} disabled={saving}>
-                {saving ? "Adding..." : `Add ${getAttendees().length} Attendee${getAttendees().length !== 1 ? "s" : ""}`}
-              </Button>
-              <Button variant="secondary" onClick={handleClose}>Cancel</Button>
+            <div className="pt-4 mt-4 border-t border-gray-200 space-y-3">
+              {capacityWarningAcknowledged && wouldExceedCapacity() && (
+                <AlertBanner variant="warning">
+                  This will exceed the course capacity of {capacity}. Currently {currentAttendeeCount} enrolled, adding {getAttendees().length} would bring the total to {currentAttendeeCount + getAttendees().length}.
+                </AlertBanner>
+              )}
+              <div className="flex gap-3">
+                <Button onClick={handleSubmit} disabled={saving}>
+                  {saving ? "Adding..." : capacityWarningAcknowledged && wouldExceedCapacity()
+                    ? `Add anyway (${getAttendees().length})`
+                    : `Add ${getAttendees().length} Attendee${getAttendees().length !== 1 ? "s" : ""}`}
+                </Button>
+                {capacityWarningAcknowledged && wouldExceedCapacity() && (
+                  <Button variant="secondary" onClick={() => setCapacityWarningAcknowledged(false)}>Go back</Button>
+                )}
+                <Button variant="secondary" onClick={handleClose}>Cancel</Button>
+              </div>
             </div>
           )}
         </>
