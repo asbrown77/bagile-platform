@@ -28,8 +28,8 @@ public class CourseScheduleRepository : ICourseScheduleRepository
             ON CONFLICT (source_system, source_product_id)
             DO UPDATE SET
                 name = EXCLUDED.name,
-                -- Preserve manual cancellations: once a course is cancelled via the platform,
-                -- ETL syncs (which set WooCommerce "outofstock" → "draft") must not resurrect it.
+                -- Preserve manual cancellations: once cancelled via platform,
+                -- ETL syncs must not overwrite with WooCommerce status.
                 status = CASE
                     WHEN bagile.course_schedules.status = 'cancelled' THEN 'cancelled'
                     ELSE EXCLUDED.status
