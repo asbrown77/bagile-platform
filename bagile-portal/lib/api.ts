@@ -657,3 +657,86 @@ export function daysFromNow(dateStr: string): number {
   const target = new Date(dateStr); target.setHours(0, 0, 0, 0);
   return Math.round((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 }
+
+// ── Post-Course Templates ────────────────────────────────
+
+export interface PostCourseTemplate {
+  id: number;
+  courseType: string;
+  subjectTemplate: string;
+  htmlBody: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function listPostCourseTemplates(apiKey: string): Promise<PostCourseTemplate[]> {
+  return apiRequest("/api/templates/post-course", apiKey);
+}
+
+export async function getPostCourseTemplate(apiKey: string, courseType: string): Promise<PostCourseTemplate> {
+  return apiRequest(`/api/templates/post-course/${courseType}`, apiKey);
+}
+
+export async function upsertPostCourseTemplate(
+  apiKey: string,
+  courseType: string,
+  subjectTemplate: string,
+  htmlBody: string,
+): Promise<PostCourseTemplate> {
+  return apiRequest(`/api/templates/post-course/${courseType}`, apiKey, {
+    method: "PUT",
+    body: { subjectTemplate, htmlBody },
+  });
+}
+
+export interface SendFollowUpResult {
+  recipientCount: number;
+  subject: string;
+  courseType: string;
+  recipientEmails: string[];
+}
+
+export async function sendFollowUpEmail(
+  apiKey: string,
+  courseScheduleId: number,
+  opts?: { courseTypeOverride?: string; delayNote?: string },
+): Promise<SendFollowUpResult> {
+  return apiRequest(`/api/templates/post-course/send/${courseScheduleId}`, apiKey, {
+    method: "POST",
+    body: opts ?? {},
+  });
+}
+
+// ── Student Override ──────────────────────────────────────
+
+export interface UpdateStudentPayload {
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  company?: string;
+  updatedBy?: string;
+  overrideNote?: string;
+}
+
+export interface UpdateStudentResult {
+  id: number;
+  email: string;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  company: string | null;
+  isOverridden: boolean;
+  updatedBy: string | null;
+  overrideNote: string | null;
+}
+
+export async function updateStudent(
+  apiKey: string,
+  studentId: number,
+  payload: UpdateStudentPayload,
+): Promise<UpdateStudentResult> {
+  return apiRequest(`/api/students/${studentId}`, apiKey, {
+    method: "PUT",
+    body: payload,
+  });
+}
