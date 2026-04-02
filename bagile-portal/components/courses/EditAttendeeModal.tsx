@@ -11,9 +11,12 @@ interface Props {
   apiKey: string;
   onSaved: () => void;
   onClose: () => void;
+  /** When true, the Company/Organisation field is hidden — irrelevant for private courses
+   *  where all attendees are from the same client organisation. */
+  isPrivate?: boolean;
 }
 
-export function EditAttendeeModal({ attendee, apiKey, onSaved, onClose }: Props) {
+export function EditAttendeeModal({ attendee, apiKey, onSaved, onClose, isPrivate = false }: Props) {
   const [firstName, setFirstName] = useState(attendee.firstName || "");
   const [lastName, setLastName] = useState(attendee.lastName || "");
   const [email, setEmail] = useState(attendee.email || "");
@@ -97,15 +100,19 @@ export function EditAttendeeModal({ attendee, apiKey, onSaved, onClose }: Props)
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Company / Organisation</label>
-            <input
-              type="text"
-              value={company}
-              onChange={(e) => setCompany(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-            />
-          </div>
+          {/* Company field is only relevant for public courses — private attendees
+              are all from the same client org so this would be noise. */}
+          {!isPrivate && (
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Company / Organisation</label>
+              <input
+                type="text"
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              />
+            </div>
+          )}
 
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">

@@ -100,10 +100,11 @@ function CoursesContent() {
 
   useEffect(() => { loadCourses(); }, [loadCourses]);
 
-  // Re-fetch when calendar range changes (user navigates weeks/months)
-  useEffect(() => {
-    if (pageView === "calendar" && calRange) loadCourses();
-  }, [calRange]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Re-fetch when calendar range changes (user navigates weeks/months).
+  // NOTE: loadCourses is intentionally omitted from the dep array here — it's
+  // already triggered by the [loadCourses] effect above whenever calRange
+  // changes (because calRange is in the loadCourses useCallback deps).
+  // Including it here would create a second fetch on every navigation.
 
   const courseTypes = [...new Set(
     courses.map((c) => c.courseCode?.split("-")[0]).filter(Boolean)

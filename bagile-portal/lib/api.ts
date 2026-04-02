@@ -103,7 +103,11 @@ export interface MonitoringCourse {
   daysUntilDecision: number;
   decisionDeadline: string | null;
   recommendedAction: string;
-  /** Course lifecycle status — "cancelled" suppresses all enrolment-based logic */
+  /** Raw WooCommerce/platform lifecycle status (publish, cancelled, sold_out, draft).
+   *  Sent as `courseStatus` by the monitoring endpoint — distinct from `status`
+   *  on CourseScheduleItem which uses the same field name. */
+  courseStatus?: string | null;
+  /** Alias kept for backward compat — getCourseDisplayStatus reads `status`. */
   status?: string | null;
 }
 

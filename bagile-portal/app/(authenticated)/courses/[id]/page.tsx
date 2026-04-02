@@ -218,6 +218,7 @@ export default function CourseDetail() {
         <EditAttendeeModal
           attendee={editingAttendee}
           apiKey={apiKey}
+          isPrivate={isPrivate}
           onSaved={() => {
             setSuccessMsg("Attendee updated");
             loadData();
@@ -303,9 +304,9 @@ export default function CourseDetail() {
                 </span>
               )}
               {course.capacity != null && (
-                <span className={`font-medium ${isOverCapacity ? "text-red-600" : "text-gray-500"}`}>
+                <span className={`font-medium ${isOverCapacity ? "text-blue-600" : "text-gray-500"}`}>
                   Capacity: {isPrivate
-                    ? <>{active.length}/{course.capacity}{isOverCapacity && " ⚠️"}</>
+                    ? <>{active.length}/{course.capacity}{isOverCapacity && " (over — client approved)"}</>
                     : course.capacity}
                 </span>
               )}
@@ -358,12 +359,16 @@ export default function CourseDetail() {
             )}
           </div>
 
-          {/* KPI cards */}
-          <div className={`grid ${isPrivate ? "grid-cols-1" : "grid-cols-3"} gap-4 mb-6`}>
-            <Card label="Attendees" value={active.length} icon={<Users className="w-4 h-4" />} />
-            {!isPrivate && <Card label="Orders" value={orders.length} />}
-            {!isPrivate && <Card label="Revenue" value={formatCurrency(totalRevenue)} />}
-          </div>
+          {/* KPI cards — public courses only. Private courses skip the standalone
+              Attendees card as the count is already in the tab header and capacity
+              display, and a lone card wastes vertical space. */}
+          {!isPrivate && (
+            <div className="grid grid-cols-3 gap-4 mb-6">
+              <Card label="Attendees" value={active.length} icon={<Users className="w-4 h-4" />} />
+              <Card label="Orders" value={orders.length} />
+              <Card label="Revenue" value={formatCurrency(totalRevenue)} />
+            </div>
+          )}
 
           {/* Course contacts — private courses only */}
           {isPrivate && (

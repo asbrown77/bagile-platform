@@ -379,12 +379,39 @@ function PostCourseTemplatesEditor() {
     setApiKey(key);
   }, []);
 
+  /** Normalise course type keys so that legacy variants from different seed
+   *  versions collapse to a single canonical key (e.g. "PALE" → "PAL-E").
+   *  The most recently updated entry wins when two keys map to the same name. */
+  function deduplicateTemplates(data: PostCourseTemplate[]): PostCourseTemplate[] {
+    const canonical: Record<string, string> = {
+      PALE: "PAL-E",
+      PSMAI: "PSM-AI",
+      PSPOAI: "PSPO-AI",
+      APSSD: "APS-SD",
+      PSMA: "PSM-A",
+      PSPOA: "PSPO-A",
+    };
+    const seen = new Map<string, PostCourseTemplate>();
+    // Sort newest-first so the most recently updated entry wins on collision
+    const sorted = [...data].sort(
+      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    );
+    for (const t of sorted) {
+      const key = canonical[t.courseType] ?? t.courseType;
+      if (!seen.has(key)) {
+        // Normalise the courseType to the canonical form so the UI shows it correctly
+        seen.set(key, { ...t, courseType: key });
+      }
+    }
+    return Array.from(seen.values()).sort((a, b) => a.courseType.localeCompare(b.courseType));
+  }
+
   const loadTemplates = useCallback(async () => {
     if (!apiKey) return;
     setLoading(true);
     try {
       const data = await listPostCourseTemplates(apiKey);
-      setTemplates(data);
+      setTemplates(deduplicateTemplates(data));
     } catch {
       // silently skip — api key may not be set yet
     } finally {

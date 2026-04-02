@@ -11,8 +11,13 @@ interface CourseForStatus {
   currentEnrolmentCount: number;
   needsAttention?: boolean;
   guaranteedToRun?: boolean;
+  /** CourseScheduleItem uses `status`; MonitoringCourse sends `courseStatus` from the API.
+   *  Both are checked so this function works correctly for both shapes. */
   status?: string | null;
+  courseStatus?: string | null;
   daysUntilStart?: number;
+  /** Private courses are always confirmed — enrolment-based risk logic does not apply. */
+  type?: string | null;
 }
 
 export type CourseDisplayStatus =
@@ -21,11 +26,14 @@ export type CourseDisplayStatus =
   | "cancel"
   | "at risk"
   | "guaranteed"
+  | "confirmed"
   | "monitor"
   | "cancelled";
 
 export function getCourseDisplayStatus(course: CourseForStatus): CourseDisplayStatus {
-  if (course.status === "cancelled") return "cancelled";
+  // MonitoringCourse sends the lifecycle status as `courseStatus`; CourseScheduleItem
+  // sends it as `status`. Check both so this works for either shape.
+  if (course.status === "cancelled" || course.courseStatus === "cancelled") return "cancelled";
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -38,6 +46,11 @@ export function getCourseDisplayStatus(course: CourseForStatus): CourseDisplaySt
 
   if (start <= today && today <= end) return "running";
   if (today > end) return "completed";
+
+  // Private courses: enrolment-based risk logic is irrelevant (client decides
+  // how many attend). "guaranteed" implies minimum enrolment met, which doesn't
+  // apply. Always show "confirmed" for private upcoming courses.
+  if (course.type === "private") return "confirmed";
 
   const { atRiskDays, minEnrolments } = loadConfig();
   const daysAway = course.daysUntilStart ?? Math.round((start.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));

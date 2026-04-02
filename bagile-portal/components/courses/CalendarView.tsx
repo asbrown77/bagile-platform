@@ -10,7 +10,7 @@
  * date-range state lives here so callers just pass courses + config.
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { CourseScheduleItem } from "@/lib/api";
 import { ChevronLeft, ChevronRight, CalendarDays, CalendarRange } from "lucide-react";
 import Link from "next/link";
@@ -36,8 +36,13 @@ const STATUS_BG: Record<string, string> = {
   cancelled:  "bg-gray-50 border-gray-100 opacity-50",
 };
 
+/** Format a Date as YYYY-MM-DD using local time (not UTC) to avoid off-by-one
+ *  errors in BST/CET where midnight local = prior day in UTC. */
 function toDateStr(d: Date): string {
-  return d.toISOString().split("T")[0];
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 function addDays(d: Date, n: number): Date {
@@ -170,6 +175,12 @@ export function CalendarView({
   const [showCancelled, setShowCancelled] = useState(false);
   const { minEnrolments } = loadConfig();
 
+  // Stable ref for onRangeChange — avoids the infinite loop where a new arrow
+  // function on every parent render would re-trigger this effect, which would
+  // trigger a state update, which would re-render the parent... 188+ times.
+  const onRangeChangeRef = useRef(onRangeChange);
+  useEffect(() => { onRangeChangeRef.current = onRangeChange; });
+
   // Restore persisted view mode after mount
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -178,9 +189,11 @@ export function CalendarView({
     }
   }, [storageKey]);
 
-  // Notify parent when range changes
+  // Notify parent when date range changes so it can re-fetch.
+  // Depends only on the date/view state — NOT on onRangeChange (use ref instead)
+  // to avoid the re-render → new function → re-effect infinite loop.
   useEffect(() => {
-    if (!onRangeChange) return;
+    if (!onRangeChangeRef.current) return;
     let from: string;
     let to: string;
     if (viewMode === "week") {
@@ -190,8 +203,8 @@ export function CalendarView({
       from = new Date(year, month - 1, 1).toISOString().split("T")[0];
       to = new Date(year, month + 2, 0).toISOString().split("T")[0];
     }
-    onRangeChange(from, to);
-  }, [viewMode, year, month, weekStart, onRangeChange]);
+    onRangeChangeRef.current(from, to);
+  }, [viewMode, year, month, weekStart]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function switchView(v: CalViewMode) {
     setViewMode(v);

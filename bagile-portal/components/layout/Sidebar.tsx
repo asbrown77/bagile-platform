@@ -29,7 +29,7 @@ const sections = [
   {
     label: "SETTINGS",
     items: [
-      { label: "API Keys", href: "/settings", icon: Key },
+      { label: "Settings", href: "/settings", icon: Key },
     ],
   },
 ];
