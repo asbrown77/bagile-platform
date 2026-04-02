@@ -8,7 +8,7 @@ import { AlertBanner } from "@/components/ui/AlertBanner";
 import { Button } from "@/components/ui/Button";
 import { ChevronLeft, ChevronRight, List, CalendarDays, CalendarRange } from "lucide-react";
 import Link from "next/link";
-import { getCourseDisplayStatus, type CourseDisplayStatus } from "@/lib/courseStatus";
+import { getCourseDisplayStatus } from "@/lib/courseStatus";
 import { loadConfig } from "@/lib/config";
 import {
   getCourseColour, getTrainerColour, trainerInitials,
