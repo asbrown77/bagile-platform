@@ -44,14 +44,15 @@ public class WebhookHandler
 
         var body = Encoding.UTF8.GetString(bodyBytes);
 
-        var payload = handler.PreparePayload(body, http, _config, _logger);
-        _logger.LogDebug("Payload body length: {Length}", payload.PayloadJson?.Length ?? 0);
+        var payload = await handler.PreparePayloadAsync(body, http, _config, _logger);
 
         if (payload == null)
         {
             _logger.LogInformation("Ignored or invalid payload for source: {Source}", source);
             return Results.Ok(); // still return 200 to stop retries
         }
+
+        _logger.LogDebug("Payload body length: {Length}", payload.PayloadJson?.Length ?? 0);
 
         if (!string.IsNullOrEmpty(payload.ExternalId))
         {

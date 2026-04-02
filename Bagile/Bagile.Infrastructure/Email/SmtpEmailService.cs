@@ -38,8 +38,7 @@ public class SmtpEmailService : IEmailService
 
         if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(user) || string.IsNullOrWhiteSpace(pass))
         {
-            _logger.LogWarning("SmtpEmailService: SMTP config missing — email not sent: {Subject}", subject);
-            return;
+            throw new InvalidOperationException("SMTP is not configured. Set Smtp:Host, Smtp:User, and Smtp:Pass.");
         }
 
         var effectiveFrom  = fromEmail ?? cfgFrom;

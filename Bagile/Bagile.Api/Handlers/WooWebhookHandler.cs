@@ -31,7 +31,7 @@ public class WooWebhookHandler : IWebhookHandler
         return valid;
     }
 
-    public WebhookPayload? PreparePayload(string body, HttpContext http, IConfiguration config, ILogger logger)
+    public Task<WebhookPayload?> PreparePayloadAsync(string body, HttpContext http, IConfiguration config, ILogger logger)
     {
         try
         {
@@ -44,12 +44,12 @@ public class WooWebhookHandler : IWebhookHandler
             logger.LogInformation("Woo webhook parsed: ExternalId={ExternalId}, EventType={EventType}",
                 externalId, eventType);
 
-            return new WebhookPayload(Source, externalId, eventType, body);
+            return Task.FromResult<WebhookPayload?>(new WebhookPayload(Source, externalId, eventType, body));
         }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Invalid Woo payload");
-            return null;
+            return Task.FromResult<WebhookPayload?>(null);
         }
     }
 }

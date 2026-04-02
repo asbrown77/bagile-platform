@@ -43,7 +43,7 @@ public class ApiKeyAuthenticationMiddleware
         {
             context.Items["ApiKeyOwner"] = keyInfo.OwnerEmail;
             context.Items["ApiKeyId"] = keyInfo.Id;
-            _ = Task.Run(() => validator.RecordUsageAsync(keyInfo.Id));
+            _ = Task.Run(async () => { try { await validator.RecordUsageAsync(keyInfo.Id); } catch { /* swallow — usage tracking must not crash the process */ } });
             await _next(context);
             return;
         }

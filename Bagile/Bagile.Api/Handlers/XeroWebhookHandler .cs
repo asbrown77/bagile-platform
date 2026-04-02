@@ -41,7 +41,7 @@ public class XeroWebhookHandler : IWebhookHandler
         return valid;
     }
 
-    public WebhookPayload? PreparePayload(string body, HttpContext http, IConfiguration config, ILogger logger)
+    public async Task<WebhookPayload?> PreparePayloadAsync(string body, HttpContext http, IConfiguration config, ILogger logger)
     {
         try
         {
@@ -71,7 +71,7 @@ public class XeroWebhookHandler : IWebhookHandler
 
             try
             {
-                invoice = _xeroClient.GetInvoiceByIdAsync(externalId).GetAwaiter().GetResult();
+                invoice = await _xeroClient.GetInvoiceByIdAsync(externalId);
             }
             catch (HttpRequestException httpEx) when (httpEx.Message.Contains("404"))
             {
