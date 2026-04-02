@@ -8,6 +8,12 @@ import { AlertBanner } from "@/components/ui/AlertBanner";
 import { AttendeeInput, AddAttendeesResult, addPrivateAttendees, parseAttendees } from "@/lib/api";
 import { UserPlus, Trash2, Upload } from "lucide-react";
 
+/** Extract the domain part from an email address, lower-cased. */
+function emailDomain(email: string): string {
+  const at = email.indexOf("@");
+  return at >= 0 ? email.slice(at + 1).toLowerCase() : "";
+}
+
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -29,6 +35,31 @@ export function AddAttendeesPanel({ open, onClose, apiKey, courseId, onAdded, ca
   const [result, setResult] = useState<AddAttendeesResult | null>(null);
   const [error, setError] = useState("");
   const [capacityWarningAcknowledged, setCapacityWarningAcknowledged] = useState(false);
+  /** Organisation name detected from the email domain, if matched. */
+  const [detectedOrg, setDetectedOrg] = useState<string | null>(null);
+
+  async function detectOrgFromDomain(items: AttendeeInput[]) {
+    setDetectedOrg(null);
+    // Find first email without a company already specified
+    const emailWithoutCompany = items.find((a) => a.email && !a.company)?.email;
+    if (!emailWithoutCompany) return;
+    const domain = emailDomain(emailWithoutCompany);
+    if (!domain) return;
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.bagile.co.uk";
+      const res = await fetch(
+        `${API_URL}/api/organisations?domain=${encodeURIComponent(domain)}&pageSize=1`,
+        { headers: { "X-Api-Key": apiKey } },
+      );
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.items?.length > 0) {
+        setDetectedOrg(data.items[0].name);
+      }
+    } catch {
+      // Domain detection is best-effort — never block the user on failure
+    }
+  }
 
   async function handleParse() {
     if (!rawText.trim()) return;
@@ -36,6 +67,7 @@ export function AddAttendeesPanel({ open, onClose, apiKey, courseId, onAdded, ca
     try {
       const items = await parseAttendees(apiKey, rawText);
       setParsed(items);
+      await detectOrgFromDomain(items);
     } catch {
       setError("Failed to parse text");
     }
@@ -72,7 +104,12 @@ export function AddAttendeesPanel({ open, onClose, apiKey, courseId, onAdded, ca
   }
 
   function getAttendees(): AttendeeInput[] {
-    if (mode === "paste") return parsed;
+    if (mode === "paste") {
+      // Backfill company from detected org for attendees that don't have one specified
+      return detectedOrg
+        ? parsed.map((a) => ({ ...a, company: a.company || detectedOrg }))
+        : parsed;
+    }
     return manualRows.filter((r) => r.email.trim());
   }
 
@@ -111,6 +148,7 @@ export function AddAttendeesPanel({ open, onClose, apiKey, courseId, onAdded, ca
     setResult(null);
     setError("");
     setCapacityWarningAcknowledged(false);
+    setDetectedOrg(null);
     onClose();
   }
 
@@ -146,7 +184,7 @@ export function AddAttendeesPanel({ open, onClose, apiKey, courseId, onAdded, ca
                 </label>
                 <textarea
                   value={rawText}
-                  onChange={(e) => { setRawText(e.target.value); setParsed([]); }}
+                  onChange={(e) => { setRawText(e.target.value); setParsed([]); setDetectedOrg(null); }}
                   placeholder={"John, Smith, john@example.com\nJane, Doe, jane@example.com, Acme Ltd\n\nOr tab-separated from Excel"}
                   rows={6}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono"
@@ -164,6 +202,13 @@ export function AddAttendeesPanel({ open, onClose, apiKey, courseId, onAdded, ca
               {parsed.length > 0 && (
                 <div>
                   <p className="text-xs font-medium text-gray-700 mb-2">{parsed.length} attendee{parsed.length !== 1 ? "s" : ""} found:</p>
+                  {detectedOrg && (
+                    <div className="mb-2 flex items-center gap-2 text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+                      <span className="font-medium">Organisation detected:</span>
+                      <span>{detectedOrg}</span>
+                      <span className="text-blue-500">(matched from email domain)</span>
+                    </div>
+                  )}
                   <div className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
                     <table className="w-full text-xs">
                       <thead className="bg-gray-100">
@@ -180,7 +225,7 @@ export function AddAttendeesPanel({ open, onClose, apiKey, courseId, onAdded, ca
                             <td className="px-3 py-1.5">{a.firstName}</td>
                             <td className="px-3 py-1.5">{a.lastName}</td>
                             <td className="px-3 py-1.5 text-brand-600">{a.email}</td>
-                            <td className="px-3 py-1.5 text-gray-400">{a.company || "—"}</td>
+                            <td className="px-3 py-1.5 text-gray-400">{a.company || detectedOrg || "—"}</td>
                           </tr>
                         ))}
                       </tbody>
