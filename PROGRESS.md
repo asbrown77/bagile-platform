@@ -1,5 +1,33 @@
 # BAgile Platform — Progress & Lessons Learned
 
+## Sprint 23 — Professional Private Courses (1 Apr 2026)
+
+**Status:** Complete — committed in 4 separate commits.
+
+**What was built:**
+- V45 migration: `acronym` column on organisations table, seeded for known orgs
+- `GET /api/organisations/search?q=` — type-ahead endpoint, hits organisations table directly (not derived query), returns id/name/acronym/ptnTier, top 10
+- `POST /api/organisations` — create new org from portal; creates alias entry with name
+- `UpdatePrivateCourseCommand` now accepts `ClientOrganisationId`; persisted in `UpdatePrivateCourseAsync`
+- `CourseScheduleDetailDto` + query: exposes `clientOrganisationId`, `clientOrganisationName`, `clientOrganisationAcronym` via LEFT JOIN
+- `OrganisationTypeAhead` component — debounced search, dropdown with name+acronym+PTN tier badge, "Create as new" inline form with auto-suggested acronym, chip on selection, graceful failure fallback to free text
+- `privateCourseHelpers.ts` — `generateCourseName()` and `generateInvoiceRef()` shared utilities
+- `CreatePrivateCoursePanel` — full rewrite: org type-ahead, auto-generated course name and invoice ref (editable, resetable), JSON template updated to accept `organisationName`/`organisationAcronym`
+- `EditPrivateCoursePanel` — pre-populates org chip from course data, reset-to-auto buttons for name/ref
+- Course detail page: prefers `clientOrganisationName` over parsed title; renders org as clickable link
+
+**Needs testing:**
+- Create private course → select existing org → verify name/ref auto-generate, submit stores `client_organisation_id`
+- Create private course → "Create as new org" flow → verify org created in DB then selected
+- Edit private course (legacy, no org set) → search and select org → save stores ID
+- Edit private course (with org) → chip pre-populated on open
+- Reset to auto buttons regenerate correctly after org change
+- Course detail page shows client org as link (not just parsed text)
+- V45 migration runs cleanly (acronym column added, existing orgs seeded)
+
+**Known debt logged:**
+- The `suggestAcronym` function takes the first letter of each word — good for 3+ word names, produces single letters for single-word orgs (e.g. "DVSA" → "D"). Trainer should always review before saving.
+
 ## Current State (26 Mar 2026)
 - **API:** Live at api.bagile.co.uk, healthy, 17 endpoints, read-only
 - **ETL:** Running on Hetzner, WooCommerce collector active, Xero collector disabled
