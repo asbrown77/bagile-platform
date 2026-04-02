@@ -200,7 +200,7 @@ export default function CourseDetail() {
               {course.status && statusBadge(course.status)}
               {course.price && (
                 <span className="text-gray-600">
-                  {formatCurrency(course.price)} per person
+                  {formatCurrency(course.price)} {isPrivate ? "total" : "per person"}
                 </span>
               )}
               {course.capacity && (
