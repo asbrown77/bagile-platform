@@ -83,11 +83,12 @@ jobs:
           XERO_CLIENT_SECRET: ${{ secrets.XERO_CLIENT_SECRET }}
           XERO_REDIRECT_URI: ${{ secrets.XERO_REDIRECT_URI }}
           XERO_WEBHOOK_SECRET: ${{ secrets.XERO_WEBHOOK_SECRET }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
         with:
           host: ${{ vars.HETZNER_HOST }}
           username: root
           key: ${{ secrets.HETZNER_SSH_KEY }}
-          envs: DB_CONNECTION_STRING,BAGILE_API_KEY,WOOCOMMERCE_WEBHOOK_SECRET,XERO_CLIENT_ID,XERO_CLIENT_SECRET,XERO_REDIRECT_URI,XERO_WEBHOOK_SECRET       
+          envs: DB_CONNECTION_STRING,BAGILE_API_KEY,WOOCOMMERCE_WEBHOOK_SECRET,XERO_CLIENT_ID,XERO_CLIENT_SECRET,XERO_REDIRECT_URI,XERO_WEBHOOK_SECRET,SMTP_PASSWORD
           script: |
             cd /opt/bagile
 
@@ -110,6 +111,12 @@ jobs:
             Xero__ClientSecret=${XERO_CLIENT_SECRET}
             Xero__RedirectUri=${XERO_REDIRECT_URI}
             Xero__WebhookSecret=${XERO_WEBHOOK_SECRET}
+
+            Smtp__Host=smtp.gmail.com
+            Smtp__Port=587
+            Smtp__User=info@bagile.co.uk
+            Smtp__Pass=${SMTP_PASSWORD}
+            Smtp__From=info@bagile.co.uk
             EOF
 
             echo "Pulling latest API image..."
