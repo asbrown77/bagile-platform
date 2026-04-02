@@ -116,12 +116,23 @@ _"I can see revenue, partner value, course demand, and make scheduling decisions
 - [ ] Click any course → course detail page
 - [ ] Toggle between week/month persists
 
-### 5 — Bug: Private course title empty
+### 5 — Bug: Private course title empty (API only)
 
-**What it is:** When creating a private course via `POST /api/course-schedules/private`, the title field returns empty even when provided in the request body. Discovered 2 Apr 2026 when creating Frazer-Nash Bristol PSM (course ID 735).
+**What it is:** When creating a private course via `POST /api/course-schedules/private`, the title field returns empty even when provided in the request body. Creating via portal UI works fine — title is saved correctly. API-only issue.
 
 **Files:**
 - `Bagile.Application/CourseSchedules/Commands/CreatePrivateCourse/` — check if title is mapped from request to entity
+
+### 6 — Bug: Price label shows "per person" for private courses
+
+**What it is:** The course detail page shows price as "£16,200 per person" but for private courses this is the total price, not per-person. The label should say "total" for private courses and "per person" for public courses.
+
+**Files:**
+- `bagile-portal/app/(authenticated)/courses/[id]/page.tsx` — conditional label based on course type
+
+**AC:**
+- [ ] Private courses show "£X total"
+- [ ] Public courses show "£X per person"
 
 ### 1 — Favicon
 
