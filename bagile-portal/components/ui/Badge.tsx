@@ -36,6 +36,7 @@ export function statusBadge(status: string) {
     "at risk": { label: "At Risk", variant: "warning" },
     "at_risk": { label: "At Risk", variant: "warning" },
     active: { label: "Active", variant: "success" },
+    publish: { label: "Published", variant: "info" },
     cancelled: { label: "Cancelled", variant: "neutral" },
     transferred: { label: "Transferred", variant: "info" },
     pending_transfer: { label: "Pending Transfer", variant: "warning" },

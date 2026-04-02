@@ -250,7 +250,7 @@ export default function Dashboard() {
                         <p className="text-xs text-gray-400 font-mono">{c.courseCode}</p>
                       </td>
                       <td className="px-4 py-3 text-gray-600">
-                        {formatDate(c.startDate)}
+                        <p>{formatDate(c.startDate)}</p>
                         <p className="text-xs text-gray-400">{c.daysUntilStart}d away</p>
                       </td>
                       <td className="px-4 py-3 text-gray-600 hidden md:table-cell">{c.trainerName || "—"}</td>

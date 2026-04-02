@@ -103,6 +103,8 @@ export interface MonitoringCourse {
   daysUntilDecision: number;
   decisionDeadline: string | null;
   recommendedAction: string;
+  /** Course lifecycle status — "cancelled" suppresses all enrolment-based logic */
+  status?: string | null;
 }
 
 export async function getMonitoring(apiKey: string, daysAhead = 60): Promise<MonitoringCourse[]> {
