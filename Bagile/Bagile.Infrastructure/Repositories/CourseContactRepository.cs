@@ -63,4 +63,32 @@ public class CourseContactRepository : ICourseContactRepository
             new CommandDefinition(sql, new { contactId, courseScheduleId }, cancellationToken: ct));
         return rows > 0;
     }
+
+    public async Task<CourseContact?> UpdateAsync(
+        long courseScheduleId,
+        long contactId,
+        string role,
+        string name,
+        string email,
+        string? phone,
+        CancellationToken ct = default)
+    {
+        const string sql = @"
+            UPDATE bagile.course_contacts
+               SET role  = @role,
+                   name  = @name,
+                   email = @email,
+                   phone = @phone
+             WHERE id = @contactId
+               AND course_schedule_id = @courseScheduleId
+            RETURNING id,
+                      course_schedule_id AS CourseScheduleId,
+                      role, name, email, phone,
+                      created_at AS CreatedAt;";
+
+        await using var c = new NpgsqlConnection(_conn);
+        return await c.QuerySingleOrDefaultAsync<CourseContact>(
+            new CommandDefinition(sql, new { contactId, courseScheduleId, role, name, email, phone },
+                cancellationToken: ct));
+    }
 }

@@ -258,6 +258,35 @@ public class CourseSchedulesController : ControllerBase
     }
 
     /// <summary>
+    /// Update a contact on a course.
+    /// </summary>
+    [HttpPut("{id}/contacts/{contactId}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateCourseContact(
+        long id,
+        long contactId,
+        [FromBody] UpdateCourseContactRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.Email))
+            return BadRequest(new { error = "Name and email are required" });
+
+        var validRoles = new[] { "admin", "organiser", "other" };
+        var role = request.Role?.ToLowerInvariant() ?? "other";
+        if (!validRoles.Contains(role))
+            return BadRequest(new { error = $"Role must be one of: {string.Join(", ", validRoles)}" });
+
+        var result = await _mediator.Send(new UpdateCourseContactCommand(
+            id, contactId, role, request.Name.Trim(), request.Email.Trim(), request.Phone?.Trim()));
+
+        if (result is null)
+            return NotFound(new { error = $"Contact {contactId} not found on course {id}" });
+
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Delete a contact from a course.
     /// </summary>
     [HttpDelete("{id}/contacts/{contactId}")]
@@ -317,6 +346,14 @@ public record ParseAttendeesRequest
 }
 
 public record AddCourseContactRequest
+{
+    public string? Role { get; init; }
+    public string Name { get; init; } = "";
+    public string Email { get; init; } = "";
+    public string? Phone { get; init; }
+}
+
+public record UpdateCourseContactRequest
 {
     public string? Role { get; init; }
     public string Name { get; init; } = "";

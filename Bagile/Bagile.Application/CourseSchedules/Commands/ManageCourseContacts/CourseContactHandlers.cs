@@ -81,3 +81,38 @@ public class DeleteCourseContactCommandHandler
         return await _repo.DeleteAsync(request.CourseScheduleId, request.ContactId, ct);
     }
 }
+
+public class UpdateCourseContactCommandHandler
+    : IRequestHandler<UpdateCourseContactCommand, CourseContactDto?>
+{
+    private readonly ICourseContactRepository _repo;
+
+    public UpdateCourseContactCommandHandler(ICourseContactRepository repo) => _repo = repo;
+
+    public async Task<CourseContactDto?> Handle(
+        UpdateCourseContactCommand request,
+        CancellationToken ct)
+    {
+        var updated = await _repo.UpdateAsync(
+            request.CourseScheduleId,
+            request.ContactId,
+            request.Role,
+            request.Name,
+            request.Email,
+            request.Phone,
+            ct);
+
+        if (updated is null) return null;
+
+        return new CourseContactDto
+        {
+            Id               = updated.Id,
+            CourseScheduleId = updated.CourseScheduleId,
+            Role             = updated.Role,
+            Name             = updated.Name,
+            Email            = updated.Email,
+            Phone            = updated.Phone,
+            CreatedAt        = updated.CreatedAt,
+        };
+    }
+}

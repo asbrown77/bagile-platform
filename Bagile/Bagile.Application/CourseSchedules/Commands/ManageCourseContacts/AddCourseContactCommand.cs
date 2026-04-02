@@ -16,6 +16,15 @@ public record DeleteCourseContactCommand(
     long ContactId
 ) : IRequest<bool>;
 
+public record UpdateCourseContactCommand(
+    long CourseScheduleId,
+    long ContactId,
+    string Role,
+    string Name,
+    string Email,
+    string? Phone
+) : IRequest<CourseContactDto?>;
+
 public record GetCourseContactsQuery(
     long CourseScheduleId
 ) : IRequest<IEnumerable<CourseContactDto>>;

@@ -850,6 +850,18 @@ export async function deleteCourseContact(
   if (!res.ok) throw new Error(`API error: ${res.status}`);
 }
 
+export async function updateCourseContact(
+  apiKey: string,
+  courseId: number,
+  contactId: number,
+  payload: AddCourseContactPayload,
+): Promise<CourseContact> {
+  return apiRequest(`/api/course-schedules/${courseId}/contacts/${contactId}`, apiKey, {
+    method: "PUT",
+    body: payload,
+  });
+}
+
 // ── Trainers ──────────────────────────────────────────────
 
 export interface Trainer {
