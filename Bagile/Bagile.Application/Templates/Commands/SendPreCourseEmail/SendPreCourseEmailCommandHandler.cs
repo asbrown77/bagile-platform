@@ -108,10 +108,26 @@ public class SendPreCourseEmailCommandHandler
 
     // ── Helpers ────────────────────────────────────────────────────────────
 
+    // Multi-segment course type prefixes that must be preserved intact.
+    // Order matters: longer/more-specific prefixes must come before shorter ones
+    // so that e.g. "APS-SD" is matched before "APS".
+    private static readonly string[] MultiSegmentPrefixes =
+    [
+        "APS-SD", "PAL-EBM", "PAL-E", "PSM-A", "PSPO-A",
+    ];
+
     internal static string DeriveCourseType(string courseCode)
     {
-        var prefix = courseCode.Split('-')[0];
-        return prefix.ToUpper();
+        var upper = courseCode.ToUpper();
+        foreach (var prefix in MultiSegmentPrefixes)
+        {
+            // Match when the code starts with the prefix followed by '-' or end-of-string
+            if (upper.StartsWith(prefix + "-") || upper == prefix)
+                return prefix;
+        }
+
+        // Simple single-segment case: PSM-260427-CB → PSM
+        return upper.Split('-')[0];
     }
 
     internal static string ResolveFormat(string? formatOverride, string? courseFormatType)
@@ -172,7 +188,49 @@ public class SendPreCourseEmailCommandHandler
 </ul>",
         "PSPO" or "PSPOAI" => @"<ul>
   <li>Read the <a href=""https://scrumguides.org"">Scrum Guide</a> (free at scrumguides.org)</li>
+  <li>Review the suggested reading for Product Owners on the <a href=""https://www.scrum.org/pathway/product-owner/"">Product Owner learning path</a></li>
   <li><a href=""https://www.scrum.org/open-assessments/product-owner-open"">Product Owner Open assessment</a> — aim for 85%+ before you arrive</li>
+</ul>",
+        "PSK" => @"<ul>
+  <li>Read the <a href=""https://scrumguides.org"">Scrum Guide</a> (free at scrumguides.org)</li>
+  <li>Read the <a href=""https://www.scrum.org/resources/kanban-guide-scrum-teams"">Kanban Guide for Scrum Teams</a></li>
+  <li><a href=""https://www.scrum.org/open-assessments/scrum-open"">Scrum Open assessment</a> — good warm-up</li>
+</ul>",
+        "APS-SD" => @"<ul>
+  <li>Read the <a href=""https://scrumguides.org"">Scrum Guide</a> (free at scrumguides.org)</li>
+  <li>Basic programming knowledge is helpful — no specific language required</li>
+  <li><a href=""https://www.scrum.org/open-assessments/scrum-open"">Scrum Open assessment</a> — good warm-up</li>
+</ul>",
+        "PAL-E" => @"<ul>
+  <li>Read the <a href=""https://scrumguides.org"">Scrum Guide</a> (free at scrumguides.org)</li>
+  <li>Read the <a href=""https://www.scrum.org/resources/evidence-based-management-guide"">EBM Guide</a></li>
+  <li>Reflect on your current leadership context — you will be asked to apply concepts to real situations</li>
+</ul>",
+        "PSPO-A" => @"<ul>
+  <li>Read the <a href=""https://scrumguides.org"">Scrum Guide</a> (free at scrumguides.org)</li>
+  <li>Read the <a href=""https://www.scrum.org/resources/evidence-based-management-guide"">EBM Guide</a></li>
+  <li>Review the <a href=""https://www.scrum.org/pathway/product-owner/"">Product Owner learning path</a> on scrum.org</li>
+  <li><a href=""https://www.scrum.org/open-assessments/product-owner-open"">Product Owner Open assessment</a> — aim for 85%+ before you arrive</li>
+</ul>",
+        "PSM-A" => @"<ul>
+  <li>Read the <a href=""https://scrumguides.org"">Scrum Guide</a> thoroughly — many advanced discussions start here</li>
+  <li>Review the <a href=""https://www.scrum.org/pathway/scrum-master/"">Scrum Master learning path</a> on scrum.org</li>
+  <li>Reflect on situations where you have coached teams or navigated organisational challenges</li>
+</ul>",
+        "PSFS" => @"<ul>
+  <li>Read the <a href=""https://scrumguides.org"">Scrum Guide</a> (free at scrumguides.org)</li>
+  <li>Browse the <a href=""https://www.scrum.org/courses/professional-scrum-facilitation-skills"">Facilitation Learning Series</a> on scrum.org</li>
+  <li>Think about a Scrum event you have facilitated recently — what worked, what did not</li>
+</ul>",
+        "PSU" => @"<ul>
+  <li>Read the <a href=""https://scrumguides.org"">Scrum Guide</a> (free at scrumguides.org)</li>
+  <li>Basic UX understanding is helpful — no design experience required</li>
+  <li>Review the <a href=""https://www.scrum.org/pathway/product-owner/"">Product Owner learning path</a> — PSU overlaps heavily with PO responsibilities</li>
+</ul>",
+        "EBM" => @"<ul>
+  <li>Read the <a href=""https://www.scrum.org/resources/evidence-based-management-guide"">EBM Guide</a> (primary reference for this course)</li>
+  <li>Read the <a href=""https://scrumguides.org"">Scrum Guide</a> (free at scrumguides.org)</li>
+  <li>Think about how your organisation currently measures value and progress</li>
 </ul>",
         _ => @"<ul>
   <li>Read the <a href=""https://scrumguides.org"">Scrum Guide</a> (free at scrumguides.org)</li>
@@ -185,10 +243,38 @@ public class SendPreCourseEmailCommandHandler
 <strong>Day 1 PM:</strong> The Scrum Framework, Done &amp; Undone<br>
 <strong>Day 2 AM:</strong> Done &amp; Undone, Product Delivery with Scrum<br>
 <strong>Day 2 PM:</strong> People &amp; Teams, The Scrum Master, Closing</p>",
-        "PSPO" or "PSPOAI" => @"<p><strong>Day 1 AM:</strong> Introductions &amp; class agreements, Scrum Theory, The Product Owner role<br>
-<strong>Day 1 PM:</strong> Product Vision &amp; Goals, Product Backlog<br>
-<strong>Day 2 AM:</strong> Stakeholder engagement, Release planning<br>
-<strong>Day 2 PM:</strong> Product metrics, Closing &amp; next steps</p>",
+        "PSPO" or "PSPOAI" => @"<p><strong>Day 1 AM:</strong> Introductions, Product Value, Product Backlog Management<br>
+<strong>Day 1 PM:</strong> Release Management, Product Backlog Refinement<br>
+<strong>Day 2 AM:</strong> Stakeholders &amp; Customers, Forecasting &amp; Reporting<br>
+<strong>Day 2 PM:</strong> Scaling, Product Owner in Practice, Closing</p>",
+        "PSK" => @"<p><strong>Day 1 AM:</strong> Introductions, Scrum Theory &amp; Flow, Kanban Practices<br>
+<strong>Day 1 PM:</strong> Flow Metrics, WIP Limits, Visualisation<br>
+<strong>Day 2 AM:</strong> Service Level Expectations, Continuous Improvement<br>
+<strong>Day 2 PM:</strong> Kanban with Scrum Events, Scaling Flow, Closing</p>",
+        "APS-SD" => @"<p><strong>Day 1 AM:</strong> Introductions, Agile &amp; Scrum Foundations, Development Team<br>
+<strong>Day 1 PM:</strong> Definition of Done, Technical Debt, Clean Code<br>
+<strong>Day 2 AM:</strong> Test-Driven Development, Pair/Mob Programming<br>
+<strong>Day 2 PM:</strong> Refactoring, CI/CD, Design Patterns<br>
+<strong>Day 3 AM:</strong> Sprint simulation, Emerging Architecture<br>
+<strong>Day 3 PM:</strong> Sprint simulation continued, Retrospective, Closing</p>",
+        "PAL-E" => @"<p><strong>Day 1 AM:</strong> Introductions, Why Agility, Complexity &amp; Cynefin<br>
+<strong>Day 1 PM:</strong> Agile Leadership, Organisational Design<br>
+<strong>Day 2 AM:</strong> Evidence-Based Management, Measuring Value<br>
+<strong>Day 2 PM:</strong> Leading Change, Coaching Leaders, Closing</p>",
+        "PSPO-A" => @"<p><strong>Day 1 AM:</strong> Introductions, Product Vision &amp; Strategy, Stakeholder Management<br>
+<strong>Day 1 PM:</strong> Product Backlog Management at Scale, Metrics &amp; Evidence, Closing</p>",
+        "PSM-A" => @"<p><strong>Day 1 AM:</strong> Introductions, Scrum Theory Deep Dive, Facilitation<br>
+<strong>Day 1 PM:</strong> Coaching Stances, Team Dynamics, Conflict<br>
+<strong>Day 2 AM:</strong> Organisational Design, Servant Leadership<br>
+<strong>Day 2 PM:</strong> Systems Thinking, Continuous Improvement, Closing</p>",
+        "PSFS" => @"<p><strong>Day 1 AM:</strong> Introductions, Facilitation Principles, Facilitation Skills<br>
+<strong>Day 1 PM:</strong> Facilitating Scrum Events, Practice Sessions, Closing</p>",
+        "PSU" => @"<p><strong>Day 1 AM:</strong> Introductions, UX and Scrum, Lean UX<br>
+<strong>Day 1 PM:</strong> User Research, Personas, Experiments<br>
+<strong>Day 2 AM:</strong> Dual-Track Development, UX in Sprint<br>
+<strong>Day 2 PM:</strong> Usability Testing, Stakeholder Alignment, Closing</p>",
+        "EBM" => @"<p><strong>Day 1 AM:</strong> Introductions, Why EBM, The Four Key Value Areas<br>
+<strong>Day 1 PM:</strong> Setting Goals, Forming Experiments, Measuring Outcomes, Closing</p>",
         _ => @"<p>Your trainer will share the detailed agenda on the day.</p>"
     };
 }
