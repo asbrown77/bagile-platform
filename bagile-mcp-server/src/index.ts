@@ -2,7 +2,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { apiGet, apiPost } from "./api-client.js";
+import { apiGet, apiPost, apiPut } from "./api-client.js";
 import { formatResult } from "./utils.js";
 
 const server = new McpServer({
@@ -270,6 +270,56 @@ server.tool(
   },
   async ({ id, reason }) => {
     const result = await apiPost(`/api/course-schedules/${id}/cancel`, { reason: reason || "" });
+    return { content: [{ type: "text" as const, text: formatResult(result) }] };
+  }
+);
+
+// ============================================================
+// STUDENT MANAGEMENT
+// ============================================================
+
+server.tool(
+  "update_student",
+  "Update a student's details (email, first name, last name, company). Changes are platform-only — no side effects on FooEvents tickets or WooCommerce. Fields marked as overridden are protected from ETL re-sync.",
+  {
+    id: z.number().describe("Student ID"),
+    email: z.string().optional().describe("New email address"),
+    firstName: z.string().optional().describe("New first name"),
+    lastName: z.string().optional().describe("New last name"),
+    company: z.string().optional().describe("New company / organisation name"),
+    updatedBy: z.string().optional().describe("Who made the change (e.g. 'alex@bagile.co.uk')"),
+    overrideNote: z.string().optional().describe("Reason for the override (e.g. 'Corrected PTN partner email — real attendee is at Ofgem')"),
+  },
+  async ({ id, email, firstName, lastName, company, updatedBy, overrideNote }) => {
+    const body: Record<string, unknown> = {};
+    if (email !== undefined) body.email = email;
+    if (firstName !== undefined) body.firstName = firstName;
+    if (lastName !== undefined) body.lastName = lastName;
+    if (company !== undefined) body.company = company;
+    if (updatedBy !== undefined) body.updatedBy = updatedBy;
+    if (overrideNote !== undefined) body.overrideNote = overrideNote;
+    const result = await apiPut(`/api/students/${id}`, body);
+    return { content: [{ type: "text" as const, text: formatResult(result) }] };
+  }
+);
+
+// ============================================================
+// POST-COURSE EMAILS
+// ============================================================
+
+server.tool(
+  "send_post_course_email",
+  "Send the post-course follow-up email to all active attendees of a course schedule. Uses the seeded template for the course type. CC's info@bagile.co.uk. Returns recipient count and emails sent.",
+  {
+    courseScheduleId: z.number().describe("Course schedule ID to send the follow-up for"),
+    courseTypeOverride: z.string().optional().describe("Override the template to use (e.g. 'PSPO' instead of auto-detected type)"),
+    delayNote: z.string().optional().describe("Optional delay apology note inserted into the email body (e.g. 'Apologies for the delay in sending these through.')"),
+  },
+  async ({ courseScheduleId, courseTypeOverride, delayNote }) => {
+    const body: Record<string, unknown> = {};
+    if (courseTypeOverride !== undefined) body.courseTypeOverride = courseTypeOverride;
+    if (delayNote !== undefined) body.delayNote = delayNote;
+    const result = await apiPost(`/api/templates/post-course/send/${courseScheduleId}`, body);
     return { content: [{ type: "text" as const, text: formatResult(result) }] };
   }
 );
