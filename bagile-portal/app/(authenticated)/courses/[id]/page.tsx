@@ -21,6 +21,7 @@ import { AddAttendeesPanel } from "@/components/courses/AddAttendeesPanel";
 import { SendFollowUpPanel } from "@/components/courses/SendFollowUpPanel";
 import { EditAttendeeModal } from "@/components/courses/EditAttendeeModal";
 import { EditPrivateCoursePanel } from "@/components/courses/EditPrivateCoursePanel";
+import { CourseContactsSection } from "@/components/courses/CourseContactsSection";
 import { Download, Mail, Users, Calendar, User, UserPlus, Video, MapPin, FileText, ExternalLink, Send, Pencil, Trash2, Building2 } from "lucide-react";
 import Link from "next/link";
 
@@ -363,10 +364,17 @@ export default function CourseDetail() {
             {!isPrivate && <Card label="Orders" value={orders.length} />}
             {!isPrivate && <Card label="Revenue" value={formatCurrency(totalRevenue)} />}
           </div>
+
+          {/* Course contacts — private courses only */}
+          {isPrivate && (
+            <CourseContactsSection apiKey={apiKey} courseId={courseId} />
+          )}
         </>
       )}
 
-      <TabBar tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+      <div className="mt-6">
+        <TabBar tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+      </div>
 
       {/* Attendees tab */}
       {activeTab === "attendees" && (

@@ -11,6 +11,7 @@ using Bagile.Application.CourseSchedules.Commands.CreatePrivateCourse;
 using Bagile.Application.CourseSchedules.Commands.AddPrivateAttendees;
 using Bagile.Application.CourseSchedules.Commands.UpdatePrivateCourse;
 using Bagile.Application.CourseSchedules.Commands.RemovePrivateAttendee;
+using Bagile.Application.CourseSchedules.Commands.ManageCourseContacts;
 
 namespace Bagile.Api.Controllers;
 
@@ -217,6 +218,59 @@ public class CourseSchedulesController : ControllerBase
         return Ok(result);
     }
 
+    // ── Course Contacts ──────────────────────────────────
+
+    /// <summary>
+    /// Get contacts for a course (admin, organiser, other).
+    /// Intended for private courses.
+    /// </summary>
+    [HttpGet("{id}/contacts")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetCourseContacts(long id)
+    {
+        var result = await _mediator.Send(new GetCourseContactsQuery(id));
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Add a contact to a course.
+    /// </summary>
+    [HttpPost("{id}/contacts")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> AddCourseContact(
+        long id,
+        [FromBody] AddCourseContactRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.Email))
+            return BadRequest(new { error = "Name and email are required" });
+
+        var validRoles = new[] { "admin", "organiser", "other" };
+        var role = request.Role?.ToLowerInvariant() ?? "other";
+        if (!validRoles.Contains(role))
+            return BadRequest(new { error = $"Role must be one of: {string.Join(", ", validRoles)}" });
+
+        var contact = await _mediator.Send(new AddCourseContactCommand(
+            id, role, request.Name.Trim(), request.Email.Trim(), request.Phone?.Trim()));
+
+        return CreatedAtAction(nameof(GetCourseContacts), new { id }, contact);
+    }
+
+    /// <summary>
+    /// Delete a contact from a course.
+    /// </summary>
+    [HttpDelete("{id}/contacts/{contactId}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteCourseContact(long id, long contactId)
+    {
+        var deleted = await _mediator.Send(new DeleteCourseContactCommand(id, contactId));
+        if (!deleted)
+            return NotFound(new { error = $"Contact {contactId} not found on course {id}" });
+
+        return NoContent();
+    }
+
     // ── Conflicts ────────────────────────────────────────
 
     [HttpGet("conflicts")]
@@ -245,4 +299,12 @@ public record AddPrivateAttendeesRequest
 public record ParseAttendeesRequest
 {
     public string RawText { get; init; } = "";
+}
+
+public record AddCourseContactRequest
+{
+    public string? Role { get; init; }
+    public string Name { get; init; } = "";
+    public string Email { get; init; } = "";
+    public string? Phone { get; init; }
 }

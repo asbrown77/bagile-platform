@@ -782,3 +782,49 @@ export async function removePrivateAttendee(
   });
   if (!res.ok) throw new Error(`API error: ${res.status}`);
 }
+
+// ── Course Contacts ───────────────────────────────────────
+
+export interface CourseContact {
+  id: number;
+  courseScheduleId: number;
+  role: "admin" | "organiser" | "other";
+  name: string;
+  email: string;
+  phone: string | null;
+  createdAt: string;
+}
+
+export async function getCourseContacts(apiKey: string, courseId: number): Promise<CourseContact[]> {
+  return apiRequest(`/api/course-schedules/${courseId}/contacts`, apiKey);
+}
+
+export interface AddCourseContactPayload {
+  role: string;
+  name: string;
+  email: string;
+  phone?: string;
+}
+
+export async function addCourseContact(
+  apiKey: string,
+  courseId: number,
+  payload: AddCourseContactPayload,
+): Promise<CourseContact> {
+  return apiRequest(`/api/course-schedules/${courseId}/contacts`, apiKey, {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export async function deleteCourseContact(
+  apiKey: string,
+  courseId: number,
+  contactId: number,
+): Promise<void> {
+  const res = await fetch(`${API_URL}/api/course-schedules/${courseId}/contacts/${contactId}`, {
+    method: "DELETE",
+    headers: { "X-Api-Key": apiKey },
+  });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+}
