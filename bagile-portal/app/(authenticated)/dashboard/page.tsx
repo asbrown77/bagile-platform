@@ -425,7 +425,11 @@ export default function Dashboard() {
             </Link>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {atRiskCourses.slice(0, 6).map((c) => (
+            {atRiskCourses.slice(0, 6).map((c) => {
+              const daysAway = c.daysUntilStart != null
+                ? c.daysUntilStart
+                : Math.round((new Date(c.startDate).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / 86400000);
+              return (
               <Link key={c.id} href={`/courses/${c.id}`}
                 className="bg-red-50 border border-red-200 rounded-xl p-4 hover:bg-red-100 transition-colors">
                 <div className="flex items-start justify-between">
@@ -438,11 +442,12 @@ export default function Dashboard() {
                 <div className="flex items-center gap-4 mt-3 text-sm text-red-700">
                   <span className="font-bold">{c.currentEnrolmentCount} enrolled</span>
                   <span>{formatDate(c.startDate)}</span>
-                  <span>{c.daysUntilStart}d away</span>
+                  <span>({daysAway}d away)</span>
                 </div>
                 <p className="text-xs text-red-500 mt-1">{c.recommendedAction}</p>
               </Link>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -495,6 +500,9 @@ export default function Dashboard() {
               <tbody>
                 {upcomingCourses.slice(0, 10).map((c) => {
                   const status = getStatus(c);
+                  const daysAway = c.daysUntilStart != null
+                    ? c.daysUntilStart
+                    : Math.round((new Date(c.startDate).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / 86400000);
                   return (
                     <tr key={c.id}
                       className="border-t border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
@@ -505,7 +513,7 @@ export default function Dashboard() {
                       </td>
                       <td className="px-4 py-3 text-gray-600">
                         <p>{formatDate(c.startDate)}</p>
-                        <p className="text-xs text-gray-400">{c.daysUntilStart}d away</p>
+                        <p className="text-xs text-gray-400">({daysAway}d away)</p>
                       </td>
                       <td className="px-4 py-3 text-gray-600 hidden md:table-cell">{c.trainerName || "—"}</td>
                       <td className="px-4 py-3 text-center">

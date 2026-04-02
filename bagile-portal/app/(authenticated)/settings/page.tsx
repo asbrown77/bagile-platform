@@ -95,21 +95,24 @@ export default function Settings() {
   if (!token) {
     return (
       <>
-        <PageHeader title="API Keys" subtitle="Sign in to manage your API keys" />
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8 text-center max-w-md mx-auto">
+        <PageHeader title="Settings" subtitle="Sign in to manage your API keys" />
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8 text-center max-w-md mx-auto mb-6">
           <Key className="w-10 h-10 text-gray-300 mx-auto mb-4" />
           <h2 className="text-lg font-semibold text-gray-900 mb-2">Create MCP API Keys</h2>
           <p className="text-gray-500 text-sm mb-6">Sign in with Google to manage your API keys.</p>
           <div ref={btnRef} className="flex justify-center" />
           {error && <p className="mt-4 text-red-600 text-sm">{error}</p>}
         </div>
+        {/* Course thresholds and templates are accessible without Google auth */}
+        <CourseThresholds />
+        <PostCourseTemplatesEditor />
       </>
     );
   }
 
   return (
     <>
-      <PageHeader title="API Keys" subtitle={user?.email || ""} />
+      <PageHeader title="Settings" subtitle={user?.email || ""} />
 
       {error && <AlertBanner variant="danger" onDismiss={() => setError("")}>{error}</AlertBanner>}
 
