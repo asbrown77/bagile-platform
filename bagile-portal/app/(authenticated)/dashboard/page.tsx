@@ -1,24 +1,262 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useApiKey } from "@/lib/hooks/useApiKey";
 import {
-  MonitoringCourse, RevenueSummary, PendingTransfer,
+  MonitoringCourse, RevenueSummary, PendingTransfer, CourseScheduleItem,
   getMonitoring, getRevenueSummary, getPendingTransfers, getDashboardOverview,
-  formatCurrency, formatDate,
+  getCourseSchedules, formatCurrency, formatDate,
 } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { AlertBanner } from "@/components/ui/AlertBanner";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { statusBadge } from "@/components/ui/Badge";
 import {
-  GraduationCap, TrendingUp, AlertTriangle, ArrowLeftRight,
-  Users, Calendar, ChevronRight, CheckCircle
+  TrendingUp, AlertTriangle,
+  Users, Calendar, ChevronRight, CheckCircle, ChevronLeft,
 } from "lucide-react";
 import Link from "next/link";
 import { getCourseDisplayStatus } from "@/lib/courseStatus";
+import {
+  getCourseColour, getTrainerColour, trainerInitials,
+} from "@/lib/courseColours";
+import { loadConfig } from "@/lib/config";
+
+// ── Calendar helpers (duplicated from calendar page to avoid coupling) ───────
+
+const DAY_NAMES_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function toDateStr(d: Date): string {
+  return d.toISOString().split("T")[0];
+}
+
+function addDays(d: Date, n: number): Date {
+  const r = new Date(d);
+  r.setDate(r.getDate() + n);
+  return r;
+}
+
+/** Returns Monday of the ISO week containing d. */
+function getWeekStart(d: Date): Date {
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  const monday = new Date(d);
+  monday.setDate(d.getDate() + diff);
+  monday.setHours(0, 0, 0, 0);
+  return monday;
+}
+
+// ── Week strip compact pill component ───────────────────────────────────────
+
+interface WeekPillProps {
+  course: CourseScheduleItem;
+  minEnrolments: number;
+  cellDate: string;
+  showCancelled: boolean;
+}
+
+function WeekPill({ course, minEnrolments, cellDate, showCancelled }: WeekPillProps) {
+  const status = getCourseDisplayStatus(course);
+  if (status === "cancelled" && !showCancelled) return null;
+
+  const isCancelled = status === "cancelled";
+  const isAtRisk = status === "at risk" || status === "cancel";
+  const isPrivate = course.type === "private";
+  const firstSegment = course.courseCode?.split("-")[0] || "";
+  const borderColour = getCourseColour(course.courseCode || "");
+  const initials = trainerInitials(course.trainerName);
+  const avatarColour = getTrainerColour(initials);
+
+  // Multi-day
+  const startStr = (course.startDate || "").split("T")[0];
+  const endStr = (course.endDate || course.startDate || "").split("T")[0];
+  const spanDays = startStr && endStr
+    ? Math.round((new Date(endStr).getTime() - new Date(startStr).getTime()) / 86400000) + 1
+    : 1;
+  const isMultiDay = spanDays > 1;
+  const dayIndex = cellDate && startStr
+    ? Math.round((new Date(cellDate).getTime() - new Date(startStr).getTime()) / 86400000) + 1
+    : 1;
+  const isDay1 = dayIndex === 1;
+
+  const enrolDisplay = `${course.currentEnrolmentCount}/${minEnrolments}`;
+
+  return (
+    <Link
+      href={`/courses/${course.id}`}
+      title={`${course.title} — ${course.currentEnrolmentCount} enrolled${isPrivate ? " (private)" : ""}${isCancelled ? " — CANCELLED" : ""}`}
+      className={`block rounded border text-[10px] font-medium transition-opacity hover:opacity-80
+        bg-white
+        ${isCancelled ? "opacity-50" : ""}
+        ${isMultiDay && !isDay1 ? "border-dashed border-gray-200" : "border-gray-200"}`}
+      style={{
+        borderLeftWidth: 3,
+        borderLeftColor: borderColour,
+        borderLeftStyle: isMultiDay && !isDay1 ? "dashed" : "solid",
+      }}
+    >
+      <div className="px-1 py-0.5 min-w-0">
+        <div className="flex items-center gap-0.5 min-w-0">
+          <span className={`font-semibold truncate text-gray-800 ${isCancelled ? "line-through" : ""}`}>
+            {isMultiDay ? `${firstSegment} (${dayIndex}/${spanDays})` : firstSegment}
+          </span>
+          {isPrivate && (
+            <span className="shrink-0 text-[8px] bg-amber-100 text-amber-700 rounded px-0.5 leading-tight font-bold">P</span>
+          )}
+        </div>
+        <div className="flex items-center gap-0.5 mt-0.5">
+          {course.trainerName && (
+            <span
+              className="inline-flex items-center justify-center rounded-full text-white font-bold leading-none shrink-0"
+              style={{ backgroundColor: avatarColour, width: 12, height: 12, fontSize: 7 }}
+            >
+              {initials}
+            </span>
+          )}
+          {isAtRisk && <span className="text-amber-500 shrink-0" style={{ fontSize: 8 }}>▲</span>}
+          <span className="text-gray-400 shrink-0">{enrolDisplay}</span>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+// ── Week strip ───────────────────────────────────────────────────────────────
+
+interface WeekStripProps {
+  apiKey: string;
+  showCancelled: boolean;
+}
+
+function WeekStrip({ apiKey, showCancelled }: WeekStripProps) {
+  const now = new Date();
+  const [weekStart, setWeekStart] = useState(() => getWeekStart(now));
+  const [courses, setCourses] = useState<CourseScheduleItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { minEnrolments } = loadConfig();
+
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const todayStr = toDateStr(today);
+
+  // Mon-Fri only
+  const weekDays = Array.from({ length: 5 }, (_, i) => addDays(weekStart, i));
+
+  const weekEndDate = addDays(weekStart, 4); // Fri
+  const weekLabel = weekStart.getMonth() === weekEndDate.getMonth()
+    ? `${MONTH_NAMES[weekStart.getMonth()]} ${weekStart.getDate()}–${weekEndDate.getDate()}`
+    : `${MONTH_NAMES[weekStart.getMonth()]} ${weekStart.getDate()} – ${MONTH_NAMES[weekEndDate.getMonth()]} ${weekEndDate.getDate()}`;
+
+  const loadWeekCourses = useCallback(async () => {
+    if (!apiKey) return;
+    setLoading(true);
+    try {
+      // Fetch Mon–Fri + 1 day buffer each side to catch multi-day courses
+      const from = toDateStr(addDays(weekStart, -1));
+      const to = toDateStr(addDays(weekStart, 6));
+      const result = await getCourseSchedules(apiKey, { from, to, pageSize: 50 });
+      setCourses((result.items || []).filter((c) => c.title && c.startDate));
+    } catch {
+      // Non-critical — week strip failing shouldn't break the page
+    } finally {
+      setLoading(false);
+    }
+  }, [apiKey, weekStart]);
+
+  useEffect(() => { loadWeekCourses(); }, [loadWeekCourses]);
+
+  function coursesOnDay(dateStr: string): CourseScheduleItem[] {
+    return courses.filter((c) => {
+      const start = (c.startDate || "").split("T")[0];
+      const end = (c.endDate || c.startDate || "").split("T")[0];
+      return dateStr >= start && dateStr <= end;
+    });
+  }
+
+  return (
+    <div className="mb-8">
+      {/* Strip header */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">This Week</h2>
+          <span className="text-xs text-gray-400">{weekLabel}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setWeekStart((ws) => addDays(ws, -7))}
+            className="p-1 rounded hover:bg-gray-100"
+            title="Previous week"
+          >
+            <ChevronLeft className="w-4 h-4 text-gray-500" />
+          </button>
+          <button
+            onClick={() => setWeekStart(getWeekStart(new Date()))}
+            className="text-xs text-brand-600 hover:text-brand-700 font-medium px-1"
+          >
+            Today
+          </button>
+          <button
+            onClick={() => setWeekStart((ws) => addDays(ws, 7))}
+            className="p-1 rounded hover:bg-gray-100"
+            title="Next week"
+          >
+            <ChevronRight className="w-4 h-4 text-gray-500" />
+          </button>
+          <Link href="/courses/calendar" className="text-xs text-brand-600 hover:text-brand-700 ml-2">
+            Full calendar
+          </Link>
+        </div>
+      </div>
+
+      {/* 5-column strip */}
+      <div className="grid grid-cols-5 gap-1 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        {weekDays.map((d, i) => {
+          const ds = toDateStr(d);
+          const isToday = ds === todayStr;
+          const dayCourses = coursesOnDay(ds);
+
+          return (
+            <div
+              key={i}
+              className={`min-h-[80px] flex flex-col border-r border-gray-100 last:border-r-0
+                ${isToday ? "bg-blue-50/60" : ""}`}
+            >
+              {/* Day header */}
+              <div className={`px-2 py-1.5 border-b border-gray-100 text-center
+                ${isToday ? "bg-blue-100/60 border-blue-200" : "bg-gray-50"}`}>
+                <p className="text-[10px] font-medium text-gray-500 uppercase">{DAY_NAMES_SHORT[i]}</p>
+                <p className={`text-sm font-semibold
+                  ${isToday ? "text-blue-700" : "text-gray-700"}`}>
+                  {d.getDate()}
+                </p>
+              </div>
+
+              {/* Course pills */}
+              <div className="flex-1 p-1 space-y-0.5">
+                {loading && i === 0 && (
+                  <div className="text-[9px] text-gray-400 p-1">Loading…</div>
+                )}
+                {dayCourses.map((c) => (
+                  <WeekPill
+                    key={`${c.id}-${ds}`}
+                    course={c}
+                    minEnrolments={minEnrolments}
+                    cellDate={ds}
+                    showCancelled={showCancelled}
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Dashboard ────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
   const apiKey = useApiKey();
@@ -27,6 +265,7 @@ export default function Dashboard() {
   const [pendingTransfers, setPendingTransfers] = useState<PendingTransfer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showCancelled, setShowCancelled] = useState(false);
 
   useEffect(() => {
     if (!apiKey) return;
@@ -64,29 +303,27 @@ export default function Dashboard() {
   }
 
   // Derived data
-  const today = new Date(); today.setHours(0, 0, 0, 0);
   const getStatus = (c: MonitoringCourse) => getCourseDisplayStatus(c);
 
   const todaysCourses = courses.filter((c) => getStatus(c) === "running");
   const atRiskCourses = courses.filter((c) => getStatus(c) === "at risk");
   const upcomingCourses = courses.filter((c) => {
     const s = getStatus(c);
-    return s !== "running" && s !== "completed";
+    return s !== "running" && s !== "completed" && s !== "cancelled";
   });
 
-  // Students trained = sum of attendees from monthly breakdown
   const studentsThisMonth = revenue?.monthlyBreakdown
     .find((m) => m.month === new Date().getMonth() + 1)?.attendeeCount ?? 0;
   const studentsThisYear = revenue?.monthlyBreakdown
     .reduce((sum, m) => sum + m.attendeeCount, 0) ?? 0;
 
-  // Fair YTD comparison: same months only
   const previousYtd = revenue?.previousYearYtdRevenue ?? 0;
   const yoyChange = revenue && previousYtd > 0
     ? Math.round(((revenue.currentYearRevenue - previousYtd) / previousYtd) * 100)
     : null;
 
-  const greeting = new Date().getHours() < 12 ? "Good morning" : new Date().getHours() < 18 ? "Good afternoon" : "Good evening";
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
   return (
     <>
@@ -218,11 +455,28 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Upcoming courses preview */}
+      {/* Week strip — loads independently so it doesn't block the dashboard */}
+      {apiKey && (
+        <WeekStrip apiKey={apiKey} showCancelled={showCancelled} />
+      )}
+
+      {/* Upcoming courses table */}
       {!loading && upcomingCourses.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Upcoming</h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Upcoming</h2>
+              {/* Cancelled toggle — shared with week strip */}
+              <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer select-none font-normal">
+                <input
+                  type="checkbox"
+                  checked={showCancelled}
+                  onChange={(e) => setShowCancelled(e.target.checked)}
+                  className="rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                />
+                Show cancelled
+              </label>
+            </div>
             <Link href="/courses" className="text-xs text-brand-600 hover:text-brand-700 flex items-center gap-1">
               View all <ChevronRight className="w-3 h-3" />
             </Link>
