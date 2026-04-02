@@ -5,8 +5,9 @@ import { useParams } from "next/navigation";
 import { useApiKey } from "@/lib/hooks/useApiKey";
 import {
   CourseAttendee, CourseScheduleDetail, TransfersByCourse, PostCourseTemplate,
+  EmailSendLog,
   getCourseAttendees, getCourseScheduleDetail, getTransfersByCourse,
-  getPostCourseTemplate, removePrivateAttendee,
+  getPostCourseTemplate, removePrivateAttendee, getEmailSendLog,
   formatCurrency, formatDate,
 } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
@@ -19,10 +20,12 @@ import { SkeletonCard, SkeletonRow } from "@/components/ui/Skeleton";
 import { Badge, statusBadge } from "@/components/ui/Badge";
 import { AddAttendeesPanel } from "@/components/courses/AddAttendeesPanel";
 import { SendFollowUpPanel } from "@/components/courses/SendFollowUpPanel";
+import { SendJoiningDetailsPanel } from "@/components/courses/SendJoiningDetailsPanel";
+import { CourseBadge } from "@/components/courses/CourseBadge";
 import { EditAttendeeModal } from "@/components/courses/EditAttendeeModal";
 import { EditPrivateCoursePanel } from "@/components/courses/EditPrivateCoursePanel";
 import { CourseContactsSection } from "@/components/courses/CourseContactsSection";
-import { Download, Mail, Users, Calendar, User, UserPlus, Video, MapPin, FileText, ExternalLink, Send, Pencil, Trash2, Building2, ChevronDown } from "lucide-react";
+import { ChevronDown, ChevronUp, Download, Mail, Users, Calendar, User, UserPlus, Video, MapPin, FileText, ExternalLink, Send, Pencil, Trash2, Building2 } from "lucide-react";
 import Link from "next/link";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.bagile.co.uk";
@@ -134,7 +137,11 @@ export default function CourseDetail() {
   const [activeTab, setActiveTab] = useState("attendees");
   const [showAddAttendees, setShowAddAttendees] = useState(false);
   const [showSendFollowUp, setShowSendFollowUp] = useState(false);
+  const [showSendJoining, setShowSendJoining] = useState(false);
   const [showEditCourse, setShowEditCourse] = useState(false);
+  const [sendHistory, setSendHistory] = useState<EmailSendLog[]>([]);
+  const [showSendHistory, setShowSendHistory] = useState(false);
+  const [sendHistoryLoading, setSendHistoryLoading] = useState(false);
   const [transfers, setTransfers] = useState<TransfersByCourse | null>(null);
   const [followUpTemplate, setFollowUpTemplate] = useState<PostCourseTemplate | null>(null);
   const [templateMissing, setTemplateMissing] = useState(false);
@@ -224,22 +231,22 @@ export default function CourseDetail() {
     }
   }
 
-  // Build mailto with joining details
-  function sendJoiningDetails() {
-    const emails = active.map((a) => a.email).join(",");
-    const courseName = course?.title || "";
-    const dateStr = course?.startDate ? formatDate(course.startDate) : "";
-    let body = `Hi,\n\nHere are the joining details for ${courseName} on ${dateStr}:\n\n`;
-    if (isVirtual && course?.meetingUrl) {
-      body += `Meeting Link: ${course.meetingUrl}\n`;
-      if (course.meetingId) body += `Meeting ID: ${course.meetingId}\n`;
-      if (course.meetingPasscode) body += `Passcode: ${course.meetingPasscode}\n`;
+  function openJoiningPanel() {
+    setShowSendJoining(true);
+  }
+
+  async function loadSendHistory() {
+    if (!apiKey || !courseId) return;
+    setSendHistoryLoading(true);
+    try {
+      const log = await getEmailSendLog(apiKey, courseId);
+      setSendHistory(log);
+    } catch {
+      // Log endpoint may not exist yet — fail silently
+      setSendHistory([]);
+    } finally {
+      setSendHistoryLoading(false);
     }
-    if (!isVirtual && course?.venueAddress) {
-      body += `Venue: ${course.venueAddress}\n`;
-    }
-    body += `\nPlease let me know if you have any questions.\n\nBest regards`;
-    window.open(`mailto:${emails}?subject=${encodeURIComponent(`Joining Details: ${courseName}`)}&body=${encodeURIComponent(body)}`);
   }
 
   // Derive client org name from course title (e.g. "PSM - Frazer-Nash (Bristol)" → "Frazer-Nash (Bristol)")
@@ -279,7 +286,7 @@ export default function CourseDetail() {
     : primaryAction === "follow-up" ? "Send Follow-Up"
     : "Email All";
   function handlePrimarySend() {
-    if (primaryAction === "joining") sendJoiningDetails();
+    if (primaryAction === "joining") openJoiningPanel();
     else if (primaryAction === "follow-up") setShowSendFollowUp(true);
     else emailAll();
   }
@@ -306,6 +313,16 @@ export default function CourseDetail() {
           attendees={attendees}
           template={followUpTemplate}
           templateMissing={templateMissing}
+        />
+      )}
+
+      {course && (
+        <SendJoiningDetailsPanel
+          open={showSendJoining}
+          onClose={() => setShowSendJoining(false)}
+          apiKey={apiKey}
+          course={course}
+          attendees={attendees}
         />
       )}
 
@@ -339,8 +356,13 @@ export default function CourseDetail() {
         <Link href="/courses" className="text-sm text-brand-600 hover:text-brand-700">&larr; Courses</Link>
       </div>
 
-      {/* ── Page header — title + pencil edit icon (private only) ── */}
+      {/* ── Page header — badge + title + pencil edit icon (private only) ── */}
       <div className="flex items-start gap-2 mb-1">
+        {course?.courseCode && (
+          <div className="mt-0.5 flex-shrink-0">
+            <CourseBadge courseCode={course.courseCode} size={48} />
+          </div>
+        )}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-semibold text-gray-900 truncate">
@@ -530,7 +552,7 @@ export default function CourseDetail() {
             <Send className="w-3.5 h-3.5" /> {primarySendLabel}
           </Button>
           <SendDropdown
-            onJoining={sendJoiningDetails}
+            onJoining={openJoiningPanel}
             onFollowUp={() => setShowSendFollowUp(true)}
             onEmailAll={emailAll}
             disabled={!hasSendTarget && primaryAction !== "follow-up" && primaryAction !== "email-all"}
@@ -768,6 +790,77 @@ export default function CourseDetail() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* ── Email Send History ── */}
+      {!loading && course && (
+        <div className="mt-6 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <button
+            type="button"
+            className="w-full flex items-center justify-between px-5 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            onClick={() => {
+              const next = !showSendHistory;
+              setShowSendHistory(next);
+              if (next && sendHistory.length === 0) loadSendHistory();
+            }}
+          >
+            <span className="flex items-center gap-2">
+              <Mail className="w-4 h-4 text-gray-400" />
+              Send History
+              {sendHistory.length > 0 && (
+                <span className="text-xs text-gray-400 font-normal">({sendHistory.length})</span>
+              )}
+            </span>
+            {showSendHistory ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+          </button>
+
+          {showSendHistory && (
+            <div className="border-t border-gray-200">
+              {sendHistoryLoading ? (
+                <div className="p-4 text-center text-sm text-gray-400">Loading...</div>
+              ) : sendHistory.length === 0 ? (
+                <div className="p-4 text-center text-sm text-gray-400">No emails sent for this course yet.</div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Date</th>
+                      <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Type</th>
+                      <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Subject</th>
+                      <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Sent by</th>
+                      <th className="text-center px-4 py-2 text-xs font-medium text-gray-500 uppercase">Recipients</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sendHistory.map((log) => (
+                      <tr key={log.id} className="border-t border-gray-100">
+                        <td className="px-4 py-2.5 text-gray-600 whitespace-nowrap">
+                          {new Date(log.sentAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                          <span className="text-gray-400 text-xs ml-1">
+                            {new Date(log.sentAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className={`text-xs font-medium ${log.templateType === "pre-course" ? "text-blue-700" : "text-purple-700"}`}>
+                              {log.templateType === "pre-course" ? "Pre-Course" : "Post-Course"}
+                            </span>
+                            {log.isTest && (
+                              <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium">[TEST]</span>
+                            )}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5 text-gray-500 text-xs hidden md:table-cell truncate max-w-xs">{log.subject}</td>
+                        <td className="px-4 py-2.5 text-gray-500 hidden md:table-cell">{log.sentBy}</td>
+                        <td className="px-4 py-2.5 text-center text-gray-700">{log.recipientCount}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
         </div>
       )}
     </>
