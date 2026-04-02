@@ -10,9 +10,10 @@ import { SkeletonRow } from "@/components/ui/Skeleton";
 import { Badge, statusBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { CreatePrivateCoursePanel } from "@/components/courses/CreatePrivateCoursePanel";
-import { GraduationCap, Plus, Search, Calendar } from "lucide-react";
+import { GraduationCap, Plus, Search, List, CalendarDays } from "lucide-react";
 import Link from "next/link";
 import { getCourseDisplayStatus } from "@/lib/courseStatus";
+import { CalendarView } from "@/components/courses/CalendarView";
 
 export default function CoursesPage() {
   return <Suspense><CoursesContent /></Suspense>;
@@ -38,6 +39,24 @@ function CoursesContent() {
   const [search, setSearch] = useState("");
   const [sortAsc, setSortAsc] = useState(true); // earliest first by default
 
+  // Page-level view: "list" or "calendar"
+  const [pageView, setPageView] = useState<"list" | "calendar">(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("bagile_courses_page_view") as "list" | "calendar") || "list";
+    }
+    return "list";
+  });
+
+  function switchPageView(v: "list" | "calendar") {
+    setPageView(v);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("bagile_courses_page_view", v);
+    }
+  }
+
+  // Calendar range — updated by CalendarView when user navigates
+  const [calRange, setCalRange] = useState<{ from: string; to: string } | null>(null);
+
   // Debounce search
   useEffect(() => {
     const timer = setTimeout(() => setSearch(searchInput), 300);
@@ -51,7 +70,10 @@ function CoursesContent() {
     let from: string | undefined;
     let to: string | undefined;
 
-    if (dateRange === "upcoming") {
+    if (pageView === "calendar" && calRange) {
+      from = calRange.from;
+      to = calRange.to;
+    } else if (dateRange === "upcoming") {
       const d = new Date(); d.setDate(d.getDate() - 2);
       from = d.toISOString().split("T")[0];
     } else if (dateRange !== "all") {
@@ -74,9 +96,14 @@ function CoursesContent() {
     } finally {
       setLoading(false);
     }
-  }, [apiKey, dateRange, visibilityFilter]);
+  }, [apiKey, dateRange, visibilityFilter, pageView, calRange]);
 
   useEffect(() => { loadCourses(); }, [loadCourses]);
+
+  // Re-fetch when calendar range changes (user navigates weeks/months)
+  useEffect(() => {
+    if (pageView === "calendar" && calRange) loadCourses();
+  }, [calRange]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const courseTypes = [...new Set(
     courses.map((c) => c.courseCode?.split("-")[0]).filter(Boolean)
@@ -132,19 +159,46 @@ function CoursesContent() {
       />
 
       <PageHeader
-        title={`Courses${!loading ? ` (${filtered.length})` : ""}`}
-        subtitle={typeFilter !== "all" ? `${typeFilter} — ${totalAttendees} attendees` : undefined}
+        title={`Courses${!loading && pageView === "list" ? ` (${filtered.length})` : ""}`}
+        subtitle={pageView === "list" && typeFilter !== "all" ? `${typeFilter} — ${totalAttendees} attendees` : undefined}
         actions={
           <div className="flex gap-2">
-            <Link href="/courses/calendar">
-              <Button variant="secondary" size="sm"><Calendar className="w-3.5 h-3.5" /> Calendar</Button>
-            </Link>
+            {/* List / Calendar toggle */}
+            <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+              <button
+                onClick={() => switchPageView("list")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors
+                  ${pageView === "list" ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+              >
+                <List className="w-3.5 h-3.5" /> List
+              </button>
+              <button
+                onClick={() => switchPageView("calendar")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border-l border-gray-300 transition-colors
+                  ${pageView === "calendar" ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+              >
+                <CalendarDays className="w-3.5 h-3.5" /> Calendar
+              </button>
+            </div>
             <Button onClick={() => setShowCreate(true)}>
               <Plus className="w-4 h-4" /> Create Private Course
             </Button>
           </div>
         }
       />
+
+      {/* Calendar view — inline, no page navigation */}
+      {pageView === "calendar" && (
+        <CalendarView
+          courses={courses}
+          loading={loading}
+          storageKey="bagile_courses_cal_view"
+          onRangeChange={(from, to) => setCalRange({ from, to })}
+        />
+      )}
+
+      {/* List view — filters + table */}
+      {pageView === "list" && (<>
 
       {/* Search + filters */}
       <div className="flex gap-3 mb-4 items-center flex-wrap">
@@ -333,6 +387,8 @@ function CoursesContent() {
           </tbody>
         </table>
       </div>
+
+      </>)} {/* end pageView === "list" */}
     </>
   );
 }
