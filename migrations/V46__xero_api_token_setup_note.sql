@@ -1,0 +1,34 @@
+-- V46: Xero token infrastructure for API layer
+--
+-- No schema changes required.
+-- Token storage uses the existing bagile.integration_tokens table (created in V11).
+-- The row with source='xero' is the singleton token row for the Xero integration.
+--
+-- The API-layer XeroTokenManager reads and writes this row via XeroTokenRepository.
+-- The ETL XeroTokenRefreshService also reads/writes this row — both use the same
+-- physical storage, which is correct: Xero rotates refresh tokens on every refresh,
+-- so the most recently refreshed token is always the authoritative one.
+--
+-- INITIAL TOKEN SEED:
+-- Before the XeroTokenManager can function, the integration_tokens row must exist
+-- with a valid refresh_token. If the OAuth flow at GET /xero/connect has already
+-- been completed, the row will already be present and this is a no-op.
+--
+-- To seed manually from .credentials/xero_tokens.json:
+--   INSERT INTO bagile.integration_tokens (source, refresh_token, access_token, expires_at)
+--   VALUES (
+--     'xero',
+--     '<refresh_token from xero_tokens.json>',
+--     '<access_token from xero_tokens.json>',
+--     NOW() -- access_token likely expired; XeroTokenManager will refresh on first call
+--   )
+--   ON CONFLICT (source) DO NOTHING;
+--
+-- DI REGISTRATION (add to Infrastructure/DependencyInjection.cs or Program.cs):
+--   services.AddSingleton<XeroTokenRepository>();
+--   services.AddSingleton<IXeroTokenManager, XeroTokenManager>();
+--   services.AddTransient<IXeroHttpClient, XeroHttpClient>();
+--   services.AddHttpClient("XeroApi");
+--   services.AddHttpClient("XeroToken");
+
+SELECT 1; -- flyway requires at least one executable statement
