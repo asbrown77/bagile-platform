@@ -94,24 +94,27 @@ function SendDropdown({ onJoining, onFollowUp, onEmailAll, disabled }: SendDropd
         Send <ChevronDown className="w-3.5 h-3.5" />
       </button>
       {open && (
-        <div className="absolute right-0 z-20 mt-1 w-48 bg-white border border-gray-200 rounded-md shadow-lg py-1 text-sm">
+        <div className="absolute right-0 z-20 mt-1 w-64 bg-white border border-gray-200 rounded-md shadow-lg py-1 text-sm">
           <button
             onClick={() => { onJoining(); setOpen(false); }}
-            className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700"
+            className="w-full text-left px-4 py-2.5 hover:bg-gray-50"
           >
-            Send Joining Details
+            <span className="block font-medium text-gray-700">Send Joining Details</span>
+            <span className="block text-xs text-gray-400 mt-0.5">Pre-course info, venue, agenda</span>
           </button>
           <button
             onClick={() => { onFollowUp(); setOpen(false); }}
-            className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700"
+            className="w-full text-left px-4 py-2.5 hover:bg-gray-50"
           >
-            Send Follow-Up
+            <span className="block font-medium text-gray-700">Send Follow-Up</span>
+            <span className="block text-xs text-gray-400 mt-0.5">Post-course assessment, resources</span>
           </button>
           <button
             onClick={() => { onEmailAll(); setOpen(false); }}
-            className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700"
+            className="w-full text-left px-4 py-2.5 hover:bg-gray-50"
           >
-            Email All
+            <span className="block font-medium text-gray-700">Email All</span>
+            <span className="block text-xs text-gray-400 mt-0.5">Quick email to all attendees</span>
           </button>
         </div>
       )}

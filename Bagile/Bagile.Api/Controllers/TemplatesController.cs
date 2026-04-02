@@ -66,6 +66,42 @@ public class TemplatesController : ControllerBase
     }
 
     /// <summary>
+    /// Send a test follow-up email to the trainer only (no attendees).
+    /// Prefixes the subject with [TEST] so the trainer can verify rendering before the real send.
+    /// The recipient is derived from the course's trainerName, or can be overridden in the request body.
+    /// </summary>
+    [HttpPost("post-course/test/{courseScheduleId:long}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SendTest(
+        long courseScheduleId,
+        [FromBody] SendFollowUpTestRequest? request,
+        CancellationToken ct)
+    {
+        try
+        {
+            var command = new SendFollowUpTestEmailCommand
+            {
+                CourseScheduleId  = courseScheduleId,
+                CourseTypeOverride = request?.CourseTypeOverride,
+                RecipientEmail    = request?.RecipientEmail,
+            };
+
+            var result = await _mediator.Send(command, ct);
+            return Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Send the follow-up email for a course to all active attendees.
     /// The template is looked up by the course code prefix (e.g. PSPO-300326 → PSPO).
     /// CC info@bagile.co.uk automatically.
@@ -114,4 +150,14 @@ public record SendFollowUpRequest
 {
     public string? CourseTypeOverride { get; init; }
     public string? DelayNote { get; init; }
+}
+
+public record SendFollowUpTestRequest
+{
+    public string? CourseTypeOverride { get; init; }
+
+    /// <summary>
+    /// Override the test recipient email. If omitted, derived from the course's trainerName.
+    /// </summary>
+    public string? RecipientEmail { get; init; }
 }

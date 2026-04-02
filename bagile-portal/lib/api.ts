@@ -713,6 +713,23 @@ export async function sendFollowUpEmail(
   });
 }
 
+export interface SendFollowUpTestResult {
+  recipientEmail: string;
+  subject: string;
+  courseType: string;
+}
+
+export async function sendFollowUpTestEmail(
+  apiKey: string,
+  courseScheduleId: number,
+  opts?: { courseTypeOverride?: string; recipientEmail?: string },
+): Promise<SendFollowUpTestResult> {
+  return apiRequest(`/api/templates/post-course/test/${courseScheduleId}`, apiKey, {
+    method: "POST",
+    body: opts ?? {},
+  });
+}
+
 // ── Student Override ──────────────────────────────────────
 
 export interface UpdateStudentPayload {

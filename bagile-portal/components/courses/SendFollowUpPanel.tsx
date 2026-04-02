@@ -9,9 +9,10 @@ import {
   CourseAttendee,
   PostCourseTemplate,
   sendFollowUpEmail,
+  sendFollowUpTestEmail,
   SendFollowUpResult,
 } from "@/lib/api";
-import { Mail, Users } from "lucide-react";
+import { Mail, Users, FlaskConical } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -35,7 +36,9 @@ export function SendFollowUpPanel({
   const [delayNote, setDelayNote] = useState("");
   const [courseTypeOverride, setCourseTypeOverride] = useState("");
   const [sending, setSending] = useState(false);
+  const [sendingTest, setSendingTest] = useState(false);
   const [result, setResult] = useState<SendFollowUpResult | null>(null);
+  const [testSentTo, setTestSentTo] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   const activeAttendees = attendees.filter((a) => a.status === "active");
@@ -62,10 +65,27 @@ export function SendFollowUpPanel({
     }
   }
 
+  async function handleSendTest() {
+    setError("");
+    setTestSentTo(null);
+    setSendingTest(true);
+    try {
+      const res = await sendFollowUpTestEmail(apiKey, course.id, {
+        courseTypeOverride: courseTypeOverride.trim() || undefined,
+      });
+      setTestSentTo(res.recipientEmail);
+    } catch (e: any) {
+      setError(e?.message?.includes("API error") ? "Server error — check template exists for this course type." : (e?.message || "Failed to send test email"));
+    } finally {
+      setSendingTest(false);
+    }
+  }
+
   function handleClose() {
     setDelayNote("");
     setCourseTypeOverride("");
     setResult(null);
+    setTestSentTo(null);
     setError("");
     onClose();
   }
@@ -179,16 +199,37 @@ export function SendFollowUpPanel({
             </p>
           </div>
 
-          {/* Send button */}
-          <div className="flex gap-3 pt-2 border-t border-gray-200">
-            <Button
-              onClick={handleSend}
-              disabled={sending || activeAttendees.length === 0}
-            >
-              <Mail className="w-3.5 h-3.5" />
-              {sending ? "Sending..." : `Send to ${activeAttendees.length} attendee${activeAttendees.length !== 1 ? "s" : ""}`}
-            </Button>
-            <Button variant="secondary" onClick={handleClose}>Cancel</Button>
+          {/* Send buttons */}
+          <div className="pt-2 border-t border-gray-200 space-y-3">
+            {/* Test send */}
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleSendTest}
+                disabled={sendingTest || templateMissing}
+                className="inline-flex items-center gap-1.5 text-sm text-brand-600 hover:text-brand-700 disabled:opacity-40 disabled:cursor-not-allowed font-medium"
+              >
+                <FlaskConical className="w-3.5 h-3.5" />
+                {sendingTest ? "Sending test..." : "Send test to me first"}
+              </button>
+              {testSentTo && (
+                <span className="text-xs text-green-700 bg-green-50 border border-green-200 rounded px-2 py-0.5">
+                  Test sent to {testSentTo} — check your inbox
+                </span>
+              )}
+            </div>
+
+            {/* Real send */}
+            <div className="flex gap-3">
+              <Button
+                onClick={handleSend}
+                disabled={sending || activeAttendees.length === 0}
+              >
+                <Mail className="w-3.5 h-3.5" />
+                {sending ? "Sending..." : `Send to ${activeAttendees.length} attendee${activeAttendees.length !== 1 ? "s" : ""}`}
+              </Button>
+              <Button variant="secondary" onClick={handleClose}>Cancel</Button>
+            </div>
           </div>
         </div>
       )}
