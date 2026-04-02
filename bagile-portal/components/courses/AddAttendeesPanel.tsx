@@ -142,15 +142,20 @@ export function AddAttendeesPanel({ open, onClose, apiKey, courseId, onAdded, ca
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Paste attendee list (one per line: FirstName, LastName, Email)
+                  Paste attendee list (one per line)
                 </label>
                 <textarea
                   value={rawText}
                   onChange={(e) => { setRawText(e.target.value); setParsed([]); }}
-                  placeholder={"John, Smith, john@example.com\nJane, Doe, jane@example.com\n\nOr tab-separated from Excel"}
+                  placeholder={"John, Smith, john@example.com\nJane, Doe, jane@example.com, Acme Ltd\n\nOr tab-separated from Excel"}
                   rows={6}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono"
                 />
+                <p className="text-xs text-gray-400 mt-1">
+                  3 columns: <code className="bg-gray-100 px-1 rounded">FirstName, LastName, Email</code>
+                  {" "}— or 4 columns to include company:{" "}
+                  <code className="bg-gray-100 px-1 rounded">FirstName, LastName, Email, Company</code>
+                </p>
                 <Button variant="secondary" size="sm" onClick={handleParse} className="mt-2">
                   Parse & Preview
                 </Button>
@@ -222,7 +227,7 @@ export function AddAttendeesPanel({ open, onClose, apiKey, courseId, onAdded, ca
               <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center">
                 <Upload className="w-8 h-8 text-gray-300 mx-auto mb-3" />
                 <p className="text-sm text-gray-600 mb-2">Upload a CSV file with attendee details</p>
-                <p className="text-xs text-gray-400 mb-4">Format: FirstName, LastName, Email (one per line)</p>
+                <p className="text-xs text-gray-400 mb-4">Format: FirstName, LastName, Email [, Company] — one per line</p>
                 <label className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-brand-600 bg-brand-50 rounded-lg hover:bg-brand-100 cursor-pointer">
                   <Upload className="w-4 h-4" /> Choose File
                   <input type="file" accept=".csv,.txt" onChange={handleFileUpload} className="hidden" />
