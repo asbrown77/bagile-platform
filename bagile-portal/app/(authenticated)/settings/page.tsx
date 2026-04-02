@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState, useRef } from "react";
+import { Suspense, useCallback, useEffect, useState, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ApiKey, CreateKeyResponse, loginWithGoogle, listKeys, createKey, revokeKey, PostCourseTemplate, listPostCourseTemplates, upsertPostCourseTemplate, PreCourseTemplate, getPreCourseTemplates, updatePreCourseTemplate, Trainer, getTrainers, createTrainer, updateTrainer, deleteTrainer } from "@/lib/api";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
@@ -9,7 +10,42 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Key, Plus, Settings2, FileText, ChevronLeft, Save, Eye, Code, Users, Pencil, Trash2, X, Check } from "lucide-react";
 import { loadConfig, saveConfig, type PortalConfig } from "@/lib/config";
 
+// ── Tab definitions ───────────────────────────────────────
+
+type Tab = "general" | "post-course" | "pre-course" | "trainers";
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: "general",    label: "General" },
+  { id: "post-course", label: "Post-Course" },
+  { id: "pre-course",  label: "Pre-Course" },
+  { id: "trainers",   label: "Trainers" },
+];
+
+// ── Root export (wraps in Suspense for useSearchParams) ───
+
 export default function Settings() {
+  return (
+    <Suspense>
+      <SettingsContent />
+    </Suspense>
+  );
+}
+
+// ── Main settings component ───────────────────────────────
+
+function SettingsContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const rawTab = searchParams.get("tab") as Tab | null;
+  const activeTab: Tab = TABS.some((t) => t.id === rawTab) ? rawTab! : "general";
+
+  function setTab(tab: Tab) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", tab);
+    router.replace(`?${params.toString()}`);
+  }
+
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<{ email: string; name: string } | null>(null);
   const [keys, setKeys] = useState<ApiKey[]>([]);
@@ -92,47 +128,61 @@ export default function Settings() {
     try { await revokeKey(token, id); await refreshKeys(); } catch { setError("Failed to revoke key"); }
   }
 
-  if (!token) {
-    return (
-      <>
-        <PageHeader title="Settings" subtitle="Sign in to manage your API keys" />
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8 text-center max-w-md mx-auto mb-6">
-          <Key className="w-10 h-10 text-gray-300 mx-auto mb-4" />
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">Create MCP API Keys</h2>
-          <p className="text-gray-500 text-sm mb-6">Sign in with Google to manage your API keys.</p>
-          <div ref={btnRef} className="flex justify-center" />
-          {error && <p className="mt-4 text-red-600 text-sm">{error}</p>}
-        </div>
-        {/* Course thresholds, templates, and trainers are accessible without Google auth */}
-        <CourseThresholds />
-        <PostCourseTemplatesEditor />
-        <PreCourseTemplatesEditor />
-        <TrainersEditor />
-      </>
-    );
-  }
-
   return (
     <>
-      <PageHeader title="Settings" subtitle={user?.email || ""} />
+      <PageHeader
+        title="Settings"
+        subtitle={token ? (user?.email || "") : "Sign in to manage your API keys"}
+      />
 
-      {error && <AlertBanner variant="danger" onDismiss={() => setError("")}>{error}</AlertBanner>}
+      {/* Tab bar */}
+      <div className="flex rounded-lg border border-gray-300 overflow-hidden mb-6 w-fit">
+        {TABS.map((tab, i) => (
+          <button
+            key={tab.id}
+            onClick={() => setTab(tab.id)}
+            className={`px-4 py-2 text-sm font-medium transition-colors
+              ${i > 0 ? "border-l border-gray-300" : ""}
+              ${activeTab === tab.id
+                ? "bg-brand-600 text-white"
+                : "bg-white text-gray-600 hover:bg-gray-50"}`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
-      {newKey && (
-        <div className="mb-6 space-y-4">
-          <AlertBanner variant="success">
-            <p className="font-semibold mb-1">Key created — copy it now! This is the only time you'll see the full key.</p>
-            <div className="flex items-center gap-2 mt-2">
-              <code className="bg-white border px-3 py-2 rounded text-sm flex-1 font-mono break-all">{newKey.key}</code>
-              <Button size="sm" onClick={() => navigator.clipboard.writeText(newKey.key)}>Copy</Button>
+      {/* General tab */}
+      {activeTab === "general" && (
+        <>
+          {error && <AlertBanner variant="danger" onDismiss={() => setError("")}>{error}</AlertBanner>}
+
+          {/* API Keys section */}
+          {!token ? (
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8 text-center max-w-md mx-auto mb-6">
+              <Key className="w-10 h-10 text-gray-300 mx-auto mb-4" />
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">Create MCP API Keys</h2>
+              <p className="text-gray-500 text-sm mb-6">Sign in with Google to manage your API keys.</p>
+              <div ref={btnRef} className="flex justify-center" />
+              {error && <p className="mt-4 text-red-600 text-sm">{error}</p>}
             </div>
-            <button onClick={() => setNewKey(null)} className="text-sm mt-2 underline">Dismiss</button>
-          </AlertBanner>
+          ) : (
+            <>
+              {newKey && (
+                <div className="mb-6 space-y-4">
+                  <AlertBanner variant="success">
+                    <p className="font-semibold mb-1">Key created — copy it now! This is the only time you'll see the full key.</p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <code className="bg-white border px-3 py-2 rounded text-sm flex-1 font-mono break-all">{newKey.key}</code>
+                      <Button size="sm" onClick={() => navigator.clipboard.writeText(newKey.key)}>Copy</Button>
+                    </div>
+                    <button onClick={() => setNewKey(null)} className="text-sm mt-2 underline">Dismiss</button>
+                  </AlertBanner>
 
-          {/* MCP Setup Instructions */}
-          <div className="bg-gray-900 rounded-xl p-5 text-sm">
-            <p className="text-gray-300 font-medium mb-3">To use with Claude Code (MCP), add this to your project's <code className="text-amber-400">.mcp.json</code>:</p>
-            <pre className="bg-gray-950 rounded-lg p-4 text-gray-300 overflow-x-auto text-xs leading-relaxed">
+                  {/* MCP Setup Instructions */}
+                  <div className="bg-gray-900 rounded-xl p-5 text-sm">
+                    <p className="text-gray-300 font-medium mb-3">To use with Claude Code (MCP), add this to your project's <code className="text-amber-400">.mcp.json</code>:</p>
+                    <pre className="bg-gray-950 rounded-lg p-4 text-gray-300 overflow-x-auto text-xs leading-relaxed">
 {`{
   "mcpServers": {
     "bagile-api": {
@@ -145,92 +195,92 @@ export default function Settings() {
     }
   }
 }`}
-            </pre>
-            <p className="text-gray-500 text-xs mt-3">This gives Claude Code access to courses, orders, students, revenue, and analytics via 20+ MCP tools.</p>
-          </div>
-        </div>
-      )}
+                    </pre>
+                    <p className="text-gray-500 text-xs mt-3">This gives Claude Code access to courses, orders, students, revenue, and analytics via 20+ MCP tools.</p>
+                  </div>
+                </div>
+              )}
 
-      {/* Create key */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-6">
-        <h2 className="text-sm font-semibold text-gray-900 mb-3">Create API Key</h2>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            placeholder="Label (e.g. MCP server)"
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleCreateKey()}
-            className="border border-gray-300 rounded-lg px-3 py-2 flex-1 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
-          />
-          <Button onClick={handleCreateKey} disabled={!label.trim()} size="md">
-            <Plus className="w-4 h-4" /> Create
-          </Button>
-        </div>
-      </div>
+              {/* Create key */}
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-6">
+                <h2 className="text-sm font-semibold text-gray-900 mb-3">Create API Key</h2>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Label (e.g. MCP server)"
+                    value={label}
+                    onChange={(e) => setLabel(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleCreateKey()}
+                    className="border border-gray-300 rounded-lg px-3 py-2 flex-1 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                  />
+                  <Button onClick={handleCreateKey} disabled={!label.trim()} size="md">
+                    <Plus className="w-4 h-4" /> Create
+                  </Button>
+                </div>
+              </div>
 
-      {/* Keys list */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="px-5 py-3 border-b border-gray-200">
-          <h2 className="text-sm font-semibold text-gray-900">Your API Keys</h2>
-        </div>
-        {keys.length === 0 ? (
-          <EmptyState icon={<Key className="w-10 h-10" />} title="No API keys" description="Create your first key above" />
-        ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Label</th>
-                <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Key</th>
-                <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Created</th>
-                <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Last Used</th>
-                <th className="px-4 py-2"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {keys.map((k) => (
-                <tr key={k.id} className="border-t border-gray-100">
-                  <td className="px-4 py-3">{k.label || "—"}</td>
-                  <td className="px-4 py-3 font-mono text-gray-500">{k.keyprefix}...</td>
-                  <td className="px-4 py-3 text-gray-500 hidden md:table-cell">{new Date(k.createdat).toLocaleDateString()}</td>
-                  <td className="px-4 py-3 text-gray-500 hidden md:table-cell">{k.lastusedat ? new Date(k.lastusedat).toLocaleDateString() : "Never"}</td>
-                  <td className="px-4 py-3 text-right">
-                    {k.isactive ? (
-                      <button onClick={() => handleRevoke(k.id)} className="text-red-500 hover:text-red-700 text-xs font-medium">Revoke</button>
-                    ) : (
-                      <span className="text-gray-400 text-xs">Revoked</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+              {/* Keys list */}
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                <div className="px-5 py-3 border-b border-gray-200">
+                  <h2 className="text-sm font-semibold text-gray-900">Your API Keys</h2>
+                </div>
+                {keys.length === 0 ? (
+                  <EmptyState icon={<Key className="w-10 h-10" />} title="No API keys" description="Create your first key above" />
+                ) : (
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Label</th>
+                        <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Key</th>
+                        <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Created</th>
+                        <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Last Used</th>
+                        <th className="px-4 py-2"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {keys.map((k) => (
+                        <tr key={k.id} className="border-t border-gray-100">
+                          <td className="px-4 py-3">{k.label || "—"}</td>
+                          <td className="px-4 py-3 font-mono text-gray-500">{k.keyprefix}...</td>
+                          <td className="px-4 py-3 text-gray-500 hidden md:table-cell">{new Date(k.createdat).toLocaleDateString()}</td>
+                          <td className="px-4 py-3 text-gray-500 hidden md:table-cell">{k.lastusedat ? new Date(k.lastusedat).toLocaleDateString() : "Never"}</td>
+                          <td className="px-4 py-3 text-right">
+                            {k.isactive ? (
+                              <button onClick={() => handleRevoke(k.id)} className="text-red-500 hover:text-red-700 text-xs font-medium">Revoke</button>
+                            ) : (
+                              <span className="text-gray-400 text-xs">Revoked</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
 
-      {/* MCP Setup Guide */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mt-6">
-        <div className="px-5 py-3 border-b border-gray-200">
-          <h2 className="text-sm font-semibold text-gray-900">Using with AI Assistants (MCP)</h2>
-        </div>
-        <div className="p-5 text-sm text-gray-600 space-y-4">
-          <p>
-            The BAgile API can be used as an MCP (Model Context Protocol) server with Claude Code,
-            Cursor, Windsurf, or any MCP-compatible AI assistant. This gives your AI access to query
-            courses, orders, students, revenue analytics, and more.
-          </p>
+              {/* MCP Setup Guide */}
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mt-6">
+                <div className="px-5 py-3 border-b border-gray-200">
+                  <h2 className="text-sm font-semibold text-gray-900">Using with AI Assistants (MCP)</h2>
+                </div>
+                <div className="p-5 text-sm text-gray-600 space-y-4">
+                  <p>
+                    The BAgile API can be used as an MCP (Model Context Protocol) server with Claude Code,
+                    Cursor, Windsurf, or any MCP-compatible AI assistant. This gives your AI access to query
+                    courses, orders, students, revenue analytics, and more.
+                  </p>
 
-          <div>
-            <p className="font-medium text-gray-900 mb-2">Setup steps:</p>
-            <ol className="list-decimal list-inside space-y-1.5 text-gray-600">
-              <li>Create an API key above (label it "MCP" or "Claude Code")</li>
-              <li>Clone the MCP server: <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">bagile-mcp-server/</code> from the repo</li>
-              <li>Run <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">npm install && npm run build</code></li>
-              <li>Add the config below to your project's <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">.mcp.json</code></li>
-            </ol>
-          </div>
+                  <div>
+                    <p className="font-medium text-gray-900 mb-2">Setup steps:</p>
+                    <ol className="list-decimal list-inside space-y-1.5 text-gray-600">
+                      <li>Create an API key above (label it "MCP" or "Claude Code")</li>
+                      <li>Clone the MCP server: <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">bagile-mcp-server/</code> from the repo</li>
+                      <li>Run <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">npm install && npm run build</code></li>
+                      <li>Add the config below to your project's <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">.mcp.json</code></li>
+                    </ol>
+                  </div>
 
-          <pre className="bg-gray-900 rounded-lg p-4 text-gray-300 overflow-x-auto text-xs leading-relaxed">
+                  <pre className="bg-gray-900 rounded-lg p-4 text-gray-300 overflow-x-auto text-xs leading-relaxed">
 {`// .mcp.json (in your project root)
 {
   "mcpServers": {
@@ -244,46 +294,50 @@ export default function Settings() {
     }
   }
 }`}
-          </pre>
+                  </pre>
 
-          <div>
-            <p className="font-medium text-gray-900 mb-2">Available MCP tools ({20}):</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1 text-xs text-gray-500">
-              <span>list_course_schedules — Filter courses by date, type, trainer</span>
-              <span>get_course_attendees — Attendees with billing details</span>
-              <span>get_course_monitoring — At-risk courses, decision deadlines</span>
-              <span>list_orders — Orders with status, date, email filters</span>
-              <span>get_order — Full order detail with line items</span>
-              <span>list_students — Search by name, email, organisation</span>
-              <span>get_student_enrolments — Student's course history</span>
-              <span>list_organisations — Company lookup</span>
-              <span>get_organisation_course_history — What they've booked</span>
-              <span>list_transfers / get_pending_transfers — Transfer management</span>
-              <span>get_revenue_summary — Monthly, YoY, by type, by country</span>
-              <span>get_partner_analytics — PTN tier tracking</span>
-              <span>cancel_course — Cancel with reason</span>
-              <span>health_check — API status</span>
-            </div>
-          </div>
+                  <div>
+                    <p className="font-medium text-gray-900 mb-2">Available MCP tools ({20}):</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1 text-xs text-gray-500">
+                      <span>list_course_schedules — Filter courses by date, type, trainer</span>
+                      <span>get_course_attendees — Attendees with billing details</span>
+                      <span>get_course_monitoring — At-risk courses, decision deadlines</span>
+                      <span>list_orders — Orders with status, date, email filters</span>
+                      <span>get_order — Full order detail with line items</span>
+                      <span>list_students — Search by name, email, organisation</span>
+                      <span>get_student_enrolments — Student's course history</span>
+                      <span>list_organisations — Company lookup</span>
+                      <span>get_organisation_course_history — What they've booked</span>
+                      <span>list_transfers / get_pending_transfers — Transfer management</span>
+                      <span>get_revenue_summary — Monthly, YoY, by type, by country</span>
+                      <span>get_partner_analytics — PTN tier tracking</span>
+                      <span>cancel_course — Cancel with reason</span>
+                      <span>health_check — API status</span>
+                    </div>
+                  </div>
 
-          <p className="text-xs text-gray-400">
-            Once configured, ask Claude: "Show me at-risk courses" or "What's our revenue this month?" —
-            it will use the MCP tools to query your live BAgile data.
-          </p>
-        </div>
-      </div>
+                  <p className="text-xs text-gray-400">
+                    Once configured, ask Claude: "Show me at-risk courses" or "What's our revenue this month?" —
+                    it will use the MCP tools to query your live BAgile data.
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
 
-      {/* Course Risk Thresholds */}
-      <CourseThresholds />
+          {/* Course Risk Thresholds — always visible on General tab */}
+          <CourseThresholds />
+        </>
+      )}
 
-      {/* Post-Course Email Templates */}
-      <PostCourseTemplatesEditor />
+      {/* Post-Course tab */}
+      {activeTab === "post-course" && <PostCourseTemplatesEditor />}
 
-      {/* Pre-Course Email Templates */}
-      <PreCourseTemplatesEditor />
+      {/* Pre-Course tab */}
+      {activeTab === "pre-course" && <PreCourseTemplatesEditor />}
 
-      {/* Trainers */}
-      <TrainersEditor />
+      {/* Trainers tab */}
+      {activeTab === "trainers" && <TrainersEditor />}
     </>
   );
 }
@@ -304,7 +358,7 @@ function CourseThresholds() {
   if (!config) return null;
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mt-6">
       <div className="flex items-center gap-3 mb-4">
         <div className="p-2 bg-amber-50 rounded-lg">
           <Settings2 className="w-5 h-5 text-amber-600" />
@@ -459,7 +513,7 @@ function PostCourseTemplatesEditor() {
     t.htmlBody.includes("needs customising");
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mt-6">
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
       <div className="px-5 py-3 border-b border-gray-200 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-blue-50 rounded-lg">
@@ -487,7 +541,7 @@ function PostCourseTemplatesEditor() {
           )}
           {!loading && !apiKey && (
             <div className="p-6 text-center text-sm text-gray-400">
-              Set your API key above to manage templates.
+              Set your API key on the General tab to manage templates.
             </div>
           )}
           {!loading && apiKey && templates.length === 0 && (
@@ -720,7 +774,7 @@ function PreCourseTemplatesEditor() {
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mt-6">
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
       <div className="px-5 py-3 border-b border-gray-200 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-indigo-50 rounded-lg">
@@ -748,7 +802,7 @@ function PreCourseTemplatesEditor() {
           )}
           {!loading && !apiKey && (
             <div className="p-6 text-center text-sm text-gray-400">
-              Set your API key above to manage templates.
+              Set your API key on the General tab to manage templates.
             </div>
           )}
           {!loading && apiKey && templates.length === 0 && (
@@ -1033,7 +1087,7 @@ function TrainersEditor() {
   const inputCls = "border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500";
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mt-6">
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
       <div className="px-5 py-3 border-b border-gray-200 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-green-50 rounded-lg">
@@ -1062,7 +1116,7 @@ function TrainersEditor() {
       )}
       {!loading && !apiKey && (
         <div className="p-6 text-center text-sm text-gray-400">
-          Set your API key above to manage trainers.
+          Set your API key on the General tab to manage trainers.
         </div>
       )}
 
