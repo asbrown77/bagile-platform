@@ -26,7 +26,7 @@ import { CourseBadge } from "@/components/courses/CourseBadge";
 import { EditAttendeeModal } from "@/components/courses/EditAttendeeModal";
 import { EditPrivateCoursePanel } from "@/components/courses/EditPrivateCoursePanel";
 import { CourseContactsSection } from "@/components/courses/CourseContactsSection";
-import { Download, Users, Calendar, User, UserPlus, Video, MapPin, FileText, ExternalLink, Pencil, Trash2, Building2 } from "lucide-react";
+import { Download, Users, Calendar, User, UserPlus, Video, MapPin, FileText, ExternalLink, Pencil, Trash2, Building2, Hash } from "lucide-react";
 import Link from "next/link";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.bagile.co.uk";
@@ -322,6 +322,14 @@ export default function CourseDetail() {
               <Badge variant={isVirtual ? "info" : "neutral"} dot>{isVirtual ? "Virtual" : "In-person"}</Badge>
             </div>
 
+            {/* Reference (course code) — private courses */}
+            {isPrivate && course.invoiceReference && (
+              <div className="flex items-center gap-2 text-gray-600">
+                <Hash className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                <span className="font-mono text-sm">{course.invoiceReference}</span>
+              </div>
+            )}
+
             {/* Venue / meeting details */}
             {isVirtual && course.meetingUrl && (
               <div className="flex items-start gap-2 text-gray-600">
@@ -379,7 +387,9 @@ export default function CourseDetail() {
                     <span className="font-semibold text-gray-900">{formatCurrency(course.price)}</span>
                   </div>
                 )}
-                {course.invoiceReference && (
+                {/* Xero invoice number — shown only when it looks like INV-XXXX (not a course reference code).
+                    The course reference code (PSM-FNC-DDMMYY) is shown in the Details card. */}
+                {course.invoiceReference?.startsWith("INV-") && (
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-1.5 text-gray-500">
                       <FileText className="w-3.5 h-3.5 text-gray-400" /> Invoice

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { SlideOver } from "@/components/ui/SlideOver";
 import { Button } from "@/components/ui/Button";
 import { AlertBanner } from "@/components/ui/AlertBanner";
@@ -51,6 +51,16 @@ const JSON_TEMPLATE = `{
 
 const emptyAttendee = (): AttendeeInput => ({ firstName: "", lastName: "", email: "" });
 
+// ── Section header ──────────────────────────────────────────────────────────
+function SectionHeader({ label }: { label: string }) {
+  return (
+    <div className="pt-2 pb-1">
+      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{label}</p>
+      <div className="border-t border-gray-100 mt-1" />
+    </div>
+  );
+}
+
 export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: Props) {
   const [mode, setMode] = useState("form");
 
@@ -72,10 +82,11 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
   const [notes, setNotes] = useState("");
 
   // Auto-generated fields with override flags
+  // courseRef = the course reference code (PSM-FNC-270426), stored as invoiceReference on backend
+  const [courseRef, setCourseRef] = useState("");
+  const [refOverridden, setRefOverridden] = useState(false);
   const [courseName, setCourseName] = useState("");
   const [nameOverridden, setNameOverridden] = useState(false);
-  const [invoiceRef, setInvoiceRef] = useState("");
-  const [refOverridden, setRefOverridden] = useState(false);
 
   const [attendees, setAttendees] = useState<AttendeeInput[]>([]);
   const [jsonText, setJsonText] = useState("");
@@ -98,7 +109,7 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiKey]);
 
-  // Check for conflicts when dates change
+  // Check for conflicts when dates or trainer change
   useEffect(() => {
     if (!apiKey || !startDate || !endDate) { setConflicts([]); return; }
     const timer = setTimeout(() => {
@@ -109,17 +120,17 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
     return () => clearTimeout(timer);
   }, [apiKey, startDate, endDate, trainerName]);
 
+  // Auto-generate reference code
+  useEffect(() => {
+    if (refOverridden) return;
+    setCourseRef(generateInvoiceRef(courseCode, org?.acronym ?? "", startDate));
+  }, [courseCode, org, startDate, refOverridden]);
+
   // Auto-generate course name
   useEffect(() => {
     if (nameOverridden) return;
     setCourseName(generateCourseName(courseCode, org?.name ?? "", formatType));
   }, [courseCode, org, formatType, nameOverridden]);
-
-  // Auto-generate invoice reference
-  useEffect(() => {
-    if (refOverridden) return;
-    setInvoiceRef(generateInvoiceRef(courseCode, org?.acronym ?? "", startDate));
-  }, [courseCode, org, startDate, refOverridden]);
 
   function resetForm() {
     setOrg(null);
@@ -135,10 +146,10 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
     setMeetingPasscode("");
     setVenueAddress("");
     setNotes("");
+    setCourseRef("");
+    setRefOverridden(false);
     setCourseName("");
     setNameOverridden(false);
-    setInvoiceRef("");
-    setRefOverridden(false);
     setAttendees([]);
     setJsonText("");
     setJsonParsed(null);
@@ -173,7 +184,7 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
         venueAddress: data.venueAddress,
         notes: data.notes,
       };
-      const atts: AttendeeInput[] = (data.attendees || []).map((a: any) => ({
+      const atts: AttendeeInput[] = (data.attendees || []).map((a: AttendeeInput & { [key: string]: string }) => ({
         firstName: a.firstName || "", lastName: a.lastName || "", email: a.email || "",
         company: a.company, country: a.country,
       }));
@@ -225,7 +236,7 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
       trainerName,
       capacity,
       price,
-      invoiceReference: invoiceRef || undefined,
+      invoiceReference: courseRef || undefined,
       meetingUrl: meetingUrl || undefined,
       meetingId: meetingId || undefined,
       meetingPasscode: meetingPasscode || undefined,
@@ -294,7 +305,7 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
                 <p>{jsonParsed.course.courseCode} — {jsonParsed.course.formatType} — {jsonParsed.course.startDate} to {jsonParsed.course.endDate}</p>
                 {jsonParsed.org && <p>Organisation: {jsonParsed.org.name}{jsonParsed.org.acronym ? ` (${jsonParsed.org.acronym})` : ""}</p>}
                 {jsonParsed.course.trainerName && <p>Trainer: {jsonParsed.course.trainerName}</p>}
-                {jsonParsed.course.invoiceReference && <p>Invoice: {jsonParsed.course.invoiceReference}</p>}
+                {jsonParsed.course.invoiceReference && <p>Reference: {jsonParsed.course.invoiceReference}</p>}
                 {jsonParsed.attendees.length > 0 && (
                   <div className="mt-2">
                     <p className="font-medium">{jsonParsed.attendees.length} attendees:</p>
@@ -321,11 +332,21 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
 
       {/* ── Form Mode ──────────────────────────────────────── */}
       {mode === "form" && (
-        <form onSubmit={(e) => { e.preventDefault(); handleSubmit(formToRequest(), attendees, org); }} className="space-y-5">
+        <form onSubmit={(e) => { e.preventDefault(); handleSubmit(formToRequest(), attendees, org); }} className="space-y-4">
 
-          {/* Organisation type-ahead */}
+          {/* ── COURSE ── */}
+          <SectionHeader label="Course" />
+
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Client Organisation</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Course Type</label>
+            <select value={courseCode} onChange={(e) => setCourseCode(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
+              {COURSE_CODES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Organisation</label>
             <OrganisationTypeAhead
               apiKey={apiKey}
               value={org}
@@ -334,48 +355,18 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
             />
           </div>
 
-          {/* Course type + format */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Course Type</label>
-              <select value={courseCode} onChange={(e) => setCourseCode(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
-                {COURSE_CODES.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Format</label>
-              <select value={formatType} onChange={(e) => setFormatType(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
-                <option value="virtual">Virtual</option>
-                <option value="in_person">In-person</option>
-              </select>
-            </div>
-          </div>
+          {/* ── SCHEDULE ── */}
+          <SectionHeader label="Schedule" />
 
-          {/* Course name — auto-generated, editable */}
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-medium text-gray-700">Course Name</label>
-              {nameOverridden && (
-                <button type="button" onClick={() => { setNameOverridden(false); }}
-                  className="flex items-center gap-1 text-xs text-gray-400 hover:text-brand-600">
-                  <RotateCcw className="w-3 h-3" /> Reset to auto
-                </button>
-              )}
-            </div>
-            <input
-              type="text"
-              value={courseName}
-              onChange={(e) => { setCourseName(e.target.value); setNameOverridden(e.target.value !== ""); }}
-              onBlur={(e) => { if (!e.target.value.trim()) setNameOverridden(false); }}
-              required
-              placeholder="Auto-generated from course type, org, and format"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
-            />
+            <label className="block text-xs font-medium text-gray-700 mb-1">Format</label>
+            <select value={formatType} onChange={(e) => setFormatType(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
+              <option value="virtual">Virtual</option>
+              <option value="in_person">In-person</option>
+            </select>
           </div>
 
-          {/* Dates */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Start Date</label>
@@ -387,6 +378,21 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
               <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} required
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Trainer</label>
+            {trainers.length > 0 ? (
+              <select value={trainerName ?? ""} onChange={(e) => setTrainerName(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
+                <option value="">— Select trainer —</option>
+                {trainers.map((t) => <option key={t.id} value={t.name}>{t.name}</option>)}
+              </select>
+            ) : (
+              <input type="text" value={trainerName || ""} onChange={(e) => setTrainerName(e.target.value)}
+                placeholder="Alex Brown"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+            )}
           </div>
 
           {/* Conflict warning */}
@@ -409,21 +415,15 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
             </div>
           )}
 
-          {/* Trainer + capacity + price */}
-          <div className="grid grid-cols-3 gap-4">
+          {/* ── COMMERCIAL ── */}
+          <SectionHeader label="Commercial" />
+
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Trainer</label>
-              {trainers.length > 0 ? (
-                <select value={trainerName ?? ""} onChange={(e) => setTrainerName(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
-                  <option value="">— Select trainer —</option>
-                  {trainers.map((t) => <option key={t.id} value={t.name}>{t.name}</option>)}
-                </select>
-              ) : (
-                <input type="text" value={trainerName || ""} onChange={(e) => setTrainerName(e.target.value)}
-                  placeholder="Alex Brown"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
-              )}
+              <label className="block text-xs font-medium text-gray-700 mb-1">Price (total)</label>
+              <input type="number" value={price || ""} onChange={(e) => setPrice(e.target.value ? Number(e.target.value) : undefined)}
+                placeholder="5000"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Capacity</label>
@@ -431,18 +431,15 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
                 placeholder="20"
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Price (total)</label>
-              <input type="number" value={price || ""} onChange={(e) => setPrice(e.target.value ? Number(e.target.value) : undefined)}
-                placeholder="5000"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
-            </div>
           </div>
 
-          {/* Invoice reference — auto-generated, editable */}
+          {/* ── AUTO-GENERATED ── */}
+          <SectionHeader label="Auto-generated" />
+
+          {/* Reference (course code) — primary identifier */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-medium text-gray-700">Invoice Reference (Xero)</label>
+              <label className="block text-xs font-medium text-gray-700">Reference</label>
               {refOverridden && (
                 <button type="button" onClick={() => setRefOverridden(false)}
                   className="flex items-center gap-1 text-xs text-gray-400 hover:text-brand-600">
@@ -452,59 +449,83 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
             </div>
             <input
               type="text"
-              value={invoiceRef}
+              value={courseRef}
               onChange={(e) => {
-                setInvoiceRef(e.target.value);
+                setCourseRef(e.target.value);
                 setRefOverridden(true);
               }}
               onBlur={(e) => { if (!e.target.value.trim()) setRefOverridden(false); }}
               placeholder="Auto-generated e.g. PSM-FNC-270426"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono"
+            />
+            <p className="mt-1 text-xs text-gray-400">Generated from course type, org acronym, and start date. This is the primary identifier used everywhere.</p>
+          </div>
+
+          {/* Course name — secondary, display label */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-medium text-gray-700 text-gray-400">Course Name</label>
+              {nameOverridden && (
+                <button type="button" onClick={() => setNameOverridden(false)}
+                  className="flex items-center gap-1 text-xs text-gray-400 hover:text-brand-600">
+                  <RotateCcw className="w-3 h-3" /> Reset to auto
+                </button>
+              )}
+            </div>
+            <input
+              type="text"
+              value={courseName}
+              onChange={(e) => { setCourseName(e.target.value); setNameOverridden(e.target.value !== ""); }}
+              onBlur={(e) => { if (!e.target.value.trim()) setNameOverridden(false); }}
+              required
+              placeholder="Auto-generated from course type, org, and format"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-600 focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
             />
           </div>
 
-          {/* Virtual: meeting details */}
-          {isVirtual && (
-            <div className="bg-blue-50 rounded-lg p-4 space-y-3">
-              <p className="text-xs font-semibold text-blue-800 uppercase tracking-wide">Meeting Details</p>
-              <div>
-                <label className="block text-xs font-medium text-blue-700 mb-1">Zoom/Teams URL</label>
-                <input type="url" value={meetingUrl} onChange={(e) => setMeetingUrl(e.target.value)}
-                  placeholder="https://zoom.us/j/..."
-                  className="w-full border border-blue-200 rounded-lg px-3 py-2 text-sm bg-white" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-blue-700 mb-1">Meeting ID</label>
-                  <input type="text" value={meetingId} onChange={(e) => setMeetingId(e.target.value)}
-                    placeholder="123 456 7890"
-                    className="w-full border border-blue-200 rounded-lg px-3 py-2 text-sm bg-white" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-blue-700 mb-1">Passcode</label>
-                  <input type="text" value={meetingPasscode} onChange={(e) => setMeetingPasscode(e.target.value)}
-                    placeholder="abc123"
-                    className="w-full border border-blue-200 rounded-lg px-3 py-2 text-sm bg-white" />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* In-person: venue */}
+          {/* ── VENUE / MEETING (conditional) ── */}
           {!isVirtual && (
-            <div className="bg-amber-50 rounded-lg p-4 space-y-3">
-              <p className="text-xs font-semibold text-amber-800 uppercase tracking-wide">Venue Details</p>
+            <>
+              <SectionHeader label="Venue Details" />
               <div>
-                <label className="block text-xs font-medium text-amber-700 mb-1">Venue Address</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Venue Address</label>
                 <textarea value={venueAddress} onChange={(e) => setVenueAddress(e.target.value)}
                   placeholder="Conference Room 3, 10 Downing Street, London SW1A 2AA"
                   rows={2}
-                  className="w-full border border-amber-200 rounded-lg px-3 py-2 text-sm bg-white" />
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
               </div>
-            </div>
+            </>
           )}
 
-          {/* Notes */}
+          {isVirtual && (
+            <>
+              <SectionHeader label="Meeting Details" />
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Zoom/Teams URL</label>
+                <input type="url" value={meetingUrl} onChange={(e) => setMeetingUrl(e.target.value)}
+                  placeholder="https://zoom.us/j/..."
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Meeting ID</label>
+                  <input type="text" value={meetingId} onChange={(e) => setMeetingId(e.target.value)}
+                    placeholder="123 456 7890"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Passcode</label>
+                  <input type="text" value={meetingPasscode} onChange={(e) => setMeetingPasscode(e.target.value)}
+                    placeholder="abc123"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ── ADDITIONAL ── */}
+          <SectionHeader label="Additional" />
+
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Notes</label>
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
@@ -513,10 +534,10 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
           </div>
 
-          {/* Attendees (optional) */}
-          <div className="border-t border-gray-200 pt-5">
+          {/* ── ATTENDEES (optional) ── */}
+          <div className="border-t border-gray-200 pt-4">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Attendees (optional)</p>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Attendees (optional)</p>
               <button type="button" onClick={addAttendeeRow}
                 className="flex items-center gap-1.5 text-xs text-brand-600 hover:text-brand-700 font-medium">
                 <UserPlus className="w-3.5 h-3.5" /> Add Attendee
