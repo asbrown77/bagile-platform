@@ -73,16 +73,55 @@ _"I can see revenue, partner value, course demand, and make scheduling decisions
 
 ---
 
-## Next Sprint: 15 — "Portal Polish & Course Risk Config"
+## Next Sprint: 15 — "Portal Polish, Calendar View & Course Risk Config"
 
-**Goal:** The portal looks professional (favicon, title) and course risk thresholds are configurable, not hardcoded.
-**We'll know it worked when:** Browser tab shows BAgile favicon + correct title. Courses at 0 days show "cancel" not "at risk". The 2-day at-risk threshold is a dashboard setting, not a magic number in code.
+**Goal:** The portal looks professional, has a calendar view for quick schedule overview, and course risk thresholds are configurable.
+**We'll know it worked when:** Browser tab shows BAgile favicon + correct title. Calendar view shows this week/month at a glance with status, trainer, enrolments. Courses at 0 days show "cancel" not "at risk".
 
 | # | Item | Size | Status |
 |---|------|------|--------|
 | 1 | Favicon — copy BAgile logo to portal, add to layout | XS | READY |
 | 2 | Page title — confirm/fix "b-agile portal" in browser tab | XS | READY |
 | 3 | Course at-risk configurable threshold — 0 days = cancel, ≤ N days = at risk (N = config, default 2) | M | READY |
+| 4 | Course calendar view — week/month toggle with schedule overview | L | READY |
+| 5 | Bug: private course title not saved (returns empty from API) | S | READY |
+
+### 4 — Course Calendar View
+
+**What it is:** A calendar-style view of the course schedule accessible from the courses page. Toggle between "this week" and "this month". Shows all courses (public + private) at a glance.
+
+**Each course tile shows:**
+- Course name + code
+- Date(s)
+- Trainer (Alex / Chris)
+- Enrolment count / minimum (e.g. "3/3" or "0/4")
+- Status badge (Healthy / At Risk / Cancelled / Confirmed)
+- Public / Private tag
+- Click → course detail page
+
+**Filters:** Trainer, status, public/private, date range
+**Colour coding:** Green = healthy/confirmed, Orange = at risk/monitor, Red = cancelled/critical, Blue = private
+
+**Why:** Currently the courses list is a flat table sorted by date. A calendar view gives instant visual overview of what's running, what's at risk, and where the gaps are. Especially useful during morning checks and scheduling decisions.
+
+**Files:**
+- `bagile-portal/app/(authenticated)/courses/calendar/page.tsx` (may already exist — enhance)
+- Reuse existing course monitoring data from API
+
+**AC:**
+- [ ] Week view shows 7 days with courses positioned by date
+- [ ] Month view shows full month grid
+- [ ] Private courses visible alongside public
+- [ ] Status badges match monitoring endpoint
+- [ ] Click any course → course detail page
+- [ ] Toggle between week/month persists
+
+### 5 — Bug: Private course title empty
+
+**What it is:** When creating a private course via `POST /api/course-schedules/private`, the title field returns empty even when provided in the request body. Discovered 2 Apr 2026 when creating Frazer-Nash Bristol PSM (course ID 735).
+
+**Files:**
+- `Bagile.Application/CourseSchedules/Commands/CreatePrivateCourse/` — check if title is mapped from request to entity
 
 ### 1 — Favicon
 

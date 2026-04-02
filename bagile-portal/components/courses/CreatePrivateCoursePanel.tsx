@@ -111,6 +111,10 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
   }
 
   async function handleSubmit(courseData: CreatePrivateCourseRequest, attendeeList: AttendeeInput[]) {
+    if (!apiKey) {
+      setError("API key not loaded — please refresh and try again");
+      return;
+    }
     if (!courseData.name || !courseData.startDate || !courseData.endDate) {
       setError("Name, start date, and end date are required");
       return;
@@ -219,7 +223,7 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
                 )}
               </div>
               <div className="flex gap-3 pt-3 border-t border-green-200">
-                <Button onClick={() => handleSubmit(jsonParsed.course, jsonParsed.attendees)} disabled={saving}>
+                <Button onClick={() => handleSubmit(jsonParsed.course, jsonParsed.attendees)} disabled={saving || !apiKey}>
                   {saving ? "Creating..." : `Create Course${jsonParsed.attendees.length > 0 ? ` + ${jsonParsed.attendees.length} Attendees` : ""}`}
                 </Button>
               </div>
@@ -407,7 +411,7 @@ export function CreatePrivateCoursePanel({ open, onClose, apiKey, onCreated }: P
 
           {/* Submit */}
           <div className="flex gap-3 pt-4 border-t border-gray-200">
-            <Button type="submit" disabled={saving}>
+            <Button type="submit" disabled={saving || !apiKey}>
               {saving ? "Creating..." : `Create Course${attendees.filter((a) => a.email).length > 0 ? ` + ${attendees.filter((a) => a.email).length} Attendees` : ""}`}
             </Button>
             <Button variant="secondary" type="button" onClick={onClose}>Cancel</Button>
