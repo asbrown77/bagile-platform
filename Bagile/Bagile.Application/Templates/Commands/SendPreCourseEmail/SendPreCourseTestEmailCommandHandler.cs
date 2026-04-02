@@ -1,6 +1,7 @@
 using Bagile.Application.Common.Interfaces;
 using Bagile.Domain.Entities;
 using Bagile.Domain.Repositories;
+using Bagile.Application.Templates;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -60,7 +61,7 @@ public class SendPreCourseTestEmailCommandHandler
         var subjectTemplate = template?.SubjectTemplate ?? "";
         var subject  = $"[TEST] {TemplateVariableSubstitution.Apply(subjectTemplate, variables)}";
         var bodyTemplate = request.HtmlBodyOverride ?? template!.HtmlBody;
-        var htmlBody = TemplateVariableSubstitution.Apply(bodyTemplate, variables);
+        var htmlBody = EmailTemplateWrapper.Wrap(TemplateVariableSubstitution.Apply(bodyTemplate, variables));
 
         // 7. Send to single recipient (no CC for test; reply-to = same recipient)
         _logger.LogInformation(

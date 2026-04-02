@@ -1,6 +1,7 @@
 using Bagile.Application.Common.Interfaces;
 using Bagile.Domain.Entities;
 using Bagile.Domain.Repositories;
+using Bagile.Application.Templates;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -74,7 +75,7 @@ public class SendPreCourseEmailCommandHandler
         var subject  = TemplateVariableSubstitution.Apply(subjectTemplate, variables);
 
         var bodyTemplate = request.HtmlBodyOverride ?? template!.HtmlBody;
-        var htmlBody = TemplateVariableSubstitution.Apply(bodyTemplate, variables);
+        var htmlBody = EmailTemplateWrapper.Wrap(TemplateVariableSubstitution.Apply(bodyTemplate, variables));
 
         // 7. Resolve trainer email for Reply-To (best-effort — fallback to null)
         var replyTo = await ResolveTrainerEmailAsync(course.TrainerName, ct);

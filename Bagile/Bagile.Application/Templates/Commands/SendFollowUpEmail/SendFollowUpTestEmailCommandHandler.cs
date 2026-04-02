@@ -1,5 +1,6 @@
 using Bagile.Application.Common.Interfaces;
 using Bagile.Domain.Repositories;
+using Bagile.Application.Templates;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -64,7 +65,7 @@ public class SendFollowUpTestEmailCommandHandler
         };
 
         var subject  = $"[TEST] {ApplyVariables(template.SubjectTemplate, variables)}";
-        var htmlBody = ApplyVariables(template.HtmlBody, variables);
+        var htmlBody = EmailTemplateWrapper.Wrap(ApplyVariables(template.HtmlBody, variables));
 
         // 6. Send to single test recipient (no CC; reply-to = same recipient)
         _logger.LogInformation(

@@ -1,6 +1,7 @@
 using Bagile.Application.Common.Interfaces;
 using Bagile.Domain.Entities;
 using Bagile.Domain.Repositories;
+using Bagile.Application.Templates;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -82,7 +83,7 @@ public class SendFollowUpEmailCommandHandler
         };
 
         var subject  = ApplyVariables(template.SubjectTemplate, variables);
-        var htmlBody = ApplyVariables(template.HtmlBody, variables);
+        var htmlBody = EmailTemplateWrapper.Wrap(ApplyVariables(template.HtmlBody, variables));
 
         // 6. Resolve trainer email for Reply-To (best-effort — fallback to null)
         var replyTo = await ResolveTrainerEmailAsync(course.TrainerName, ct);
