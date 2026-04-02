@@ -260,6 +260,17 @@ The current workaround requires updating 3 systems (FooEvents tickets, WooCommer
 | X3 | Add payment_status to orders | Daily operations | Blocked by X2 |
 | S1 | Stripe payment check endpoint (both accounts) | Daily operations | Ready to refine |
 
+### P2.5 — Course Contacts & Private Course Enhancements
+
+| # | Item | Size |
+|---|------|------|
+| 1 | Course Contacts section — store admin/logistics contacts separately from attendees (e.g. Debbie Gooch for invoicing, Stuart Pullin as organiser) | M |
+| 2 | Auto-detect organisation from email domain (e.g. @fnc.co.uk → Frazer-Nash Consultancy) | S |
+| 3 | Support Company as 4th column in paste attendee format | S |
+| 4 | Bulk edit Organisation/Country for attendees after adding | M |
+| 5 | Calendar: inline toggle between list and calendar on courses page (not separate page) | M |
+| 6 | Calendar: show course type name and format (Virtual/In-person) on tiles | S |
+
 ### P3 — Automation & Outreach
 
 | ID | Item | Who Needs It | Status |
@@ -277,6 +288,16 @@ The current workaround requires updating 3 systems (FooEvents tickets, WooCommer
 ---
 
 ## Completed
+
+### Sprint 17 — "Calendar Enhancement & Visual Identity" (Completed 2 Apr 2026)
+- [x] Fix cancelled courses showing as "Running" on dashboard
+- [x] Course colour system (scrum.org badge colours)
+- [x] Calendar tile redesign (left border, trainer circle, enrolments, multi-day)
+- [x] Trainer filter (AB/CB/Both)
+- [x] Dashboard 5-day week strip with navigation
+- [x] Cancelled courses toggle (hidden by default)
+- [x] Fix "d away" interpolation bug
+- [x] Fix "publish" status badge
 
 ### Sprint 14 (31 Mar 2026)
 - [x] Course detail: attendees with orders, country, revenue, cancel/transfer actions
