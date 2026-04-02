@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import { useApiKey } from "@/lib/hooks/useApiKey";
 import {
@@ -22,10 +22,102 @@ import { SendFollowUpPanel } from "@/components/courses/SendFollowUpPanel";
 import { EditAttendeeModal } from "@/components/courses/EditAttendeeModal";
 import { EditPrivateCoursePanel } from "@/components/courses/EditPrivateCoursePanel";
 import { CourseContactsSection } from "@/components/courses/CourseContactsSection";
-import { Download, Mail, Users, Calendar, User, UserPlus, Video, MapPin, FileText, ExternalLink, Send, Pencil, Trash2, Building2 } from "lucide-react";
+import { Download, Mail, Users, Calendar, User, UserPlus, Video, MapPin, FileText, ExternalLink, Send, Pencil, Trash2, Building2, ChevronDown } from "lucide-react";
 import Link from "next/link";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.bagile.co.uk";
+
+// ── Smart primary send action ────────────────────────────────────────────────
+// Returns which send action should be the primary button based on course state.
+type SendAction = "joining" | "follow-up" | "email-all";
+
+function derivePrimaryAction(course: CourseScheduleDetail): SendAction {
+  if (!course.startDate) return "email-all";
+  const start = new Date(course.startDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dayAfterTomorrow = new Date(today);
+  dayAfterTomorrow.setDate(today.getDate() + 2);
+
+  if (start > dayAfterTomorrow) return "joining";       // clearly in the future
+  if (start <= today) return "follow-up";               // today or past
+  return "joining";                                     // tomorrow — still pre-course
+}
+
+// ── Capacity progress bar ────────────────────────────────────────────────────
+function CapacityBar({ enrolled, capacity }: { enrolled: number; capacity: number }) {
+  const pct = capacity > 0 ? Math.min((enrolled / capacity) * 100, 100) : 0;
+  const colour = pct >= 75 ? "bg-green-500" : pct >= 50 ? "bg-amber-400" : "bg-red-500";
+  const remaining = Math.max(capacity - enrolled, 0);
+  return (
+    <div>
+      <div className="w-full bg-gray-200 rounded-full h-2 mb-1">
+        <div className={`${colour} h-2 rounded-full transition-all`} style={{ width: `${pct}%` }} />
+      </div>
+      <span className="text-xs text-gray-500">
+        {enrolled} / {capacity}{" "}
+        {remaining > 0 ? `(${remaining} place${remaining === 1 ? "" : "s"} remaining)` : "(full)"}
+      </span>
+    </div>
+  );
+}
+
+// ── Send dropdown ────────────────────────────────────────────────────────────
+interface SendDropdownProps {
+  onJoining: () => void;
+  onFollowUp: () => void;
+  onEmailAll: () => void;
+  disabled?: boolean;
+}
+
+function SendDropdown({ onJoining, onFollowUp, onEmailAll, disabled }: SendDropdownProps) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        disabled={disabled}
+        className="inline-flex items-center gap-1 px-2.5 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 disabled:opacity-40"
+        aria-haspopup="true"
+        aria-expanded={open}
+      >
+        Send <ChevronDown className="w-3.5 h-3.5" />
+      </button>
+      {open && (
+        <div className="absolute right-0 z-20 mt-1 w-48 bg-white border border-gray-200 rounded-md shadow-lg py-1 text-sm">
+          <button
+            onClick={() => { onJoining(); setOpen(false); }}
+            className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700"
+          >
+            Send Joining Details
+          </button>
+          <button
+            onClick={() => { onFollowUp(); setOpen(false); }}
+            className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700"
+          >
+            Send Follow-Up
+          </button>
+          <button
+            onClick={() => { onEmailAll(); setOpen(false); }}
+            className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700"
+          >
+            Email All
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function CourseDetail() {
   const apiKey = useApiKey();
@@ -129,24 +221,6 @@ export default function CourseDetail() {
     }
   }
 
-  const isPrivate = course?.type === "private";
-  const isVirtual = course?.formatType?.toLowerCase().includes("virtual");
-  const active = attendees.filter((a) => a.status === "active");
-  const inactive = attendees.filter((a) => a.status !== "active");
-  const orders = [...new Map(active.map((a) => [a.orderNumber, a])).values()].filter((a) => a.orderNumber);
-  const totalRevenue = orders.reduce((s, o) => s + (o.orderAmount || 0), 0);
-
-  // Over-capacity: attendees vs stated capacity
-  const isOverCapacity = isPrivate && course?.capacity != null && active.length > course.capacity;
-
-  const transferCount = (transfers?.totalTransfersIn ?? 0) + (transfers?.totalTransfersOut ?? 0);
-  const tabs = [
-    { id: "attendees", label: "Attendees", count: active.length },
-    ...(!isPrivate ? [{ id: "orders", label: "Orders", count: orders.length }] : []),
-    ...(transferCount > 0 ? [{ id: "transfers", label: "Transfers", count: transferCount }] : []),
-    ...(inactive.length > 0 ? [{ id: "history", label: "Transferred / Refunded", count: inactive.length }] : []),
-  ];
-
   // Build mailto with joining details
   function sendJoiningDetails() {
     const emails = active.map((a) => a.email).join(",");
@@ -174,7 +248,38 @@ export default function CourseDetail() {
     return after || null;
   }
 
+  const isPrivate = course?.type === "private";
+  const isVirtual = course?.formatType?.toLowerCase().includes("virtual");
+  const active = attendees.filter((a) => a.status === "active");
+  const inactive = attendees.filter((a) => a.status !== "active");
+  const orders = [...new Map(active.map((a) => [a.orderNumber, a])).values()].filter((a) => a.orderNumber);
+  const totalRevenue = orders.reduce((s, o) => s + (o.orderAmount || 0), 0);
+
+  // Over-capacity: attendees vs stated capacity
+  const isOverCapacity = isPrivate && course?.capacity != null && active.length > course.capacity;
+
+  const transferCount = (transfers?.totalTransfersIn ?? 0) + (transfers?.totalTransfersOut ?? 0);
+  const tabs = [
+    { id: "attendees", label: "Attendees", count: active.length },
+    ...(!isPrivate ? [{ id: "orders", label: "Orders", count: orders.length }] : []),
+    ...(transferCount > 0 ? [{ id: "transfers", label: "Transfers", count: transferCount }] : []),
+    ...(inactive.length > 0 ? [{ id: "history", label: "Transferred / Refunded", count: inactive.length }] : []),
+  ];
+
   const clientName = isPrivate ? parseClientFromTitle(course?.title) : null;
+  const primaryAction = course ? derivePrimaryAction(course) : null;
+  const hasAttendees = active.length > 0;
+  const hasSendTarget = course?.meetingUrl || course?.venueAddress;
+
+  // Label + handler for the smart primary send button
+  const primarySendLabel = primaryAction === "joining" ? "Send Joining Details"
+    : primaryAction === "follow-up" ? "Send Follow-Up"
+    : "Email All";
+  function handlePrimarySend() {
+    if (primaryAction === "joining") sendJoiningDetails();
+    else if (primaryAction === "follow-up") setShowSendFollowUp(true);
+    else emailAll();
+  }
 
   return (
     <>
@@ -231,154 +336,232 @@ export default function CourseDetail() {
         <Link href="/courses" className="text-sm text-brand-600 hover:text-brand-700">&larr; Courses</Link>
       </div>
 
-      <PageHeader
-        title={course?.title || `Course ${courseId}`}
-        subtitle={course?.courseCode}
-        actions={
-          <div className="flex gap-2 flex-wrap">
-            {isPrivate && (
-              <>
-                <Button variant="secondary" size="sm" onClick={() => setShowEditCourse(true)}>
-                  <Pencil className="w-3.5 h-3.5" /> Edit Course
-                </Button>
-                <Button size="sm" onClick={() => setShowAddAttendees(true)}>
-                  <UserPlus className="w-3.5 h-3.5" /> Add Attendees
-                </Button>
-              </>
-            )}
-            {active.length > 0 && (
-              <>
-                <Button variant="secondary" size="sm" onClick={downloadCsv}><Download className="w-3.5 h-3.5" /> Export CSV</Button>
-                <Button variant="secondary" size="sm" onClick={emailAll}><Mail className="w-3.5 h-3.5" /> Email All</Button>
-                {(course?.meetingUrl || course?.venueAddress) && (
-                  <Button variant="secondary" size="sm" onClick={sendJoiningDetails}>
-                    <Send className="w-3.5 h-3.5" /> Send Joining Details
-                  </Button>
-                )}
-                <Button
-                  size="sm"
-                  onClick={() => setShowSendFollowUp(true)}
-                  title={templateMissing ? `No template for ${course?.courseCode?.split("-")[0]?.toUpperCase()}` : "Send post-course follow-up email"}
-                >
-                  <Mail className="w-3.5 h-3.5" /> Send Follow-Up
-                </Button>
-              </>
+      {/* ── Page header — title + pencil edit icon (private only) ── */}
+      <div className="flex items-start gap-2 mb-1">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-semibold text-gray-900 truncate">
+              {course?.title || `Course ${courseId}`}
+            </h1>
+            {isPrivate && course && (
+              <button
+                onClick={() => setShowEditCourse(true)}
+                title="Edit course"
+                className="text-gray-400 hover:text-brand-600 flex-shrink-0"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
             )}
           </div>
-        }
-      />
+          {course?.courseCode && (
+            <p className="text-sm text-gray-500 mt-0.5">{course.courseCode}</p>
+          )}
+        </div>
+        {/* Status badges */}
+        <div className="flex items-center gap-2 flex-shrink-0 mt-1">
+          <Badge variant={isPrivate ? "warning" : "success"} dot>{isPrivate ? "Private" : "Public"}</Badge>
+          {course?.status && statusBadge(course.status)}
+        </div>
+      </div>
 
       {error && <AlertBanner variant="danger" onDismiss={() => setError("")}>{error}</AlertBanner>}
       {successMsg && <AlertBanner variant="success" onDismiss={() => setSuccessMsg("")}>{successMsg}</AlertBanner>}
 
-      {/* Course info header */}
+      {/* ── Two info cards: Details + Commercial/Enrolment ── */}
       {loading ? (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {[1, 2, 3, 4].map((i) => <SkeletonCard key={i} />)}
+        <div className="grid grid-cols-2 gap-4 mb-6 mt-4">
+          {[1, 2].map((i) => <SkeletonCard key={i} />)}
         </div>
       ) : course && (
-        <>
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-6">
-            <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-              <span className="flex items-center gap-1.5 text-gray-600">
-                <Calendar className="w-3.5 h-3.5 text-gray-400" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 mt-4">
+
+          {/* Left card — Details */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 space-y-2.5 text-sm">
+            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Details</h2>
+
+            <div className="flex items-start gap-2 text-gray-600">
+              <Calendar className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
+              <span>
                 {formatDate(course.startDate)}
                 {course.endDate && course.endDate !== course.startDate && ` — ${formatDate(course.endDate)}`}
               </span>
-              {course.trainerName && (
-                <span className="flex items-center gap-1.5 text-gray-600">
-                  <User className="w-3.5 h-3.5 text-gray-400" />
-                  {course.trainerName}
-                </span>
-              )}
-              <span className="flex items-center gap-1.5">
-                <Badge variant={isVirtual ? "info" : "neutral"} dot>{isVirtual ? "Virtual" : "In-person"}</Badge>
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Badge variant={isPrivate ? "warning" : "success"} dot>{isPrivate ? "Private" : "Public"}</Badge>
-              </span>
-              {course.status && statusBadge(course.status)}
-              {course.price && (
-                <span className="text-gray-600">
-                  {formatCurrency(course.price)} {isPrivate ? "total" : "per person"}
-                </span>
-              )}
-              {course.capacity != null && (
-                <span className={`font-medium ${isOverCapacity ? "text-blue-600" : "text-gray-500"}`}>
-                  Capacity: {isPrivate
-                    ? <>{active.length}/{course.capacity}{isOverCapacity && " (over — client approved)"}</>
-                    : course.capacity}
-                </span>
-              )}
-              {course.invoiceReference && (
-                <span className="flex items-center gap-1.5 text-gray-600">
-                  <FileText className="w-3.5 h-3.5 text-gray-400" />
-                  Invoice: {course.invoiceReference}
-                </span>
-              )}
-              {/* Client org derived from course title */}
-              {clientName && (
-                <span className="flex items-center gap-1.5 text-gray-600">
-                  <Building2 className="w-3.5 h-3.5 text-gray-400" />
-                  Client: {clientName}
-                </span>
-              )}
             </div>
 
-            {/* Meeting details (virtual) */}
-            {isVirtual && course.meetingUrl && (
-              <div className="mt-3 pt-3 border-t border-gray-100 flex flex-wrap gap-x-6 gap-y-2 text-sm">
-                <span className="flex items-center gap-1.5 text-gray-600">
-                  <Video className="w-3.5 h-3.5 text-blue-500" />
-                  <a href={course.meetingUrl} target="_blank" rel="noopener" className="text-brand-600 hover:underline">
-                    Join Meeting <ExternalLink className="w-3 h-3 inline" />
-                  </a>
-                </span>
-                {course.meetingId && (
-                  <span className="text-gray-500">ID: <span className="font-mono">{course.meetingId}</span></span>
-                )}
-                {course.meetingPasscode && (
-                  <span className="text-gray-500">Passcode: <span className="font-mono">{course.meetingPasscode}</span></span>
-                )}
+            {course.trainerName && (
+              <div className="flex items-center gap-2 text-gray-600">
+                <User className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                {course.trainerName}
               </div>
             )}
 
-            {/* Venue details (in-person) */}
+            <div className="flex items-center gap-2">
+              <Badge variant={isVirtual ? "info" : "neutral"} dot>{isVirtual ? "Virtual" : "In-person"}</Badge>
+            </div>
+
+            {/* Venue / meeting details */}
+            {isVirtual && course.meetingUrl && (
+              <div className="flex items-start gap-2 text-gray-600">
+                <Video className="w-3.5 h-3.5 text-blue-500 mt-0.5 flex-shrink-0" />
+                <div>
+                  <a href={course.meetingUrl} target="_blank" rel="noopener" className="text-brand-600 hover:underline">
+                    Join Meeting <ExternalLink className="w-3 h-3 inline" />
+                  </a>
+                  {course.meetingId && (
+                    <p className="text-xs text-gray-400 mt-0.5">ID: <span className="font-mono">{course.meetingId}</span>{course.meetingPasscode && ` · Passcode: ${course.meetingPasscode}`}</p>
+                  )}
+                </div>
+              </div>
+            )}
             {!isVirtual && course.venueAddress && (
-              <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-1.5 text-sm text-gray-600">
-                <MapPin className="w-3.5 h-3.5 text-amber-500" />
-                {course.venueAddress}
+              <div className="flex items-start gap-2 text-gray-600">
+                <MapPin className="w-3.5 h-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
+                <span>{course.venueAddress}</span>
+              </div>
+            )}
+
+            {/* Capacity */}
+            {course.capacity != null && (
+              <div className="pt-1">
+                {isPrivate ? (
+                  <span className={`font-medium ${isOverCapacity ? "text-blue-600" : "text-gray-500"}`}>
+                    Capacity: {active.length}/{course.capacity}
+                    {isOverCapacity && " (over — client approved)"}
+                  </span>
+                ) : (
+                  <CapacityBar enrolled={active.length} capacity={course.capacity} />
+                )}
               </div>
             )}
 
             {/* Notes */}
             {course.notes && (
-              <div className="mt-3 pt-3 border-t border-gray-100 text-sm text-gray-500">
+              <div className="pt-2 border-t border-gray-100 text-gray-500">
                 {course.notes}
               </div>
             )}
           </div>
 
-          {/* KPI cards — public courses only. Private courses skip the standalone
-              Attendees card as the count is already in the tab header and capacity
-              display, and a lone card wastes vertical space. */}
-          {!isPrivate && (
-            <div className="grid grid-cols-3 gap-4 mb-6">
-              <Card label="Attendees" value={active.length} icon={<Users className="w-4 h-4" />} />
-              <Card label="Orders" value={orders.length} />
-              <Card label="Revenue" value={formatCurrency(totalRevenue)} />
-            </div>
-          )}
+          {/* Right card — Commercial (private) or Enrolment (public) */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 space-y-2.5 text-sm">
+            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+              {isPrivate ? "Commercial" : "Enrolment"}
+            </h2>
 
-          {/* Course contacts — private courses only */}
-          {isPrivate && (
-            <CourseContactsSection apiKey={apiKey} courseId={courseId} />
-          )}
-        </>
+            {isPrivate ? (
+              <>
+                {course.price != null && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500">Total price</span>
+                    <span className="font-semibold text-gray-900">{formatCurrency(course.price)}</span>
+                  </div>
+                )}
+                {course.invoiceReference && (
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-gray-500">
+                      <FileText className="w-3.5 h-3.5 text-gray-400" /> Invoice
+                    </span>
+                    <span className="font-mono text-gray-700">{course.invoiceReference}</span>
+                  </div>
+                )}
+                {clientName && (
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-gray-500">
+                      <Building2 className="w-3.5 h-3.5 text-gray-400" /> Client
+                    </span>
+                    <span className="text-gray-700">{clientName}</span>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                {course.price != null && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500">Per person</span>
+                    <span className="font-semibold text-gray-900">{formatCurrency(course.price)}</span>
+                  </div>
+                )}
+                {orders.length > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500">Revenue</span>
+                    <span className="font-semibold text-gray-900">{formatCurrency(totalRevenue)}</span>
+                  </div>
+                )}
+                {course.capacity != null && (
+                  <div className="pt-2">
+                    <CapacityBar enrolled={active.length} capacity={course.capacity} />
+                  </div>
+                )}
+                {course.capacity == null && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500">Enrolled</span>
+                    <span className="font-semibold text-gray-900">{active.length}</span>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
       )}
 
-      <div className="mt-6">
-        <TabBar tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+      {/* ── KPI cards — public courses only ── */}
+      {!loading && course && !isPrivate && (
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <Card label="Attendees" value={active.length} icon={<Users className="w-4 h-4" />} />
+          <Card label="Orders" value={orders.length} />
+          <Card label="Revenue" value={formatCurrency(totalRevenue)} />
+        </div>
+      )}
+
+      {/* ── Actions: smart primary send + dropdown ── */}
+      {!loading && course && hasAttendees && (
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
+          <Button
+            size="sm"
+            onClick={handlePrimarySend}
+            title={
+              primaryAction === "follow-up" && templateMissing
+                ? `No template for ${course.courseCode?.split("-")[0]?.toUpperCase()}`
+                : undefined
+            }
+          >
+            <Send className="w-3.5 h-3.5" /> {primarySendLabel}
+          </Button>
+          <SendDropdown
+            onJoining={sendJoiningDetails}
+            onFollowUp={() => setShowSendFollowUp(true)}
+            onEmailAll={emailAll}
+            disabled={!hasSendTarget && primaryAction !== "follow-up" && primaryAction !== "email-all"}
+          />
+        </div>
+      )}
+
+      {/* ── Contacts (private only) — between actions and attendee table ── */}
+      {!loading && isPrivate && (
+        <CourseContactsSection apiKey={apiKey} courseId={courseId} />
+      )}
+
+      {/* ── Attendee table header with inline Add + Export ── */}
+      <div className="flex items-center justify-between mt-6 mb-2">
+        <div>
+          <TabBar tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+        </div>
+        {!loading && course && (
+          <div className="flex items-center gap-3">
+            {isPrivate && (
+              <Button size="sm" onClick={() => setShowAddAttendees(true)}>
+                <UserPlus className="w-3.5 h-3.5" /> Add Attendees
+              </Button>
+            )}
+            {hasAttendees && (
+              <button
+                onClick={downloadCsv}
+                className="text-xs text-gray-500 hover:text-brand-600 flex items-center gap-1"
+              >
+                <Download className="w-3 h-3" /> Export CSV
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Attendees tab */}
