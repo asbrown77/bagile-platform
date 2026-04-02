@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, useRef } from "react";
-import { ApiKey, CreateKeyResponse, loginWithGoogle, listKeys, createKey, revokeKey, PostCourseTemplate, listPostCourseTemplates, upsertPostCourseTemplate, Trainer, getTrainers, createTrainer, updateTrainer, deleteTrainer } from "@/lib/api";
+import { ApiKey, CreateKeyResponse, loginWithGoogle, listKeys, createKey, revokeKey, PostCourseTemplate, listPostCourseTemplates, upsertPostCourseTemplate, PreCourseTemplate, getPreCourseTemplates, updatePreCourseTemplate, Trainer, getTrainers, createTrainer, updateTrainer, deleteTrainer } from "@/lib/api";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { AlertBanner } from "@/components/ui/AlertBanner";
@@ -106,6 +106,7 @@ export default function Settings() {
         {/* Course thresholds, templates, and trainers are accessible without Google auth */}
         <CourseThresholds />
         <PostCourseTemplatesEditor />
+        <PreCourseTemplatesEditor />
         <TrainersEditor />
       </>
     );
@@ -277,6 +278,9 @@ export default function Settings() {
 
       {/* Post-Course Email Templates */}
       <PostCourseTemplatesEditor />
+
+      {/* Pre-Course Email Templates */}
+      <PreCourseTemplatesEditor />
 
       {/* Trainers */}
       <TrainersEditor />
@@ -615,6 +619,282 @@ function PostCourseTemplatesEditor() {
             <p className="text-xs text-gray-400 mt-1">
               Variables: <code>{"{{greeting}}"}</code>, <code>{"{{trainer_name}}"}</code>,{" "}
               <code>{"{{course_dates}}"}</code>, <code>{"{{delay_note}}"}</code>
+            </p>
+          </div>
+
+          {saveError && (
+            <AlertBanner variant="danger" onDismiss={() => setSaveError("")}>{saveError}</AlertBanner>
+          )}
+
+          <div className="flex items-center gap-3 pt-1">
+            <Button onClick={handleSave} disabled={saving}>
+              <Save className="w-4 h-4" />
+              {saving ? "Saving..." : "Save template"}
+            </Button>
+            <Button variant="secondary" onClick={() => setState({ view: "list" })}>
+              Cancel
+            </Button>
+            {saveSuccess && (
+              <span className="text-sm text-green-600 font-medium">Saved!</span>
+            )}
+          </div>
+
+          <div className="p-3 bg-gray-50 rounded-lg text-xs text-gray-500">
+            <strong>Last updated:</strong>{" "}
+            {new Date(state.template.updatedAt).toLocaleString("en-GB")}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Pre-Course Templates Editor ───────────────────────────
+
+type PreCourseEditorState =
+  | { view: "list" }
+  | { view: "edit"; template: PreCourseTemplate };
+
+function PreCourseTemplatesEditor() {
+  const [apiKey, setApiKey] = useState<string>("");
+  const [templates, setTemplates] = useState<PreCourseTemplate[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [state, setState] = useState<PreCourseEditorState>({ view: "list" });
+  const [editSubject, setEditSubject] = useState("");
+  const [editBody, setEditBody] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+
+  useEffect(() => {
+    setApiKey(localStorage.getItem("bagile_api_key") ?? "");
+  }, []);
+
+  const loadTemplates = useCallback(async () => {
+    if (!apiKey) return;
+    setLoading(true);
+    try {
+      const data = await getPreCourseTemplates(apiKey);
+      // Sort by courseType then format
+      setTemplates([...data].sort((a, b) =>
+        a.courseType.localeCompare(b.courseType) || a.format.localeCompare(b.format)
+      ));
+    } catch {
+      // silently skip — api key may not be set yet
+    } finally {
+      setLoading(false);
+    }
+  }, [apiKey]);
+
+  useEffect(() => { loadTemplates(); }, [loadTemplates]);
+
+  function openEdit(template: PreCourseTemplate) {
+    setEditSubject(template.subjectTemplate);
+    setEditBody(template.htmlBody);
+    setSaveError("");
+    setSaveSuccess(false);
+    setShowPreview(false);
+    setState({ view: "edit", template });
+  }
+
+  async function handleSave() {
+    if (state.view !== "edit") return;
+    setSaving(true);
+    setSaveError("");
+    setSaveSuccess(false);
+    try {
+      await updatePreCourseTemplate(apiKey, state.template.courseType, {
+        format: state.template.format,
+        subjectTemplate: editSubject,
+        htmlBody: editBody,
+      });
+      setSaveSuccess(true);
+      await loadTemplates();
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err: any) {
+      setSaveError(err.message ?? "Failed to save template");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mt-6">
+      <div className="px-5 py-3 border-b border-gray-200 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-indigo-50 rounded-lg">
+            <FileText className="w-5 h-5 text-indigo-600" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Pre-Course Email Templates</h2>
+            <p className="text-sm text-gray-500">Joining details sent before each course type</p>
+          </div>
+        </div>
+        {state.view === "edit" && (
+          <button
+            onClick={() => setState({ view: "list" })}
+            className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900"
+          >
+            <ChevronLeft className="w-4 h-4" /> Back to list
+          </button>
+        )}
+      </div>
+
+      {state.view === "list" && (
+        <div>
+          {loading && (
+            <div className="p-6 text-center text-sm text-gray-400">Loading templates...</div>
+          )}
+          {!loading && !apiKey && (
+            <div className="p-6 text-center text-sm text-gray-400">
+              Set your API key above to manage templates.
+            </div>
+          )}
+          {!loading && apiKey && templates.length === 0 && (
+            <EmptyState
+              icon={<FileText className="w-10 h-10" />}
+              title="No pre-course templates found"
+              description="Run the migration to seed pre-course templates, then reload."
+            />
+          )}
+          {!loading && templates.length > 0 && (
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Course Type</th>
+                  <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Format</th>
+                  <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Subject</th>
+                  <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Last Updated</th>
+                  <th className="px-4 py-2"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {templates.map((t) => (
+                  <tr key={`${t.courseType}-${t.format}`} className="border-t border-gray-100 hover:bg-gray-50">
+                    <td className="px-4 py-3 font-medium">{t.courseType}</td>
+                    <td className="px-4 py-3">
+                      <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${t.format === "Virtual" ? "bg-blue-50 text-blue-700" : "bg-amber-50 text-amber-700"}`}>
+                        {t.format}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">{t.subjectTemplate}</td>
+                    <td className="px-4 py-3 text-gray-400 hidden md:table-cell">
+                      {new Date(t.updatedAt).toLocaleDateString("en-GB", {
+                        day: "numeric", month: "short", year: "numeric",
+                      })}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        onClick={() => openEdit(t)}
+                        className="text-brand-600 hover:text-brand-700 text-xs font-medium"
+                      >
+                        Edit
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {state.view === "edit" && (
+        <div className="p-5 space-y-5">
+          <div className="flex gap-6">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 uppercase mb-1">
+                Course Type (read-only)
+              </label>
+              <div className="text-sm font-semibold text-gray-900">{state.template.courseType}</div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 uppercase mb-1">
+                Format (read-only)
+              </label>
+              <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${state.template.format === "Virtual" ? "bg-blue-50 text-blue-700" : "bg-amber-50 text-amber-700"}`}>
+                {state.template.format}
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Email Subject
+            </label>
+            <input
+              type="text"
+              value={editSubject}
+              onChange={(e) => setEditSubject(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Variables: <code>{"{{course_name}}"}</code>, <code>{"{{dates}}"}</code>
+            </p>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-sm font-medium text-gray-700">
+                HTML Body
+              </label>
+              <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setShowPreview(false)}
+                  className={`flex items-center gap-1 px-2.5 py-1 text-xs font-medium transition-colors
+                    ${!showPreview ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+                >
+                  <Code className="w-3 h-3" /> Source
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowPreview(true)}
+                  className={`flex items-center gap-1 px-2.5 py-1 text-xs font-medium border-l border-gray-200 transition-colors
+                    ${showPreview ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+                >
+                  <Eye className="w-3 h-3" /> Preview
+                </button>
+              </div>
+            </div>
+
+            {!showPreview ? (
+              <textarea
+                value={editBody}
+                onChange={(e) => setEditBody(e.target.value)}
+                rows={24}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                spellCheck={false}
+              />
+            ) : (
+              <div className="border border-gray-300 rounded-lg overflow-auto bg-white" style={{ minHeight: "24rem" }}>
+                {editBody.trim() ? (
+                  <iframe
+                    srcDoc={editBody}
+                    className="w-full border-0"
+                    style={{ minHeight: "24rem" }}
+                    title="Template preview"
+                    sandbox="allow-same-origin"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-48 text-sm text-gray-400">
+                    Nothing to preview — add some HTML in Source mode.
+                  </div>
+                )}
+              </div>
+            )}
+
+            <p className="text-xs text-gray-400 mt-1">
+              Variables:{" "}
+              <code>{"{{course_name}}"}</code>,{" "}
+              <code>{"{{dates}}"}</code>,{" "}
+              <code>{"{{times}}"}</code>,{" "}
+              <code>{"{{trainer_name}}"}</code>,{" "}
+              <code>{"{{venue_address}}"}</code>,{" "}
+              <code>{"{{zoom_url}}"}</code>,{" "}
+              <code>{"{{zoom_id}}"}</code>,{" "}
+              <code>{"{{zoom_passcode}}"}</code>
             </p>
           </div>
 
