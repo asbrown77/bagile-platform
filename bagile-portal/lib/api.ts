@@ -742,3 +742,43 @@ export async function updateStudent(
     body: payload,
   });
 }
+
+// ── Private Course Edit ───────────────────────────────────
+
+export interface UpdatePrivateCourseRequest {
+  name: string;
+  trainerName?: string;
+  startDate: string;
+  endDate: string;
+  capacity?: number;
+  price?: number;
+  invoiceReference?: string;
+  venueAddress?: string;
+  meetingUrl?: string;
+  meetingId?: string;
+  meetingPasscode?: string;
+  notes?: string;
+}
+
+export async function updatePrivateCourse(
+  apiKey: string,
+  courseId: number,
+  payload: UpdatePrivateCourseRequest,
+): Promise<CourseScheduleDetail> {
+  return apiRequest(`/api/course-schedules/${courseId}`, apiKey, {
+    method: "PUT",
+    body: payload,
+  });
+}
+
+export async function removePrivateAttendee(
+  apiKey: string,
+  courseId: number,
+  enrolmentId: number,
+): Promise<void> {
+  const res = await fetch(`${API_URL}/api/course-schedules/${courseId}/attendees/${enrolmentId}`, {
+    method: "DELETE",
+    headers: { "X-Api-Key": apiKey },
+  });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+}
