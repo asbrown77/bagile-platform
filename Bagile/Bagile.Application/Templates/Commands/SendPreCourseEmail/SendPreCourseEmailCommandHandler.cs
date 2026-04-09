@@ -277,44 +277,97 @@ public class SendPreCourseEmailCommandHandler
 </ul>"
     };
 
-    private static string BuildDefaultAgenda(string courseType) => courseType switch
+    // Renders agenda as a day-grouped table: Day header, then Morning/Afternoon rows.
+    // Uses inline styles for email client compatibility; orange labels match the info-box accent.
+    private static string BuildDefaultAgenda(string courseType)
     {
-        "PSM" or "PSMAI" => @"<p><strong>Day 1 AM:</strong> Introductions &amp; class agreements, Scrum Theory &amp; Empiricism<br>
-<strong>Day 1 PM:</strong> The Scrum Framework, Done &amp; Undone<br>
-<strong>Day 2 AM:</strong> Done &amp; Undone, Product Delivery with Scrum<br>
-<strong>Day 2 PM:</strong> People &amp; Teams, The Scrum Master, Closing</p>",
-        "PSPO" or "PSPOAI" => @"<p><strong>Day 1 AM:</strong> Introductions, Product Value, Product Backlog Management<br>
-<strong>Day 1 PM:</strong> Release Management, Product Backlog Refinement<br>
-<strong>Day 2 AM:</strong> Stakeholders &amp; Customers, Forecasting &amp; Reporting<br>
-<strong>Day 2 PM:</strong> Scaling, Product Owner in Practice, Closing</p>",
-        "PSK" => @"<p><strong>Day 1 AM:</strong> Introductions, Scrum Theory &amp; Flow, Kanban Practices<br>
-<strong>Day 1 PM:</strong> Flow Metrics, WIP Limits, Visualisation<br>
-<strong>Day 2 AM:</strong> Service Level Expectations, Continuous Improvement<br>
-<strong>Day 2 PM:</strong> Kanban with Scrum Events, Scaling Flow, Closing</p>",
-        "APS-SD" => @"<p><strong>Day 1 AM:</strong> Introductions, Agile &amp; Scrum Foundations, Development Team<br>
-<strong>Day 1 PM:</strong> Definition of Done, Technical Debt, Clean Code<br>
-<strong>Day 2 AM:</strong> Test-Driven Development, Pair/Mob Programming<br>
-<strong>Day 2 PM:</strong> Refactoring, CI/CD, Design Patterns<br>
-<strong>Day 3 AM:</strong> Sprint simulation, Emerging Architecture<br>
-<strong>Day 3 PM:</strong> Sprint simulation continued, Retrospective, Closing</p>",
-        "PAL-E" => @"<p><strong>Day 1 AM:</strong> Introductions, Why Agility, Complexity &amp; Cynefin<br>
-<strong>Day 1 PM:</strong> Agile Leadership, Organisational Design<br>
-<strong>Day 2 AM:</strong> Evidence-Based Management, Measuring Value<br>
-<strong>Day 2 PM:</strong> Leading Change, Coaching Leaders, Closing</p>",
-        "PSPO-A" => @"<p><strong>Day 1 AM:</strong> Introductions, Product Vision &amp; Strategy, Stakeholder Management<br>
-<strong>Day 1 PM:</strong> Product Backlog Management at Scale, Metrics &amp; Evidence, Closing</p>",
-        "PSM-A" => @"<p><strong>Day 1 AM:</strong> Introductions, Scrum Theory Deep Dive, Facilitation<br>
-<strong>Day 1 PM:</strong> Coaching Stances, Team Dynamics, Conflict<br>
-<strong>Day 2 AM:</strong> Organisational Design, Servant Leadership<br>
-<strong>Day 2 PM:</strong> Systems Thinking, Continuous Improvement, Closing</p>",
-        "PSFS" => @"<p><strong>Day 1 AM:</strong> Introductions, Facilitation Principles, Facilitation Skills<br>
-<strong>Day 1 PM:</strong> Facilitating Scrum Events, Practice Sessions, Closing</p>",
-        "PSU" => @"<p><strong>Day 1 AM:</strong> Introductions, UX and Scrum, Lean UX<br>
-<strong>Day 1 PM:</strong> User Research, Personas, Experiments<br>
-<strong>Day 2 AM:</strong> Dual-Track Development, UX in Sprint<br>
-<strong>Day 2 PM:</strong> Usability Testing, Stakeholder Alignment, Closing</p>",
-        "EBM" => @"<p><strong>Day 1 AM:</strong> Introductions, Why EBM, The Four Key Value Areas<br>
-<strong>Day 1 PM:</strong> Setting Goals, Forming Experiments, Measuring Outcomes, Closing</p>",
-        _ => @"<p>Your trainer will share the detailed agenda on the day.</p>"
-    };
+        var days = courseType switch
+        {
+            "PSM" or "PSMAI" => new[]
+            {
+                ("Day 1", "Introductions &amp; class agreements, Scrum Theory &amp; Empiricism",
+                          "The Scrum Framework, Done &amp; Undone"),
+                ("Day 2", "Done &amp; Undone, Product Delivery with Scrum",
+                          "People &amp; Teams, The Scrum Master, Closing"),
+            },
+            "PSPO" or "PSPOAI" => new[]
+            {
+                ("Day 1", "Introductions, Product Value, Product Backlog Management",
+                          "Release Management, Product Backlog Refinement"),
+                ("Day 2", "Stakeholders &amp; Customers, Forecasting &amp; Reporting",
+                          "Scaling, Product Owner in Practice, Closing"),
+            },
+            "PSK" => new[]
+            {
+                ("Day 1", "Introductions, Scrum Theory &amp; Flow, Kanban Practices",
+                          "Flow Metrics, WIP Limits, Visualisation"),
+                ("Day 2", "Service Level Expectations, Continuous Improvement",
+                          "Kanban with Scrum Events, Scaling Flow, Closing"),
+            },
+            "APS-SD" => new[]
+            {
+                ("Day 1", "Introductions, Agile &amp; Scrum Foundations, Development Team",
+                          "Definition of Done, Technical Debt, Clean Code"),
+                ("Day 2", "Test-Driven Development, Pair/Mob Programming",
+                          "Refactoring, CI/CD, Design Patterns"),
+                ("Day 3", "Sprint simulation, Emerging Architecture",
+                          "Sprint simulation continued, Retrospective, Closing"),
+            },
+            "PAL-E" => new[]
+            {
+                ("Day 1", "Introductions, Why Agility, Complexity &amp; Cynefin",
+                          "Agile Leadership, Organisational Design"),
+                ("Day 2", "Evidence-Based Management, Measuring Value",
+                          "Leading Change, Coaching Leaders, Closing"),
+            },
+            "PSPO-A" => new[]
+            {
+                ("Day 1", "Introductions, Product Vision &amp; Strategy, Stakeholder Management",
+                          "Product Backlog Management at Scale, Metrics &amp; Evidence, Closing"),
+            },
+            "PSM-A" => new[]
+            {
+                ("Day 1", "Introductions, Scrum Theory Deep Dive, Facilitation",
+                          "Coaching Stances, Team Dynamics, Conflict"),
+                ("Day 2", "Organisational Design, Servant Leadership",
+                          "Systems Thinking, Continuous Improvement, Closing"),
+            },
+            "PSFS" => new[]
+            {
+                ("Day 1", "Introductions, Facilitation Principles, Facilitation Skills",
+                          "Facilitating Scrum Events, Practice Sessions, Closing"),
+            },
+            "PSU" => new[]
+            {
+                ("Day 1", "Introductions, UX and Scrum, Lean UX",
+                          "User Research, Personas, Experiments"),
+                ("Day 2", "Dual-Track Development, UX in Sprint",
+                          "Usability Testing, Stakeholder Alignment, Closing"),
+            },
+            "EBM" => new[]
+            {
+                ("Day 1", "Introductions, Why EBM, The Four Key Value Areas",
+                          "Setting Goals, Forming Experiments, Measuring Outcomes, Closing"),
+            },
+            _ => null
+        };
+
+        if (days is null)
+            return "<p>Your trainer will share the detailed agenda on the day.</p>";
+
+        const string tdLabel = @"style=""padding:3px 14px 3px 0;color:#F7741C;font-weight:600;white-space:nowrap;vertical-align:top;font-size:13px;""";
+        const string tdValue = @"style=""padding:3px 0;font-size:14px;vertical-align:top;""";
+        const string tdDay   = @"style=""padding:10px 0 4px;font-weight:600;color:#003366;font-size:14px;border-bottom:1px solid #e8e8e8;"" colspan=""2""";
+
+        var sb = new System.Text.StringBuilder();
+        sb.Append(@"<table width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""border-collapse:collapse;"">");
+        foreach (var (day, morning, afternoon) in days)
+        {
+            sb.Append($"<tr><td {tdDay}>{day}</td></tr>");
+            sb.Append($"<tr><td {tdLabel}>Morning</td><td {tdValue}>{morning}</td></tr>");
+            sb.Append($"<tr><td {tdLabel}>Afternoon</td><td {tdValue}>{afternoon}</td></tr>");
+        }
+        sb.Append("</table>");
+        return sb.ToString();
+    }
 }

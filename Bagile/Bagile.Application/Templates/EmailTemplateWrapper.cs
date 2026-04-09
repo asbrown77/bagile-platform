@@ -131,10 +131,10 @@ public static class EmailTemplateWrapper
         .footer p {{
             margin: 0 0 6px;
             font-size: 13px;
-            color: #7a9cc0;
+            color: rgba(255,255,255,0.65);
         }}
         .footer a {{
-            color: #F7741C;
+            color: #ffffff;
             text-decoration: none;
             font-size: 13px;
         }}
@@ -142,8 +142,8 @@ public static class EmailTemplateWrapper
             text-decoration: underline;
         }}
         .footer .divider {{
-            color: #3a5a80;
-            margin: 0 6px;
+            color: rgba(255,255,255,0.25);
+            margin: 0 8px;
         }}
         .footer .links {{
             margin-top: 10px;
