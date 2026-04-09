@@ -16,17 +16,24 @@ function toCamel(obj: any): any {
   return obj;
 }
 
-async function apiRequest<T>(path: string, apiKey: string, options?: { method?: string; body?: unknown }): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
-    method: options?.method || "GET",
-    headers: {
-      "X-Api-Key": apiKey,
-      ...(options?.body ? { "Content-Type": "application/json" } : {}),
-    },
-    ...(options?.body ? { body: JSON.stringify(options.body) } : {}),
-  });
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
-  return res.json();
+async function apiRequest<T>(path: string, apiKey: string, options?: { method?: string; body?: unknown; timeoutMs?: number }): Promise<T> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), options?.timeoutMs ?? 15000);
+  try {
+    const res = await fetch(`${API_URL}${path}`, {
+      method: options?.method || "GET",
+      headers: {
+        "X-Api-Key": apiKey,
+        ...(options?.body ? { "Content-Type": "application/json" } : {}),
+      },
+      ...(options?.body ? { body: JSON.stringify(options.body) } : {}),
+      signal: controller.signal,
+    });
+    if (!res.ok) throw new Error(`API error: ${res.status}`);
+    return res.json();
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 // ── Portal Auth (JWT) ────────────────────────────────────

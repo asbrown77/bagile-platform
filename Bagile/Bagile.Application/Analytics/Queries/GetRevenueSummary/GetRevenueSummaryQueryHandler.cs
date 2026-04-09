@@ -21,11 +21,20 @@ public class GetRevenueSummaryQueryHandler
         int year = request.Year ?? DateTime.UtcNow.Year;
         int previousYear = year - 1;
 
-        var currentYearMonthly = (await _queries.GetMonthlyRevenueAsync(year, ct)).ToList();
-        var previousYearMonthly = (await _queries.GetMonthlyRevenueAsync(previousYear, ct)).ToList();
-        var byCourseType = await _queries.GetRevenueByCourseTypeAsync(year, ct);
-        var bySource = await _queries.GetRevenueBySourceAsync(year, ct);
-        var byCountry = await _queries.GetRevenueByCountryAsync(year, ct);
+        var currentYearMonthlyTask  = _queries.GetMonthlyRevenueAsync(year, ct);
+        var previousYearMonthlyTask = _queries.GetMonthlyRevenueAsync(previousYear, ct);
+        var byCourseTypeTask        = _queries.GetRevenueByCourseTypeAsync(year, ct);
+        var bySourceTask            = _queries.GetRevenueBySourceAsync(year, ct);
+        var byCountryTask           = _queries.GetRevenueByCountryAsync(year, ct);
+
+        await Task.WhenAll(currentYearMonthlyTask, previousYearMonthlyTask,
+                           byCourseTypeTask, bySourceTask, byCountryTask);
+
+        var currentYearMonthly  = (await currentYearMonthlyTask).ToList();
+        var previousYearMonthly = (await previousYearMonthlyTask).ToList();
+        var byCourseType        = await byCourseTypeTask;
+        var bySource            = await bySourceTask;
+        var byCountry           = await byCountryTask;
 
         int currentMonth = DateTime.UtcNow.Month;
 
