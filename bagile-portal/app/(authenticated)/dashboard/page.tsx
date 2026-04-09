@@ -279,31 +279,31 @@ export default function Dashboard() {
       window.location.replace("/login");
       return;
     }
-    loadData();
+    loadData(apiKey);
   }, [apiKey]);
 
-  async function loadData() {
+  async function loadData(key: string) {
     try {
       // Single aggregated call — falls back to parallel if endpoint unavailable
       try {
-        const overview = await getDashboardOverview(apiKey);
+        const overview = await getDashboardOverview(key);
         setCourses((overview.monitoring || []).filter((c) =>
           c.title && c.title !== "N/A" && c.courseCode && c.courseCode !== ""
         ));
         setRevenue(overview.revenue);
         if (overview.pendingTransferCount > 0) {
-          setPendingTransfers(await getPendingTransfers(apiKey));
+          setPendingTransfers(await getPendingTransfers(key));
         }
       } catch {
         const [monitoring, rev] = await Promise.all([
-          getMonitoring(apiKey, 60),
-          getRevenueSummary(apiKey),
+          getMonitoring(key, 60),
+          getRevenueSummary(key),
         ]);
         setCourses(monitoring.filter((c) =>
           c.title && c.title !== "N/A" && c.courseCode && c.courseCode !== ""
         ));
         setRevenue(rev);
-        try { setPendingTransfers(await getPendingTransfers(apiKey)); } catch {}
+        try { setPendingTransfers(await getPendingTransfers(key)); } catch {}
       }
     } catch {
       setError("Failed to load dashboard data");
@@ -472,7 +472,7 @@ export default function Dashboard() {
 
       {/* Week strip — loads independently so it doesn't block the dashboard */}
       {apiKey && (
-        <WeekStrip apiKey={apiKey} showCancelled={showCancelled} />
+        <WeekStrip apiKey={apiKey as string} showCancelled={showCancelled} />
       )}
 
       {/* Upcoming courses table */}

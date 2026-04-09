@@ -20,7 +20,8 @@ export default function CoursesPage() {
 }
 
 function CoursesContent() {
-  const apiKey = useApiKey();
+  const apiKeyOrNull = useApiKey();
+  const apiKey = apiKeyOrNull ?? ""; // narrow to string; "" means still loading/missing
   const searchParams = useSearchParams();
 
   const urlType = searchParams.get("type") || "";
@@ -96,7 +97,7 @@ function CoursesContent() {
     } finally {
       setLoading(false);
     }
-  }, [apiKey, dateRange, visibilityFilter, pageView, calRange]);
+  }, [apiKeyOrNull, dateRange, visibilityFilter, pageView, calRange]);
 
   useEffect(() => { loadCourses(); }, [loadCourses]);
 

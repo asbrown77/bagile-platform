@@ -50,7 +50,8 @@ function CapacityBar({ enrolled, capacity }: { enrolled: number; capacity: numbe
 }
 
 export default function CourseDetail() {
-  const apiKey = useApiKey();
+  const apiKeyOrNull = useApiKey();
+  const apiKey = apiKeyOrNull ?? ""; // narrow to string; "" means still loading/missing
   const params = useParams();
   const courseId = Number(params.id);
   const [course, setCourse] = useState<CourseScheduleDetail | null>(null);
@@ -74,7 +75,7 @@ export default function CourseDetail() {
   useEffect(() => {
     if (!apiKey || !courseId) return;
     loadData();
-  }, [apiKey, courseId]);
+  }, [apiKeyOrNull, courseId]);
 
   async function loadData() {
     setEmailLogLoading(true);
