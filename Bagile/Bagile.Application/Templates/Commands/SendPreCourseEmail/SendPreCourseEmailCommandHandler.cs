@@ -214,9 +214,19 @@ public class SendPreCourseEmailCommandHandler
     private static string BuildCourseDates(DateTime? start, DateTime? end)
     {
         if (start is null) return "";
-        var startStr = start.Value.ToString("d MMMM yyyy");
-        if (end is null || end.Value.Date == start.Value.Date) return startStr;
-        return $"{startStr} – {end.Value:d MMMM yyyy}";
+        if (end is null || end.Value.Date == start.Value.Date)
+            return start.Value.ToString("d MMMM yyyy");
+
+        // Same month + year: "27–28 April 2026"
+        if (start.Value.Month == end.Value.Month && start.Value.Year == end.Value.Year)
+            return $"{start.Value.Day}–{end.Value.Day} {start.Value:MMMM yyyy}";
+
+        // Same year, different months: "27 April – 3 May 2026"
+        if (start.Value.Year == end.Value.Year)
+            return $"{start.Value:d MMMM} – {end.Value:d MMMM yyyy}";
+
+        // Different years: "30 December 2025 – 2 January 2026"
+        return $"{start.Value:d MMMM yyyy} – {end.Value:d MMMM yyyy}";
     }
 
     private static string BuildDefaultSelfStudy(string courseType) => courseType switch
