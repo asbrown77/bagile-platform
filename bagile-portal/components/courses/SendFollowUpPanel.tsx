@@ -11,10 +11,11 @@ import {
   Trainer,
   sendFollowUpEmail,
   sendFollowUpTestEmail,
+  getFollowUpEmailPreview,
   getTrainers,
   SendFollowUpResult,
 } from "@/lib/api";
-import { FlaskConical, Mail, Users } from "lucide-react";
+import { Code, Eye, FlaskConical, Mail, Users } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -36,6 +37,9 @@ export function SendFollowUpPanel({
   templateMissing,
 }: Props) {
   const [editedBody, setEditedBody] = useState("");
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
   const [sending, setSending] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
   const [result, setResult] = useState<SendFollowUpResult | null>(null);
@@ -52,6 +56,8 @@ export function SendFollowUpPanel({
   useEffect(() => {
     if (!open || !apiKey) return;
     setEditedBody(template?.htmlBody ?? "");
+    setShowPreview(false);
+    setPreviewHtml(null);
     setResult(null);
     setTestSentTo(null);
     setError("");
@@ -180,19 +186,74 @@ export function SendFollowUpPanel({
             </AlertBanner>
           )}
 
-          {/* Editable body */}
+          {/* Editable body with Source/Preview toggle */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {templateMissing ? "Email body" : "Email body (pre-filled, editable)"}
-            </label>
-            <textarea
-              value={editedBody}
-              onChange={(e) => setEditedBody(e.target.value)}
-              rows={20}
-              placeholder={templateMissing ? "Compose your follow-up email here..." : ""}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
-              spellCheck={false}
-            />
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-sm font-medium text-gray-700">
+                {templateMissing ? "Email body" : "Email body (pre-filled, editable)"}
+              </label>
+              {(template || editedBody) && (
+                <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setShowPreview(false)}
+                    className={`flex items-center gap-1 px-2.5 py-1 text-xs font-medium transition-colors
+                      ${!showPreview ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+                  >
+                    <Code className="w-3 h-3" /> Source
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setShowPreview(true);
+                      setLoadingPreview(true);
+                      setPreviewHtml(null);
+                      try {
+                        const html = await getFollowUpEmailPreview(apiKey, course.id, editedBody || undefined);
+                        setPreviewHtml(html);
+                      } catch {
+                        setPreviewHtml("<p style='padding:16px;color:red'>Failed to load preview</p>");
+                      } finally {
+                        setLoadingPreview(false);
+                      }
+                    }}
+                    className={`flex items-center gap-1 px-2.5 py-1 text-xs font-medium border-l border-gray-200 transition-colors
+                      ${showPreview ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+                  >
+                    <Eye className="w-3 h-3" /> {loadingPreview ? "Loading…" : "Preview"}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {!showPreview ? (
+              <textarea
+                value={editedBody}
+                onChange={(e) => setEditedBody(e.target.value)}
+                rows={20}
+                placeholder={templateMissing ? "Compose your follow-up email here..." : ""}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                spellCheck={false}
+              />
+            ) : (
+              <div className="border border-gray-300 rounded-lg overflow-hidden bg-white" style={{ minHeight: "24rem" }}>
+                {loadingPreview ? (
+                  <div className="flex items-center justify-center h-48 text-sm text-gray-400">Loading preview…</div>
+                ) : previewHtml ? (
+                  <iframe
+                    srcDoc={previewHtml}
+                    className="w-full border-0"
+                    style={{ minHeight: "24rem", height: "600px" }}
+                    title="Email preview"
+                    sandbox="allow-same-origin"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-48 text-sm text-gray-400">
+                    Nothing to preview.
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Send actions */}

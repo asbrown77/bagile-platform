@@ -66,6 +66,31 @@ public class TemplatesController : ControllerBase
     }
 
     /// <summary>
+    /// Returns the full rendered HTML for a follow-up email — variables substituted and
+    /// wrapped in the b-agile branded template. Used to power the portal's live preview.
+    /// </summary>
+    [HttpPost("post-course/preview/{courseScheduleId:long}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Preview(
+        long courseScheduleId,
+        [FromBody] PreviewFollowUpRequest? request,
+        CancellationToken ct)
+    {
+        try
+        {
+            var html = await _mediator.Send(new GetFollowUpEmailPreviewQuery
+            {
+                CourseScheduleId = courseScheduleId,
+                HtmlBody         = request?.HtmlBody,
+            }, ct);
+            return Content(html, "text/html");
+        }
+        catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+        catch (InvalidOperationException ex) { return BadRequest(new { error = ex.Message }); }
+    }
+
+    /// <summary>
     /// Send a test follow-up email to the trainer only (no attendees).
     /// Prefixes the subject with [TEST] so the trainer can verify rendering before the real send.
     /// The recipient is derived from the course's trainerName, or can be overridden in the request body.
@@ -145,6 +170,11 @@ public record UpsertTemplateRequest
 {
     public string SubjectTemplate { get; init; } = "";
     public string HtmlBody { get; init; } = "";
+}
+
+public record PreviewFollowUpRequest
+{
+    public string? HtmlBody { get; init; }
 }
 
 public record SendFollowUpRequest

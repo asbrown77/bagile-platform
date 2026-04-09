@@ -734,6 +734,23 @@ export interface SendFollowUpResult {
   recipientEmails: string[];
 }
 
+export async function getFollowUpEmailPreview(
+  apiKey: string,
+  courseScheduleId: number,
+  htmlBody?: string,
+): Promise<string> {
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), 15000);
+  const res = await fetch(`${API_URL}/api/templates/post-course/preview/${courseScheduleId}`, {
+    method: "POST",
+    headers: { "X-Api-Key": apiKey, "Content-Type": "application/json" },
+    body: JSON.stringify({ htmlBody: htmlBody ?? null }),
+    signal: controller.signal,
+  });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.text();
+}
+
 export async function sendFollowUpEmail(
   apiKey: string,
   courseScheduleId: number,
