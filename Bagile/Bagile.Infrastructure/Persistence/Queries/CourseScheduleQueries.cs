@@ -132,6 +132,7 @@ public class CourseScheduleQueries : ICourseScheduleQueries
                 cs.client_organisation_id AS ClientOrganisationId,
                 org.name AS ClientOrganisationName,
                 org.acronym AS ClientOrganisationAcronym,
+                org.contact_email AS ClientOrganisationContactEmail,
                 cs.invoice_reference AS InvoiceReference,
                 cs.meeting_url AS MeetingUrl,
                 cs.meeting_id AS MeetingId,
@@ -153,7 +154,7 @@ public class CourseScheduleQueries : ICourseScheduleQueries
             GROUP BY cs.id, cs.sku, cs.name, cs.start_date, cs.end_date, cs.format_type,
                      cs.is_public, cs.status, cs.capacity, cs.price, cs.trainer_name,
                      cs.source_system, cs.source_product_id, cs.last_synced,
-                     cs.client_organisation_id, org.name, org.acronym,
+                     cs.client_organisation_id, org.name, org.acronym, org.contact_email,
                      cs.invoice_reference, cs.meeting_url, cs.meeting_id,
                      cs.meeting_passcode, cs.venue_address, cs.notes;";
 

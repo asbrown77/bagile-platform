@@ -85,11 +85,13 @@ public class SendPreCourseEmailCommandHandler
             "Sending pre-course email for course {CourseId} ({CourseCode}) format={Format} to {Count} recipients",
             request.CourseScheduleId, course.CourseCode, format, toEmails.Count);
 
+        var ccList = BuildCcList(toEmails, course.ClientOrganisationContactEmail);
+
         await _emailService.SendAsync(
             to:       toEmails,
             subject:  subject,
             htmlBody: htmlBody,
-            cc:       [CcAddress],
+            cc:       ccList,
             replyTo:  replyTo,
             ct:       ct);
 
@@ -210,6 +212,21 @@ public class SendPreCourseEmailCommandHandler
         "EBM"              => "Evidence-Based Management",
         _                  => courseType
     };
+
+    /// <summary>
+    /// Builds the CC list: always includes info@bagile.co.uk.
+    /// Adds the org contact email only if it is not already in the recipient list.
+    /// </summary>
+    private static List<string> BuildCcList(List<string> toEmails, string? orgContactEmail)
+    {
+        var cc = new List<string> { CcAddress };
+        if (!string.IsNullOrWhiteSpace(orgContactEmail) &&
+            !toEmails.Contains(orgContactEmail, StringComparer.OrdinalIgnoreCase))
+        {
+            cc.Add(orgContactEmail);
+        }
+        return cc;
+    }
 
     private static string BuildCourseDates(DateTime? start, DateTime? end)
     {
