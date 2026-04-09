@@ -180,19 +180,36 @@ public class SendPreCourseEmailCommandHandler
 
         return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            ["course_name"]    = course.Title,
-            ["dates"]          = dates,
-            ["times"]          = DefaultTimes,
-            ["trainer_name"]   = course.TrainerName ?? "Alex and Chris",
-            ["venue_address"]  = course.VenueAddress ?? "",
-            ["zoom_url"]       = course.MeetingUrl ?? "",
-            ["zoom_id"]        = course.MeetingId ?? "",
-            ["zoom_passcode"]  = course.MeetingPasscode ?? "",
-            ["client_name"]    = clientName,
-            ["self_study"]     = selfStudy,
-            ["agenda"]         = agenda,
+            ["course_name"]      = course.Title,
+            ["course_full_name"] = CourseFullName(courseType),
+            ["dates"]            = dates,
+            ["times"]            = DefaultTimes,
+            ["trainer_name"]     = course.TrainerName ?? "Alex and Chris",
+            ["venue_address"]    = course.VenueAddress ?? "",
+            ["zoom_url"]         = course.MeetingUrl ?? "",
+            ["zoom_id"]          = course.MeetingId ?? "",
+            ["zoom_passcode"]    = course.MeetingPasscode ?? "",
+            ["client_name"]      = clientName,
+            ["self_study"]       = selfStudy,
+            ["agenda"]           = agenda,
         };
     }
+
+    private static string CourseFullName(string courseType) => courseType switch
+    {
+        "PSM" or "PSMAI"   => "Professional Scrum Master",
+        "PSPO" or "PSPOAI" => "Professional Scrum Product Owner",
+        "PSK"              => "Professional Scrum with Kanban",
+        "APS-SD"           => "Applying Professional Scrum for Software Development",
+        "PAL-E"            => "Professional Agile Leadership Essentials",
+        "PAL-EBM"          => "Professional Agile Leadership with EBM",
+        "PSPO-A"           => "Professional Scrum Product Owner Advanced",
+        "PSM-A"            => "Professional Scrum Master Advanced",
+        "PSFS"             => "Professional Scrum Facilitation Skills",
+        "PSU"              => "Professional Scrum with User Experience",
+        "EBM"              => "Evidence-Based Management",
+        _                  => courseType
+    };
 
     private static string BuildCourseDates(DateTime? start, DateTime? end)
     {
