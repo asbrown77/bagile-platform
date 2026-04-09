@@ -14,7 +14,7 @@ public class TrainerRepository : ITrainerRepository
     public async Task<IEnumerable<Trainer>> GetAllActiveAsync(CancellationToken ct = default)
     {
         const string sql = @"
-            SELECT id, name, email, phone, is_active AS IsActive, created_at AS CreatedAt
+            SELECT id, name, email, phone, is_active AS IsActive, scrum_org_profile_url AS ScrumOrgProfileUrl, created_at AS CreatedAt
             FROM bagile.trainers
             WHERE is_active = TRUE
             ORDER BY name;";
@@ -26,7 +26,7 @@ public class TrainerRepository : ITrainerRepository
     public async Task<Trainer?> GetByIdAsync(int id, CancellationToken ct = default)
     {
         const string sql = @"
-            SELECT id, name, email, phone, is_active AS IsActive, created_at AS CreatedAt
+            SELECT id, name, email, phone, is_active AS IsActive, scrum_org_profile_url AS ScrumOrgProfileUrl, created_at AS CreatedAt
             FROM bagile.trainers
             WHERE id = @id;";
 

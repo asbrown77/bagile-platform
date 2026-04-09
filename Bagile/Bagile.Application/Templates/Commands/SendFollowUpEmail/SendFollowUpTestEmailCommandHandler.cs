@@ -51,18 +51,22 @@ public class SendFollowUpTestEmailCommandHandler
         var recipientEmail = await ResolveRecipientAsync(request.RecipientEmail, course.TrainerName, ct);
 
         // 5. Build variable map with placeholder attendee data so the template renders sensibly
-        var courseDates = BuildCourseDates(course.StartDate, course.EndDate);
-        var trainerName = course.TrainerName ?? "Alex and Chris";
+        var courseDates  = BuildCourseDates(course.StartDate, course.EndDate);
+        var trainerName  = course.TrainerName ?? "Alex and Chris";
+        var allTrainers  = await _trainerRepo.GetAllActiveAsync(ct);
+        var trainerEntry = allTrainers.FirstOrDefault(t =>
+            string.Equals(t.Name.Trim(), trainerName.Trim(), StringComparison.OrdinalIgnoreCase));
 
         var variables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            ["greeting"]     = "Hi [TEST]",
-            ["trainer_name"] = trainerName,
-            ["course_dates"] = courseDates,
-            ["delay_note"]   = "",
-            ["course_title"] = course.Title,
-            ["course_code"]  = course.CourseCode,
-            ["course_type"]  = courseType,
+            ["greeting"]            = "Hi [TEST]",
+            ["trainer_name"]        = trainerName,
+            ["trainer_profile_url"] = trainerEntry?.ScrumOrgProfileUrl ?? "https://www.scrum.org/trainers",
+            ["course_dates"]        = courseDates,
+            ["delay_note"]          = "",
+            ["course_title"]        = course.Title,
+            ["course_code"]         = course.CourseCode,
+            ["course_type"]         = courseType,
         };
 
         var subjectTemplate = template?.SubjectTemplate ?? "";

@@ -65,19 +65,21 @@ public class SendFollowUpEmailCommandHandler
         var toEmails = attendees.Select(a => a.Email).Distinct().ToList();
 
         // 5. Build variable map and populate template
-        var courseDates = BuildCourseDates(course.StartDate, course.EndDate);
-        var trainerName = course.TrainerName ?? "Alex and Chris";
-        var greeting    = BuildGreeting(attendees.Select(a => a.FirstName).ToList());
+        var courseDates  = BuildCourseDates(course.StartDate, course.EndDate);
+        var trainerName  = course.TrainerName ?? "Alex and Chris";
+        var greeting     = BuildGreeting(attendees.Select(a => a.FirstName).ToList());
+        var trainerEntry = await ResolveTrainerAsync(course.TrainerName, ct);
 
         var variables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            ["greeting"]     = greeting,
-            ["trainer_name"] = trainerName,
-            ["course_dates"] = courseDates,
-            ["delay_note"]   = "",
-            ["course_title"] = course.Title,
-            ["course_code"]  = course.CourseCode,
-            ["course_type"]  = courseType,
+            ["greeting"]              = greeting,
+            ["trainer_name"]          = trainerName,
+            ["trainer_profile_url"]   = trainerEntry?.ScrumOrgProfileUrl ?? "https://www.scrum.org/trainers",
+            ["course_dates"]          = courseDates,
+            ["delay_note"]            = "",
+            ["course_title"]          = course.Title,
+            ["course_code"]           = course.CourseCode,
+            ["course_type"]           = courseType,
         };
 
         var subjectTemplate = template?.SubjectTemplate ?? "";
@@ -85,8 +87,8 @@ public class SendFollowUpEmailCommandHandler
         var bodyTemplate = request.HtmlBodyOverride ?? template!.HtmlBody;
         var htmlBody = EmailTemplateWrapper.Wrap(ApplyVariables(bodyTemplate, variables));
 
-        // 6. Resolve trainer email for Reply-To (best-effort — fallback to null)
-        var replyTo = await ResolveTrainerEmailAsync(course.TrainerName, ct);
+        // 6. Trainer email for Reply-To
+        var replyTo = trainerEntry?.Email;
 
         // 7. Send
         _logger.LogInformation(
@@ -132,19 +134,12 @@ public class SendFollowUpEmailCommandHandler
 
     // ── Helpers ──────────────────────────────────────────────
 
-    /// <summary>
-    /// Resolve the trainer's email from the trainers table by matching on trainer name.
-    /// Returns null if not found — callers treat null as "no Reply-To header".
-    /// </summary>
-    private async Task<string?> ResolveTrainerEmailAsync(string? trainerName, CancellationToken ct)
+    private async Task<Domain.Entities.Trainer?> ResolveTrainerAsync(string? trainerName, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(trainerName)) return null;
-
         var trainers = await _trainerRepo.GetAllActiveAsync(ct);
-        var match = trainers.FirstOrDefault(t =>
+        return trainers.FirstOrDefault(t =>
             string.Equals(t.Name.Trim(), trainerName.Trim(), StringComparison.OrdinalIgnoreCase));
-
-        return match?.Email;
     }
 
     private static string DeriveCourseType(string courseCode)
