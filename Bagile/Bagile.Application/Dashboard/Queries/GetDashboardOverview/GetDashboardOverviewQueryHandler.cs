@@ -27,7 +27,8 @@ public class GetDashboardOverviewQueryHandler
         GetDashboardOverviewQuery request,
         CancellationToken ct)
     {
-        var revenueTask = _mediator.Send(new GetRevenueSummaryQuery(), ct);
+        // IncludeBreakdowns=false skips the expensive correlated subqueries
+        var revenueTask = _mediator.Send(new GetRevenueSummaryQuery(IncludeBreakdowns: false), ct);
         var monitoringTask = _courseQueries.GetCourseMonitoringDataAsync(60, ct);
         var transfersTask = _transferQueries.GetPendingTransfersAsync(ct);
 

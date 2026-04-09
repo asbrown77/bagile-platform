@@ -3,4 +3,4 @@ using MediatR;
 
 namespace Bagile.Application.Analytics.Queries.GetRevenueSummary;
 
-public record GetRevenueSummaryQuery(int? Year = null) : IRequest<RevenueSummaryDto>;
+public record GetRevenueSummaryQuery(int? Year = null, bool IncludeBreakdowns = true) : IRequest<RevenueSummaryDto>;
