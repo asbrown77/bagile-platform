@@ -10,6 +10,7 @@ import {
   PreCourseTemplate,
   Trainer,
   getPreCourseTemplate,
+  getPreCourseEmailPreview,
   getTrainers,
   sendPreCourseEmail,
   sendPreCourseTestEmail,
@@ -88,6 +89,9 @@ export function SendJoiningDetailsPanel({ open, onClose, apiKey, course, attende
   const [sentCount, setSentCount] = useState<number | null>(null);
   const [testSentTo, setTestSentTo] = useState<string | null>(null);
   const [error, setError] = useState("");
+
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
 
   // Test recipient selection
   const [trainers, setTrainers] = useState<Trainer[]>([]);
@@ -288,11 +292,23 @@ export function SendJoiningDetailsPanel({ open, onClose, apiKey, course, attende
                   </button>
                   <button
                     type="button"
-                    onClick={() => setShowPreview(true)}
+                    onClick={async () => {
+                      setShowPreview(true);
+                      setLoadingPreview(true);
+                      setPreviewHtml(null);
+                      try {
+                        const html = await getPreCourseEmailPreview(apiKey, course.id, editedBody || undefined);
+                        setPreviewHtml(html);
+                      } catch {
+                        setPreviewHtml("<p style='padding:16px;color:red'>Failed to load preview</p>");
+                      } finally {
+                        setLoadingPreview(false);
+                      }
+                    }}
                     className={`flex items-center gap-1 px-2.5 py-1 text-xs font-medium border-l border-gray-200 transition-colors
                       ${showPreview ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
                   >
-                    <Eye className="w-3 h-3" /> Preview
+                    <Eye className="w-3 h-3" /> {loadingPreview ? "Loading…" : "Preview"}
                   </button>
                 </div>
               )}
@@ -312,12 +328,14 @@ export function SendJoiningDetailsPanel({ open, onClose, apiKey, course, attende
                 spellCheck={false}
               />
             ) : (
-              <div className="border border-gray-300 rounded-lg overflow-auto bg-white" style={{ minHeight: "20rem" }}>
-                {editedBody.trim() ? (
+              <div className="border border-gray-300 rounded-lg overflow-hidden bg-white" style={{ minHeight: "24rem" }}>
+                {loadingPreview ? (
+                  <div className="flex items-center justify-center h-48 text-sm text-gray-400">Loading preview…</div>
+                ) : previewHtml ? (
                   <iframe
-                    srcDoc={editedBody}
+                    srcDoc={previewHtml}
                     className="w-full border-0"
-                    style={{ minHeight: "20rem" }}
+                    style={{ minHeight: "24rem", height: "600px" }}
                     title="Email preview"
                     sandbox="allow-same-origin"
                   />

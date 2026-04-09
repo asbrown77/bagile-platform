@@ -3,6 +3,7 @@ using Bagile.Application.Templates.Commands.UpsertPreCourseTemplate;
 using Bagile.Application.Templates.Queries;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Bagile.Api.Controllers;
 
@@ -78,6 +79,40 @@ public class PreCourseTemplatesController : ControllerBase
 
         var result = await _mediator.Send(command, ct);
         return Ok(result);
+    }
+
+    /// <summary>
+    /// Returns the full rendered HTML for a pre-course email — with all variables substituted
+    /// and wrapped in the b-agile branded template. Used to power the portal's live preview.
+    /// Pass htmlBody to preview edited content; omit it to preview the stored template.
+    /// </summary>
+    [HttpPost("pre-course/preview/{courseScheduleId:long}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Preview(
+        long courseScheduleId,
+        [FromBody] PreviewPreCourseRequest? request,
+        CancellationToken ct)
+    {
+        try
+        {
+            var html = await _mediator.Send(new GetPreCourseEmailPreviewQuery
+            {
+                CourseScheduleId = courseScheduleId,
+                HtmlBody         = request?.HtmlBody,
+                FormatOverride   = request?.FormatOverride,
+            }, ct);
+
+            return Content(html, "text/html");
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
     }
 
     /// <summary>
@@ -165,6 +200,12 @@ public record UpsertPreCourseTemplateRequest
     public string? Format { get; init; }
     public string SubjectTemplate { get; init; } = "";
     public string HtmlBody { get; init; } = "";
+}
+
+public record PreviewPreCourseRequest
+{
+    public string? HtmlBody { get; init; }
+    public string? FormatOverride { get; init; }
 }
 
 public record SendPreCourseRequest

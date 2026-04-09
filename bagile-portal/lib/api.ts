@@ -959,6 +959,23 @@ export async function updatePreCourseTemplate(
   return apiRequest(`/api/templates/pre-course/${courseType}`, apiKey, { method: "PUT", body: data });
 }
 
+export async function getPreCourseEmailPreview(
+  apiKey: string,
+  courseScheduleId: number,
+  htmlBody?: string,
+): Promise<string> {
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), 15000);
+  const res = await fetch(`${API_URL}/api/templates/pre-course/preview/${courseScheduleId}`, {
+    method: "POST",
+    headers: { "X-Api-Key": apiKey, "Content-Type": "application/json" },
+    body: JSON.stringify({ htmlBody: htmlBody ?? null }),
+    signal: controller.signal,
+  });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.text();
+}
+
 export async function sendPreCourseEmail(
   apiKey: string,
   courseScheduleId: number,
