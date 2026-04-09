@@ -31,10 +31,18 @@ public class WooCourseImporter : IImporter<WooProductDto>
 
         DateTime? Parse(string? s) => DateTime.TryParse(s, out var d) ? d : null;
 
+        // WooCommerce auto-sets courses back to "draft" after their date passes.
+        // Treat past drafts as completed so our DB reflects reality.
+        var resolvedStatus = product.Status == "draft"
+            && Parse(meta?.GetValueOrDefault("end_date") ?? meta?.GetValueOrDefault("start_date")) is DateTime endOrStart
+            && endOrStart.Date < DateTime.UtcNow.Date
+                ? "completed"
+                : product.Status;
+
         var course = new CourseSchedule
         {
             Name = product.Name,
-            Status = product.Status,
+            Status = resolvedStatus,
             StartDate = Parse(meta?.GetValueOrDefault("start_date")),
             EndDate = Parse(meta?.GetValueOrDefault("end_date")),
             Capacity = product.StockQuantity,
