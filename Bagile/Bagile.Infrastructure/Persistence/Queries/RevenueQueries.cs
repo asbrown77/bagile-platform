@@ -42,17 +42,21 @@ public class RevenueQueries : IRevenueQueries
         int year, CancellationToken ct = default)
     {
         var sql = @"
-            WITH enrolment_share AS (
+            WITH order_active_counts AS (
+                SELECT order_id, COUNT(*) AS active_count
+                FROM bagile.enrolments
+                WHERE status != 'cancelled'
+                GROUP BY order_id
+            ),
+            enrolment_share AS (
                 SELECT
                     e.id AS enrolment_id,
                     e.order_id,
                     e.course_schedule_id,
-                    o.net_total / NULLIF(
-                        (SELECT COUNT(*) FROM bagile.enrolments e2
-                         WHERE e2.order_id = o.id AND e2.status != 'cancelled'), 0
-                    ) AS share
+                    o.net_total / NULLIF(oac.active_count, 0) AS share
                 FROM bagile.enrolments e
                 JOIN bagile.orders o ON e.order_id = o.id
+                JOIN order_active_counts oac ON oac.order_id = e.order_id
                 WHERE EXTRACT(YEAR FROM o.order_date) = @year
                   AND o.status NOT IN ('cancelled', 'refunded', 'failed')
                   AND e.status != 'cancelled'
@@ -116,17 +120,21 @@ public class RevenueQueries : IRevenueQueries
         int year, CancellationToken ct = default)
     {
         var sql = @"
-            WITH enrolment_share AS (
+            WITH order_active_counts AS (
+                SELECT order_id, COUNT(*) AS active_count
+                FROM bagile.enrolments
+                WHERE status != 'cancelled'
+                GROUP BY order_id
+            ),
+            enrolment_share AS (
                 SELECT
                     e.id AS enrolment_id,
                     e.order_id,
                     e.course_schedule_id,
-                    o.net_total / NULLIF(
-                        (SELECT COUNT(*) FROM bagile.enrolments e2
-                         WHERE e2.order_id = o.id AND e2.status != 'cancelled'), 0
-                    ) AS share
+                    o.net_total / NULLIF(oac.active_count, 0) AS share
                 FROM bagile.enrolments e
                 JOIN bagile.orders o ON e.order_id = o.id
+                JOIN order_active_counts oac ON oac.order_id = e.order_id
                 WHERE EXTRACT(YEAR FROM o.order_date) = @year
                   AND o.status NOT IN ('cancelled', 'refunded', 'failed')
                   AND e.status != 'cancelled'
@@ -149,17 +157,21 @@ public class RevenueQueries : IRevenueQueries
         int year, CancellationToken ct = default)
     {
         var sql = @"
-            WITH enrolment_share AS (
+            WITH order_active_counts AS (
+                SELECT order_id, COUNT(*) AS active_count
+                FROM bagile.enrolments
+                WHERE status != 'cancelled'
+                GROUP BY order_id
+            ),
+            enrolment_share AS (
                 SELECT
                     e.id AS enrolment_id,
                     e.order_id,
                     e.student_id,
-                    o.net_total / NULLIF(
-                        (SELECT COUNT(*) FROM bagile.enrolments e2
-                         WHERE e2.order_id = o.id AND e2.status != 'cancelled'), 0
-                    ) AS share
+                    o.net_total / NULLIF(oac.active_count, 0) AS share
                 FROM bagile.enrolments e
                 JOIN bagile.orders o ON e.order_id = o.id
+                JOIN order_active_counts oac ON oac.order_id = e.order_id
                 WHERE EXTRACT(YEAR FROM o.order_date) = @year
                   AND o.status NOT IN ('cancelled', 'refunded', 'failed')
                   AND e.status != 'cancelled'
