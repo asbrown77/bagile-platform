@@ -219,7 +219,7 @@ export function CalendarView({
       const start = (c.startDate || "").split("T")[0];
       const end = (c.endDate || c.startDate || "").split("T")[0];
       if (dateStr < start || dateStr > end) return false;
-      if (!showCancelled && c.status === "cancelled") return false;
+      if (!showCancelled && getCourseDisplayStatus(c) === "cancelled") return false;
       if (trainerFilter !== "all") {
         if (trainerInitials(c.trainerName) !== trainerFilter) return false;
       }
