@@ -15,13 +15,15 @@ public static class EmailTemplateWrapper
 <head>
     <meta charset=""utf-8"">
     <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
-    <title>BAgile</title>
+    <title>b-agile</title>
+    <link href=""https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600&display=swap"" rel=""stylesheet"">
     <style>
         body {{
             margin: 0; padding: 0;
-            font-family: Arial, Helvetica, sans-serif;
+            font-family: 'Montserrat', Arial, Helvetica, sans-serif;
             font-size: 15px;
-            color: #2d2d2d;
+            font-weight: 300;
+            color: #212121;
             line-height: 1.65;
             background-color: #eef0f3;
         }}
@@ -39,33 +41,31 @@ public static class EmailTemplateWrapper
 
         /* ── Header ── */
         .header {{
-            background-color: #1a2332;
+            background-color: #003366;
             padding: 24px 36px;
             text-align: center;
         }}
+        .header img {{
+            display: block;
+            margin: 0 auto;
+            max-width: 160px;
+            height: auto;
+        }}
+        /* Fallback wordmark shown if logo fails to load */
         .header-wordmark {{
-            display: inline-block;
-            font-size: 26px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
+            display: none;
+            font-family: 'Montserrat', Arial, sans-serif;
+            font-size: 24px;
+            font-weight: 600;
             color: #ffffff;
-            font-family: Arial, Helvetica, sans-serif;
+            letter-spacing: -0.5px;
         }}
-        .header-wordmark span {{
-            color: #e8792b;
-        }}
-        .header-tagline {{
-            font-size: 11px;
-            color: #8a9bb0;
-            letter-spacing: 1.5px;
-            text-transform: uppercase;
-            margin-top: 4px;
-        }}
+        .header-wordmark .dot {{ color: #F7741C; }}
 
-        /* ── Orange accent bar under header ── */
+        /* ── Blue accent bar under header ── */
         .accent-bar {{
             height: 4px;
-            background: linear-gradient(90deg, #e8792b 0%, #f5a623 100%);
+            background-color: #007BFF;
         }}
 
         /* ── Body content ── */
@@ -76,19 +76,22 @@ public static class EmailTemplateWrapper
             margin: 0 0 14px;
         }}
         .content h2 {{
-            font-size: 18px;
-            color: #1a2332;
-            margin: 28px 0 6px;
+            font-family: 'Montserrat', Arial, sans-serif;
+            font-size: 17px;
+            font-weight: 600;
+            color: #003366;
+            margin: 28px 0 8px;
             padding-bottom: 6px;
-            border-bottom: 2px solid #e8792b;
+            border-bottom: 2px solid #007BFF;
         }}
         .content h3 {{
             font-size: 15px;
-            color: #1a2332;
+            font-weight: 600;
+            color: #003366;
             margin: 20px 0 6px;
         }}
         .content a {{
-            color: #e8792b;
+            color: #007BFF;
             text-decoration: none;
         }}
         .content a:hover {{
@@ -102,35 +105,36 @@ public static class EmailTemplateWrapper
             margin-bottom: 6px;
         }}
 
-        /* ── Course info box ── */
+        /* ── Course info box (orange left border matches ticket email style) ── */
         .info-box {{
             background-color: #f7f8fa;
-            border-left: 4px solid #e8792b;
+            border-left: 4px solid #F7741C;
             border-radius: 0 4px 4px 0;
             padding: 14px 18px;
             margin: 0 0 22px;
             font-size: 14px;
-            line-height: 1.8;
+            line-height: 1.9;
         }}
         .info-box strong {{
-            color: #1a2332;
+            color: #003366;
+            font-weight: 600;
             display: inline-block;
-            min-width: 52px;
+            min-width: 88px;
         }}
 
         /* ── Footer ── */
         .footer {{
-            background-color: #1a2332;
+            background-color: #003366;
             padding: 22px 36px;
             text-align: center;
         }}
         .footer p {{
             margin: 0 0 6px;
             font-size: 13px;
-            color: #8a9bb0;
+            color: #7a9cc0;
         }}
         .footer a {{
-            color: #e8792b;
+            color: #F7741C;
             text-decoration: none;
             font-size: 13px;
         }}
@@ -138,7 +142,7 @@ public static class EmailTemplateWrapper
             text-decoration: underline;
         }}
         .footer .divider {{
-            color: #3d4f66;
+            color: #3a5a80;
             margin: 0 6px;
         }}
         .footer .links {{
@@ -153,10 +157,13 @@ public static class EmailTemplateWrapper
 <div class=""outer"">
     <div class=""wrapper"">
 
-        <!-- Header -->
+        <!-- Header with b-agile logo -->
         <div class=""header"">
-            <div class=""header-wordmark"">B<span>A</span>gile</div>
-            <div class=""header-tagline"">Professional Scrum Training</div>
+            <img src=""https://www.bagile.co.uk/wp-content/uploads/2023/07/bagile-logo-white-01.svg""
+                 alt=""b-agile""
+                 width=""160""
+                 onerror=""this.style.display='none';this.nextElementSibling.style.display='block'"" />
+            <div class=""header-wordmark"">b<span class=""dot"">·</span>agile</div>
         </div>
         <div class=""accent-bar""></div>
 
@@ -172,7 +179,7 @@ public static class EmailTemplateWrapper
                 <span class=""divider"">|</span>
                 <a href=""https://www.bagile.co.uk"">www.bagile.co.uk</a>
                 <span class=""divider"">|</span>
-                <span style=""color:#8a9bb0"">+44 20 4552 9823</span>
+                <span style=""color:#7a9cc0"">+44 20 4552 9823</span>
             </p>
             <p class=""links"">
                 <a href=""https://www.linkedin.com/company/bagile"">LinkedIn</a>

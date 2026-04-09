@@ -4,7 +4,7 @@
 --   • Use {{course_full_name}} for heading (e.g. "Professional Scrum Master") instead of {{course_name}} ("PSM - Frazer-Nash (Bristol)")
 --   • info-box div for course details (styled via wrapper CSS)
 --   • <h2> section headers (styled with orange bottom border via wrapper CSS)
---   • BAgile branding (not b-agile)
+--   • b-agile branding (not b-agile)
 --   • DO UPDATE so existing templates in production are refreshed
 --
 -- Available variables:
@@ -36,7 +36,7 @@ INSERT INTO bagile.pre_course_templates (course_type, format, subject_template, 
 <strong>Venue</strong>&ensp;{{venue_address}}
 </div>
 
-<p>Welcome to your Scrum.org {{course_full_name}} class with BAgile.</p>
+<p>Welcome to your Scrum.org {{course_full_name}} class with b-agile.</p>
 
 <p>Please aim to arrive around 10 minutes before the start so we can get settled and begin on time.
 Your trainer will be available after the session each day if you have questions or want to chat further.</p>
@@ -51,7 +51,7 @@ Your trainer will be available after the session each day if you have questions 
 
 <p>See you soon,<br>
 {{trainer_name}}<br>
-BAgile</p>'
+b-agile</p>'
 ) ON CONFLICT (course_type, format) DO UPDATE
     SET subject_template = EXCLUDED.subject_template,
         html_body        = EXCLUDED.html_body;
@@ -69,7 +69,7 @@ INSERT INTO bagile.pre_course_templates (course_type, format, subject_template, 
 <strong>Passcode</strong>&ensp;{{zoom_passcode}}
 </div>
 
-<p>Welcome to your Scrum.org {{course_full_name}} class with BAgile.</p>
+<p>Welcome to your Scrum.org {{course_full_name}} class with b-agile.</p>
 
 <p>The course runs online via Zoom. Please join a few minutes early so we can get settled and begin on time.
 Your trainer will be available after the session each day if you have questions or want to chat further.</p>
@@ -84,7 +84,7 @@ Your trainer will be available after the session each day if you have questions 
 
 <p>See you soon,<br>
 {{trainer_name}}<br>
-BAgile</p>'
+b-agile</p>'
 ) ON CONFLICT (course_type, format) DO UPDATE
     SET subject_template = EXCLUDED.subject_template,
         html_body        = EXCLUDED.html_body;
@@ -104,7 +104,7 @@ INSERT INTO bagile.pre_course_templates (course_type, format, subject_template, 
 <strong>Venue</strong>&ensp;{{venue_address}}
 </div>
 
-<p>Welcome to your Scrum.org {{course_full_name}} class with BAgile.</p>
+<p>Welcome to your Scrum.org {{course_full_name}} class with b-agile.</p>
 
 <p>Please aim to arrive around 10 minutes before the start so we can get settled and begin on time.
 Your trainer will be available after the session each day if you have questions or want to chat further.</p>
@@ -119,7 +119,7 @@ Your trainer will be available after the session each day if you have questions 
 
 <p>See you soon,<br>
 {{trainer_name}}<br>
-BAgile</p>'
+b-agile</p>'
 ) ON CONFLICT (course_type, format) DO UPDATE
     SET subject_template = EXCLUDED.subject_template,
         html_body        = EXCLUDED.html_body;
@@ -137,7 +137,7 @@ INSERT INTO bagile.pre_course_templates (course_type, format, subject_template, 
 <strong>Passcode</strong>&ensp;{{zoom_passcode}}
 </div>
 
-<p>Welcome to your Scrum.org {{course_full_name}} class with BAgile.</p>
+<p>Welcome to your Scrum.org {{course_full_name}} class with b-agile.</p>
 
 <p>The course runs online via Zoom. Please join a few minutes early so we can get settled and begin on time.
 Your trainer will be available after the session each day if you have questions or want to chat further.</p>
@@ -152,7 +152,7 @@ Your trainer will be available after the session each day if you have questions 
 
 <p>See you soon,<br>
 {{trainer_name}}<br>
-BAgile</p>'
+b-agile</p>'
 ) ON CONFLICT (course_type, format) DO UPDATE
     SET subject_template = EXCLUDED.subject_template,
         html_body        = EXCLUDED.html_body;
@@ -172,7 +172,7 @@ INSERT INTO bagile.pre_course_templates (course_type, format, subject_template, 
 <strong>Venue</strong>&ensp;{{venue_address}}
 </div>
 
-<p>Welcome to your Scrum.org {{course_full_name}} class with BAgile.</p>
+<p>Welcome to your Scrum.org {{course_full_name}} class with b-agile.</p>
 
 <p>Please aim to arrive around 10 minutes before the start so we can get settled and begin on time.
 Your trainer will be available after the session each day if you have questions or want to chat further.</p>
@@ -187,7 +187,7 @@ Your trainer will be available after the session each day if you have questions 
 
 <p>See you soon,<br>
 {{trainer_name}}<br>
-BAgile</p>'
+b-agile</p>'
 ) ON CONFLICT (course_type, format) DO UPDATE
     SET subject_template = EXCLUDED.subject_template,
         html_body        = EXCLUDED.html_body;
@@ -205,7 +205,7 @@ INSERT INTO bagile.pre_course_templates (course_type, format, subject_template, 
 <strong>Passcode</strong>&ensp;{{zoom_passcode}}
 </div>
 
-<p>Welcome to your Scrum.org {{course_full_name}} class with BAgile.</p>
+<p>Welcome to your Scrum.org {{course_full_name}} class with b-agile.</p>
 
 <p>The course runs online via Zoom. Please join a few minutes early so we can get settled and begin on time.
 Your trainer will be available after the session each day if you have questions or want to chat further.</p>
@@ -220,7 +220,7 @@ Your trainer will be available after the session each day if you have questions 
 
 <p>See you soon,<br>
 {{trainer_name}}<br>
-BAgile</p>'
+b-agile</p>'
 ) ON CONFLICT (course_type, format) DO UPDATE
     SET subject_template = EXCLUDED.subject_template,
         html_body        = EXCLUDED.html_body;
@@ -240,7 +240,7 @@ INSERT INTO bagile.pre_course_templates (course_type, format, subject_template, 
 <strong>Venue</strong>&ensp;{{venue_address}}
 </div>
 
-<p>Welcome to your Scrum.org {{course_full_name}} class with BAgile.</p>
+<p>Welcome to your Scrum.org {{course_full_name}} class with b-agile.</p>
 
 <p>This is a 3-day hands-on course. Please aim to arrive around 10 minutes before the start on Day 1.
 Bring your laptop if you plan to code during exercises — no specific language is required.
@@ -256,7 +256,7 @@ Your trainer will be available after each session if you have questions.</p>
 
 <p>See you soon,<br>
 {{trainer_name}}<br>
-BAgile</p>'
+b-agile</p>'
 ) ON CONFLICT (course_type, format) DO UPDATE
     SET subject_template = EXCLUDED.subject_template,
         html_body        = EXCLUDED.html_body;
@@ -274,7 +274,7 @@ INSERT INTO bagile.pre_course_templates (course_type, format, subject_template, 
 <strong>Passcode</strong>&ensp;{{zoom_passcode}}
 </div>
 
-<p>Welcome to your Scrum.org {{course_full_name}} class with BAgile.</p>
+<p>Welcome to your Scrum.org {{course_full_name}} class with b-agile.</p>
 
 <p>This is a 3-day hands-on course running online via Zoom. Please join a few minutes early on Day 1.
 Bring your laptop if you plan to code during exercises — no specific language is required.</p>
@@ -289,7 +289,7 @@ Bring your laptop if you plan to code during exercises — no specific language 
 
 <p>See you soon,<br>
 {{trainer_name}}<br>
-BAgile</p>'
+b-agile</p>'
 ) ON CONFLICT (course_type, format) DO UPDATE
     SET subject_template = EXCLUDED.subject_template,
         html_body        = EXCLUDED.html_body;
@@ -309,7 +309,7 @@ INSERT INTO bagile.pre_course_templates (course_type, format, subject_template, 
 <strong>Venue</strong>&ensp;{{venue_address}}
 </div>
 
-<p>Welcome to your Scrum.org {{course_full_name}} class with BAgile.</p>
+<p>Welcome to your Scrum.org {{course_full_name}} class with b-agile.</p>
 
 <p>Please aim to arrive around 10 minutes before the start so we can get settled and begin on time.
 Your trainer will be available after the session each day if you have questions or want to chat further.</p>
@@ -324,7 +324,7 @@ Your trainer will be available after the session each day if you have questions 
 
 <p>See you soon,<br>
 {{trainer_name}}<br>
-BAgile</p>'
+b-agile</p>'
 ) ON CONFLICT (course_type, format) DO UPDATE
     SET subject_template = EXCLUDED.subject_template,
         html_body        = EXCLUDED.html_body;
@@ -342,7 +342,7 @@ INSERT INTO bagile.pre_course_templates (course_type, format, subject_template, 
 <strong>Passcode</strong>&ensp;{{zoom_passcode}}
 </div>
 
-<p>Welcome to your Scrum.org {{course_full_name}} class with BAgile.</p>
+<p>Welcome to your Scrum.org {{course_full_name}} class with b-agile.</p>
 
 <p>The course runs online via Zoom. Please join a few minutes early so we can get settled and begin on time.
 Your trainer will be available after the session each day if you have questions or want to chat further.</p>
@@ -357,7 +357,7 @@ Your trainer will be available after the session each day if you have questions 
 
 <p>See you soon,<br>
 {{trainer_name}}<br>
-BAgile</p>'
+b-agile</p>'
 ) ON CONFLICT (course_type, format) DO UPDATE
     SET subject_template = EXCLUDED.subject_template,
         html_body        = EXCLUDED.html_body;
@@ -377,7 +377,7 @@ INSERT INTO bagile.pre_course_templates (course_type, format, subject_template, 
 <strong>Venue</strong>&ensp;{{venue_address}}
 </div>
 
-<p>Welcome to your Scrum.org {{course_full_name}} class with BAgile.</p>
+<p>Welcome to your Scrum.org {{course_full_name}} class with b-agile.</p>
 
 <p>This advanced 1-day course builds on PSPO foundations — we will go deep into product strategy
 and stakeholder complexity. Please aim to arrive around 10 minutes before the start.</p>
@@ -392,7 +392,7 @@ and stakeholder complexity. Please aim to arrive around 10 minutes before the st
 
 <p>See you soon,<br>
 {{trainer_name}}<br>
-BAgile</p>'
+b-agile</p>'
 ) ON CONFLICT (course_type, format) DO UPDATE
     SET subject_template = EXCLUDED.subject_template,
         html_body        = EXCLUDED.html_body;
@@ -410,7 +410,7 @@ INSERT INTO bagile.pre_course_templates (course_type, format, subject_template, 
 <strong>Passcode</strong>&ensp;{{zoom_passcode}}
 </div>
 
-<p>Welcome to your Scrum.org {{course_full_name}} class with BAgile.</p>
+<p>Welcome to your Scrum.org {{course_full_name}} class with b-agile.</p>
 
 <p>This advanced 1-day course runs online via Zoom. It builds on PSPO foundations — we will go
 deep into product strategy and stakeholder complexity. Please join a few minutes early.</p>
@@ -425,7 +425,7 @@ deep into product strategy and stakeholder complexity. Please join a few minutes
 
 <p>See you soon,<br>
 {{trainer_name}}<br>
-BAgile</p>'
+b-agile</p>'
 ) ON CONFLICT (course_type, format) DO UPDATE
     SET subject_template = EXCLUDED.subject_template,
         html_body        = EXCLUDED.html_body;
@@ -445,7 +445,7 @@ INSERT INTO bagile.pre_course_templates (course_type, format, subject_template, 
 <strong>Venue</strong>&ensp;{{venue_address}}
 </div>
 
-<p>Welcome to your Scrum.org {{course_full_name}} class with BAgile.</p>
+<p>Welcome to your Scrum.org {{course_full_name}} class with b-agile.</p>
 
 <p>This advanced course is designed for experienced Scrum Masters. We will work through complex
 scenarios and coaching challenges. Please aim to arrive around 10 minutes before the start.</p>
@@ -460,7 +460,7 @@ scenarios and coaching challenges. Please aim to arrive around 10 minutes before
 
 <p>See you soon,<br>
 {{trainer_name}}<br>
-BAgile</p>'
+b-agile</p>'
 ) ON CONFLICT (course_type, format) DO UPDATE
     SET subject_template = EXCLUDED.subject_template,
         html_body        = EXCLUDED.html_body;
@@ -478,7 +478,7 @@ INSERT INTO bagile.pre_course_templates (course_type, format, subject_template, 
 <strong>Passcode</strong>&ensp;{{zoom_passcode}}
 </div>
 
-<p>Welcome to your Scrum.org {{course_full_name}} class with BAgile.</p>
+<p>Welcome to your Scrum.org {{course_full_name}} class with b-agile.</p>
 
 <p>This advanced course for experienced Scrum Masters runs online via Zoom. We will work through
 complex scenarios and coaching challenges. Please join a few minutes early.</p>
@@ -493,7 +493,7 @@ complex scenarios and coaching challenges. Please join a few minutes early.</p>
 
 <p>See you soon,<br>
 {{trainer_name}}<br>
-BAgile</p>'
+b-agile</p>'
 ) ON CONFLICT (course_type, format) DO UPDATE
     SET subject_template = EXCLUDED.subject_template,
         html_body        = EXCLUDED.html_body;
@@ -513,7 +513,7 @@ INSERT INTO bagile.pre_course_templates (course_type, format, subject_template, 
 <strong>Venue</strong>&ensp;{{venue_address}}
 </div>
 
-<p>Welcome to your Scrum.org {{course_full_name}} class with BAgile.</p>
+<p>Welcome to your Scrum.org {{course_full_name}} class with b-agile.</p>
 
 <p>This is a practical 1-day course with lots of exercises. Please aim to arrive around 10 minutes
 before the start so we can get settled and begin on time.</p>
@@ -528,7 +528,7 @@ before the start so we can get settled and begin on time.</p>
 
 <p>See you soon,<br>
 {{trainer_name}}<br>
-BAgile</p>'
+b-agile</p>'
 ) ON CONFLICT (course_type, format) DO UPDATE
     SET subject_template = EXCLUDED.subject_template,
         html_body        = EXCLUDED.html_body;
@@ -546,7 +546,7 @@ INSERT INTO bagile.pre_course_templates (course_type, format, subject_template, 
 <strong>Passcode</strong>&ensp;{{zoom_passcode}}
 </div>
 
-<p>Welcome to your Scrum.org {{course_full_name}} class with BAgile.</p>
+<p>Welcome to your Scrum.org {{course_full_name}} class with b-agile.</p>
 
 <p>This is a practical 1-day course with lots of exercises, running online via Zoom.
 Please join a few minutes early so we can start on time.</p>
@@ -561,7 +561,7 @@ Please join a few minutes early so we can start on time.</p>
 
 <p>See you soon,<br>
 {{trainer_name}}<br>
-BAgile</p>'
+b-agile</p>'
 ) ON CONFLICT (course_type, format) DO UPDATE
     SET subject_template = EXCLUDED.subject_template,
         html_body        = EXCLUDED.html_body;
@@ -581,7 +581,7 @@ INSERT INTO bagile.pre_course_templates (course_type, format, subject_template, 
 <strong>Venue</strong>&ensp;{{venue_address}}
 </div>
 
-<p>Welcome to your Scrum.org {{course_full_name}} class with BAgile.</p>
+<p>Welcome to your Scrum.org {{course_full_name}} class with b-agile.</p>
 
 <p>Please aim to arrive around 10 minutes before the start so we can get settled and begin on time.
 Your trainer will be available after the session each day if you have questions or want to chat further.</p>
@@ -596,7 +596,7 @@ Your trainer will be available after the session each day if you have questions 
 
 <p>See you soon,<br>
 {{trainer_name}}<br>
-BAgile</p>'
+b-agile</p>'
 ) ON CONFLICT (course_type, format) DO UPDATE
     SET subject_template = EXCLUDED.subject_template,
         html_body        = EXCLUDED.html_body;
@@ -614,7 +614,7 @@ INSERT INTO bagile.pre_course_templates (course_type, format, subject_template, 
 <strong>Passcode</strong>&ensp;{{zoom_passcode}}
 </div>
 
-<p>Welcome to your Scrum.org {{course_full_name}} class with BAgile.</p>
+<p>Welcome to your Scrum.org {{course_full_name}} class with b-agile.</p>
 
 <p>The course runs online via Zoom. Please join a few minutes early so we can get settled and begin on time.
 Your trainer will be available after the session each day if you have questions or want to chat further.</p>
@@ -629,7 +629,7 @@ Your trainer will be available after the session each day if you have questions 
 
 <p>See you soon,<br>
 {{trainer_name}}<br>
-BAgile</p>'
+b-agile</p>'
 ) ON CONFLICT (course_type, format) DO UPDATE
     SET subject_template = EXCLUDED.subject_template,
         html_body        = EXCLUDED.html_body;
@@ -649,7 +649,7 @@ INSERT INTO bagile.pre_course_templates (course_type, format, subject_template, 
 <strong>Venue</strong>&ensp;{{venue_address}}
 </div>
 
-<p>Welcome to your Scrum.org {{course_full_name}} class with BAgile.</p>
+<p>Welcome to your Scrum.org {{course_full_name}} class with b-agile.</p>
 
 <p>Please aim to arrive around 10 minutes before the start so we can get settled and begin on time.</p>
 
@@ -663,7 +663,7 @@ INSERT INTO bagile.pre_course_templates (course_type, format, subject_template, 
 
 <p>See you soon,<br>
 {{trainer_name}}<br>
-BAgile</p>'
+b-agile</p>'
 ) ON CONFLICT (course_type, format) DO UPDATE
     SET subject_template = EXCLUDED.subject_template,
         html_body        = EXCLUDED.html_body;
@@ -681,7 +681,7 @@ INSERT INTO bagile.pre_course_templates (course_type, format, subject_template, 
 <strong>Passcode</strong>&ensp;{{zoom_passcode}}
 </div>
 
-<p>Welcome to your Scrum.org {{course_full_name}} class with BAgile.</p>
+<p>Welcome to your Scrum.org {{course_full_name}} class with b-agile.</p>
 
 <p>The course runs online via Zoom. Please join a few minutes early so we can start on time.</p>
 
@@ -695,7 +695,7 @@ INSERT INTO bagile.pre_course_templates (course_type, format, subject_template, 
 
 <p>See you soon,<br>
 {{trainer_name}}<br>
-BAgile</p>'
+b-agile</p>'
 ) ON CONFLICT (course_type, format) DO UPDATE
     SET subject_template = EXCLUDED.subject_template,
         html_body        = EXCLUDED.html_body;
