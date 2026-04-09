@@ -365,7 +365,7 @@ public class SendPreCourseEmailCommandHandler
         if (days is null)
             return "<p>Your trainer will share the detailed agenda on the day.</p>";
 
-        const string tdLabel = @"style=""padding:3px 14px 3px 0;color:#F7741C;font-weight:600;white-space:nowrap;vertical-align:top;font-size:13px;""";
+        const string tdLabel = @"style=""padding:3px 14px 3px 0;color:#007BFF;font-weight:600;white-space:nowrap;vertical-align:top;font-size:13px;""";
         const string tdValue = @"style=""padding:3px 0;font-size:14px;vertical-align:top;""";
         const string tdDay   = @"style=""padding:10px 0 4px;font-weight:600;color:#003366;font-size:14px;border-bottom:1px solid #e8e8e8;"" colspan=""2""";
 
