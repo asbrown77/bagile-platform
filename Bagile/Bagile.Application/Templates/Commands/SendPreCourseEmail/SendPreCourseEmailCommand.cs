@@ -18,6 +18,11 @@ public record SendPreCourseEmailCommand : IRequest<SendPreCourseEmailResult>
     /// This supports the compose flow where the trainer edits before sending.
     /// </summary>
     public string? HtmlBodyOverride { get; init; }
+
+    /// <summary>
+    /// Additional CC addresses (e.g. course organiser). info@bagile.co.uk is always CC'd separately.
+    /// </summary>
+    public IReadOnlyList<string> AdditionalCc { get; init; } = [];
 }
 
 public record SendPreCourseEmailResult

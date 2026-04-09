@@ -138,6 +138,7 @@ public class PreCourseTemplatesController : ControllerBase
                 CourseScheduleId = courseScheduleId,
                 FormatOverride   = request?.FormatOverride,
                 HtmlBodyOverride = request?.HtmlBodyOverride,
+                AdditionalCc     = request?.AdditionalCc ?? [],
             };
 
             var result = await _mediator.Send(command, ct);
@@ -210,14 +211,11 @@ public record PreviewPreCourseRequest
 
 public record SendPreCourseRequest
 {
-    /// <summary>Override the format used to select the template ('virtual' or 'f2f').</summary>
     public string? FormatOverride { get; init; }
-
-    /// <summary>
-    /// If provided, sent as the email body instead of the stored template.
-    /// Supports the compose flow where the trainer edits before sending.
-    /// </summary>
     public string? HtmlBodyOverride { get; init; }
+
+    /// <summary>Additional CC addresses, e.g. course organiser chosen in the portal.</summary>
+    public List<string> AdditionalCc { get; init; } = [];
 }
 
 public record SendPreCourseTestRequest

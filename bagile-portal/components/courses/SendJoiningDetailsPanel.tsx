@@ -7,10 +7,12 @@ import { AlertBanner } from "@/components/ui/AlertBanner";
 import {
   CourseScheduleDetail,
   CourseAttendee,
+  CourseContact,
   PreCourseTemplate,
   Trainer,
   getPreCourseTemplate,
   getPreCourseEmailPreview,
+  getCourseContacts,
   getTrainers,
   sendPreCourseEmail,
   sendPreCourseTestEmail,
@@ -93,6 +95,10 @@ export function SendJoiningDetailsPanel({ open, onClose, apiKey, course, attende
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
 
+  // Course contacts for optional CC
+  const [contacts, setContacts] = useState<CourseContact[]>([]);
+  const [ccContactIds, setCcContactIds] = useState<Set<number>>(new Set());
+
   // Test recipient selection
   const [trainers, setTrainers] = useState<Trainer[]>([]);
   const [testRecipient, setTestRecipient] = useState<string>("");
@@ -120,6 +126,15 @@ export function SendJoiningDetailsPanel({ open, onClose, apiKey, course, attende
     setSentCount(null);
     setTestSentTo(null);
     setError("");
+    setContacts([]);
+    setCcContactIds(new Set());
+
+    getCourseContacts(apiKey, course.id).then((list) => {
+      setContacts(list);
+      // Pre-tick anyone with role "organiser"
+      const organisers = new Set(list.filter((c) => c.role === "organiser").map((c) => c.id));
+      setCcContactIds(organisers);
+    }).catch(() => {/* non-critical */});
 
     getPreCourseTemplate(apiKey, courseType, format)
       .then((t) => {
@@ -157,8 +172,12 @@ export function SendJoiningDetailsPanel({ open, onClose, apiKey, course, attende
     setError("");
     setSending(true);
     try {
+      const additionalCc = contacts
+        .filter((c) => ccContactIds.has(c.id) && c.email)
+        .map((c) => c.email);
       const res = await sendPreCourseEmail(apiKey, course.id, {
         htmlBodyOverride: editedBody || undefined,
+        additionalCc: additionalCc.length > 0 ? additionalCc : undefined,
       });
       setSentCount(res.recipientCount);
     } catch (e: any) {
@@ -199,6 +218,8 @@ export function SendJoiningDetailsPanel({ open, onClose, apiKey, course, attende
     setSentCount(null);
     setTestSentTo(null);
     setError("");
+    setContacts([]);
+    setCcContactIds(new Set());
     setCustomEmail("");
     onClose();
   }
@@ -272,6 +293,38 @@ export function SendJoiningDetailsPanel({ open, onClose, apiKey, course, attende
               </div>
             )}
           </div>
+
+          {/* ── CC contacts (organiser checkboxes) ── */}
+          {contacts.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-gray-700 mb-1.5">CC on this email:</p>
+              <div className="space-y-1">
+                {contacts.map((c) => (
+                  <label key={c.id} className="flex items-center gap-2 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={ccContactIds.has(c.id)}
+                      onChange={(e) => {
+                        setCcContactIds((prev) => {
+                          const next = new Set(prev);
+                          e.target.checked ? next.add(c.id) : next.delete(c.id);
+                          return next;
+                        });
+                      }}
+                      className="rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                    />
+                    <span className="text-sm text-gray-700 group-hover:text-gray-900">
+                      {c.name}
+                      <span className="text-gray-400 ml-1">({c.email})</span>
+                      <span className={`ml-1.5 text-xs font-medium px-1.5 py-0.5 rounded-full ${c.role === "organiser" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"}`}>
+                        {c.role}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* ── HTML editor with Source / Preview toggle ── */}
           <div>

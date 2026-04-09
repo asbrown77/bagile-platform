@@ -996,7 +996,7 @@ export async function getPreCourseEmailPreview(
 export async function sendPreCourseEmail(
   apiKey: string,
   courseScheduleId: number,
-  data?: { htmlBodyOverride?: string },
+  data?: { htmlBodyOverride?: string; additionalCc?: string[] },
 ): Promise<{ recipientCount: number }> {
   return apiRequest(`/api/templates/pre-course/send/${courseScheduleId}`, apiKey, { method: "POST", body: data ?? {} });
 }
