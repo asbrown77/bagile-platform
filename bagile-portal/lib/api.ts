@@ -737,7 +737,7 @@ export interface SendFollowUpResult {
 export async function sendFollowUpEmail(
   apiKey: string,
   courseScheduleId: number,
-  opts?: { courseTypeOverride?: string; delayNote?: string },
+  opts?: { courseTypeOverride?: string; htmlBodyOverride?: string },
 ): Promise<SendFollowUpResult> {
   return apiRequest(`/api/templates/post-course/send/${courseScheduleId}`, apiKey, {
     method: "POST",
@@ -754,7 +754,7 @@ export interface SendFollowUpTestResult {
 export async function sendFollowUpTestEmail(
   apiKey: string,
   courseScheduleId: number,
-  opts?: { courseTypeOverride?: string; recipientEmail?: string },
+  opts?: { courseTypeOverride?: string; htmlBodyOverride?: string; recipientEmail?: string },
 ): Promise<SendFollowUpTestResult> {
   return apiRequest(`/api/templates/post-course/test/${courseScheduleId}`, apiKey, {
     method: "POST",

@@ -46,9 +46,10 @@ public class SendFollowUpEmailCommandHandler
         var courseType = request.CourseTypeOverride?.ToUpper()
             ?? DeriveCourseType(course.CourseCode);
 
-        // 3. Load template
-        var template = await _templateRepo.GetByCourseTypeAsync(courseType, ct)
-            ?? throw new InvalidOperationException(
+        // 3. Load template (required unless caller supplies a full HTML override)
+        var template = await _templateRepo.GetByCourseTypeAsync(courseType, ct);
+        if (template is null && string.IsNullOrWhiteSpace(request.HtmlBodyOverride))
+            throw new InvalidOperationException(
                 $"No post-course template found for course type '{courseType}'. " +
                 $"Create one via PUT /api/templates/post-course/{courseType}.");
 
@@ -67,23 +68,22 @@ public class SendFollowUpEmailCommandHandler
         var courseDates = BuildCourseDates(course.StartDate, course.EndDate);
         var trainerName = course.TrainerName ?? "Alex and Chris";
         var greeting    = BuildGreeting(attendees.Select(a => a.FirstName).ToList());
-        var delayNote   = string.IsNullOrWhiteSpace(request.DelayNote)
-            ? ""
-            : $"<p>{System.Net.WebUtility.HtmlEncode(request.DelayNote)}</p>";
 
         var variables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             ["greeting"]     = greeting,
             ["trainer_name"] = trainerName,
             ["course_dates"] = courseDates,
-            ["delay_note"]   = delayNote,
+            ["delay_note"]   = "",
             ["course_title"] = course.Title,
             ["course_code"]  = course.CourseCode,
             ["course_type"]  = courseType,
         };
 
-        var subject  = ApplyVariables(template.SubjectTemplate, variables);
-        var htmlBody = EmailTemplateWrapper.Wrap(ApplyVariables(template.HtmlBody, variables));
+        var subjectTemplate = template?.SubjectTemplate ?? "";
+        var subject  = ApplyVariables(subjectTemplate, variables);
+        var bodyTemplate = request.HtmlBodyOverride ?? template!.HtmlBody;
+        var htmlBody = EmailTemplateWrapper.Wrap(ApplyVariables(bodyTemplate, variables));
 
         // 6. Resolve trainer email for Reply-To (best-effort — fallback to null)
         var replyTo = await ResolveTrainerEmailAsync(course.TrainerName, ct);

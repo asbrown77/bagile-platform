@@ -13,10 +13,10 @@ public record SendFollowUpEmailCommand : IRequest<SendFollowUpEmailResult>
     public string? CourseTypeOverride { get; init; }
 
     /// <summary>
-    /// Optional note to inject as the {{delay_note}} variable.
-    /// Example: "Apologies for the delay in getting these over to you."
+    /// If provided, used as the email body instead of the stored template.
+    /// Supports the compose flow where the trainer edits before sending.
     /// </summary>
-    public string? DelayNote { get; init; }
+    public string? HtmlBodyOverride { get; init; }
 }
 
 public record SendFollowUpEmailResult

@@ -40,9 +40,10 @@ public class SendFollowUpTestEmailCommandHandler
         var courseType = request.CourseTypeOverride?.ToUpper()
             ?? DeriveCourseType(course.CourseCode);
 
-        // 3. Load template
-        var template = await _templateRepo.GetByCourseTypeAsync(courseType, ct)
-            ?? throw new InvalidOperationException(
+        // 3. Load template (required unless caller supplies a full HTML override)
+        var template = await _templateRepo.GetByCourseTypeAsync(courseType, ct);
+        if (template is null && string.IsNullOrWhiteSpace(request.HtmlBodyOverride))
+            throw new InvalidOperationException(
                 $"No post-course template found for course type '{courseType}'. " +
                 $"Create one via PUT /api/templates/post-course/{courseType}.");
 
@@ -64,8 +65,10 @@ public class SendFollowUpTestEmailCommandHandler
             ["course_type"]  = courseType,
         };
 
-        var subject  = $"[TEST] {ApplyVariables(template.SubjectTemplate, variables)}";
-        var htmlBody = EmailTemplateWrapper.Wrap(ApplyVariables(template.HtmlBody, variables));
+        var subjectTemplate = template?.SubjectTemplate ?? "";
+        var subject  = $"[TEST] {ApplyVariables(subjectTemplate, variables)}";
+        var bodyTemplate = request.HtmlBodyOverride ?? template!.HtmlBody;
+        var htmlBody = EmailTemplateWrapper.Wrap(ApplyVariables(bodyTemplate, variables));
 
         // 6. Send to single test recipient (no CC; reply-to = same recipient)
         _logger.LogInformation(

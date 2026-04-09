@@ -35,8 +35,7 @@ export function SendFollowUpPanel({
   template,
   templateMissing,
 }: Props) {
-  const [delayNote, setDelayNote] = useState("");
-  const [courseTypeOverride, setCourseTypeOverride] = useState("");
+  const [editedBody, setEditedBody] = useState("");
   const [sending, setSending] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
   const [result, setResult] = useState<SendFollowUpResult | null>(null);
@@ -52,6 +51,11 @@ export function SendFollowUpPanel({
 
   useEffect(() => {
     if (!open || !apiKey) return;
+    setEditedBody(template?.htmlBody ?? "");
+    setResult(null);
+    setTestSentTo(null);
+    setError("");
+
     getTrainers(apiKey)
       .then((list) => {
         const active = list.filter((t) => t.isActive);
@@ -64,7 +68,7 @@ export function SendFollowUpPanel({
       })
       .catch(() => setTestRecipient(INFO_EMAIL));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, apiKey]);
+  }, [open, apiKey, template]);
 
   const activeAttendees = attendees.filter((a) => a.status === "active");
 
@@ -77,14 +81,11 @@ export function SendFollowUpPanel({
     setSending(true);
     try {
       const res = await sendFollowUpEmail(apiKey, course.id, {
-        courseTypeOverride: courseTypeOverride.trim() || undefined,
-        delayNote: delayNote.trim() || undefined,
+        htmlBodyOverride: editedBody.trim() || undefined,
       });
       setResult(res);
     } catch (e: any) {
-      const msg = e?.message || "Failed to send email";
-      // Try to extract API error body
-      setError(msg.includes("API error") ? "Server error — check template exists for this course type." : msg);
+      setError(e?.message?.includes("API error") ? "Server error — check template exists for this course type." : (e?.message || "Failed to send email"));
     } finally {
       setSending(false);
     }
@@ -102,7 +103,7 @@ export function SendFollowUpPanel({
     }
     try {
       const res = await sendFollowUpTestEmail(apiKey, course.id, {
-        courseTypeOverride: courseTypeOverride.trim() || undefined,
+        htmlBodyOverride: editedBody.trim() || undefined,
         recipientEmail,
       });
       setTestSentTo(res.recipientEmail);
@@ -114,17 +115,13 @@ export function SendFollowUpPanel({
   }
 
   function handleClose() {
-    setDelayNote("");
-    setCourseTypeOverride("");
+    setEditedBody("");
     setResult(null);
     setTestSentTo(null);
     setError("");
     setCustomEmail("");
     onClose();
   }
-
-  const derivedCourseType = courseTypeOverride.trim().toUpperCase() ||
-    (course.courseCode?.split("-")[0]?.toUpperCase() ?? "");
 
   return (
     <SlideOver open={open} onClose={handleClose} title="Send Follow-Up Email" subtitle={course.title} wide>
@@ -152,89 +149,54 @@ export function SendFollowUpPanel({
           <Button onClick={handleClose}>Done</Button>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-5">
+
           {/* Recipient summary */}
           <div className="bg-gray-50 rounded-lg border border-gray-200 p-4">
             <div className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
               <Users className="w-4 h-4 text-gray-400" />
-              Recipients ({activeAttendees.length} active attendees)
+              Recipients ({activeAttendees.length} active attendee{activeAttendees.length !== 1 ? "s" : ""})
             </div>
             {activeAttendees.length === 0 ? (
               <p className="text-sm text-amber-600">No active attendees — email cannot be sent.</p>
             ) : (
               <div className="space-y-1">
-                {activeAttendees.map((a) => (
+                {activeAttendees.slice(0, 8).map((a) => (
                   <p key={a.enrolmentId} className="text-xs text-gray-600">
                     {a.firstName} {a.lastName} &lt;{a.email}&gt;
                   </p>
                 ))}
+                {activeAttendees.length > 8 && (
+                  <p className="text-xs text-gray-400">+ {activeAttendees.length - 8} more</p>
+                )}
                 <p className="text-xs text-gray-400 pt-1">+ info@bagile.co.uk (CC)</p>
               </div>
             )}
           </div>
 
-          {/* Template status */}
-          {templateMissing ? (
+          {templateMissing && (
             <AlertBanner variant="warning">
-              No template found for course type <strong>{derivedCourseType}</strong>.
-              Create one via Settings &rarr; Templates, or use a course type override below.
+              No template found for this course type. Compose your email below or create a template in Settings.
             </AlertBanner>
-          ) : template ? (
-            <div>
-              <p className="text-xs font-medium text-gray-700 mb-1">
-                Template: <span className="font-mono text-brand-600">{template.courseType}</span>
-              </p>
-              <p className="text-xs text-gray-500 mb-2">Subject: {template.subjectTemplate}</p>
-              <details className="text-xs">
-                <summary className="cursor-pointer text-brand-600 hover:text-brand-700 font-medium">
-                  Preview email body
-                </summary>
-                <div
-                  className="mt-3 bg-white border border-gray-200 rounded-lg p-4 text-gray-700 prose prose-sm max-w-none overflow-auto max-h-80"
-                  dangerouslySetInnerHTML={{ __html: template.htmlBody }}
-                />
-              </details>
-            </div>
-          ) : null}
+          )}
 
-          {/* Optional: delay note */}
+          {/* Editable body */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
-              Delay note (optional)
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {templateMissing ? "Email body" : "Email body (pre-filled, editable)"}
             </label>
-            <input
-              type="text"
-              value={delayNote}
-              onChange={(e) => setDelayNote(e.target.value)}
-              placeholder="e.g. Apologies for the slight delay getting these over!"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            <textarea
+              value={editedBody}
+              onChange={(e) => setEditedBody(e.target.value)}
+              rows={20}
+              placeholder={templateMissing ? "Compose your follow-up email here..." : ""}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+              spellCheck={false}
             />
-            <p className="text-xs text-gray-400 mt-1">
-              Inserts as a paragraph at the top. Leave blank if sending promptly.
-            </p>
           </div>
 
-          {/* Course type override */}
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
-              Course type override (optional)
-            </label>
-            <input
-              type="text"
-              value={courseTypeOverride}
-              onChange={(e) => setCourseTypeOverride(e.target.value.toUpperCase())}
-              placeholder={`Detected: ${derivedCourseType || "—"}`}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono uppercase"
-              maxLength={20}
-            />
-            <p className="text-xs text-gray-400 mt-1">
-              Use if the course code prefix doesn&apos;t match a template (e.g. PSMAI → PSMO-AI).
-            </p>
-          </div>
-
-          {/* Send buttons */}
+          {/* Send actions */}
           <div className="pt-2 border-t border-gray-200 space-y-3">
-            {/* Test send — dropdown + button */}
             <div>
               <p className="text-xs font-medium text-gray-600 mb-1.5">Send test to:</p>
               <div className="flex items-center gap-2 flex-wrap">
@@ -261,7 +223,7 @@ export function SendFollowUpPanel({
                 <button
                   type="button"
                   onClick={handleSendTest}
-                  disabled={sendingTest || templateMissing}
+                  disabled={sendingTest || (!editedBody.trim() && templateMissing)}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <FlaskConical className="w-3.5 h-3.5" />
@@ -275,7 +237,6 @@ export function SendFollowUpPanel({
               )}
             </div>
 
-            {/* Real send */}
             <div className="flex gap-3">
               <Button
                 onClick={handleSend}

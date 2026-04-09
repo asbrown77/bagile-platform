@@ -13,6 +13,11 @@ public record SendFollowUpTestEmailCommand : IRequest<SendFollowUpTestEmailResul
     public string? CourseTypeOverride { get; init; }
 
     /// <summary>
+    /// If provided, used as the email body instead of the stored template.
+    /// </summary>
+    public string? HtmlBodyOverride { get; init; }
+
+    /// <summary>
     /// Explicit recipient email. If null, the trainer email is derived from TrainerName.
     /// </summary>
     public string? RecipientEmail { get; init; }

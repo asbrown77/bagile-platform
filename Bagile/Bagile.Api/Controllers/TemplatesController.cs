@@ -83,9 +83,10 @@ public class TemplatesController : ControllerBase
         {
             var command = new SendFollowUpTestEmailCommand
             {
-                CourseScheduleId  = courseScheduleId,
+                CourseScheduleId   = courseScheduleId,
                 CourseTypeOverride = request?.CourseTypeOverride,
-                RecipientEmail    = request?.RecipientEmail,
+                HtmlBodyOverride   = request?.HtmlBodyOverride,
+                RecipientEmail     = request?.RecipientEmail,
             };
 
             var result = await _mediator.Send(command, ct);
@@ -119,9 +120,9 @@ public class TemplatesController : ControllerBase
         {
             var command = new SendFollowUpEmailCommand
             {
-                CourseScheduleId  = courseScheduleId,
+                CourseScheduleId   = courseScheduleId,
                 CourseTypeOverride = request?.CourseTypeOverride,
-                DelayNote         = request?.DelayNote
+                HtmlBodyOverride   = request?.HtmlBodyOverride,
             };
 
             var result = await _mediator.Send(command, ct);
@@ -149,15 +150,12 @@ public record UpsertTemplateRequest
 public record SendFollowUpRequest
 {
     public string? CourseTypeOverride { get; init; }
-    public string? DelayNote { get; init; }
+    public string? HtmlBodyOverride { get; init; }
 }
 
 public record SendFollowUpTestRequest
 {
     public string? CourseTypeOverride { get; init; }
-
-    /// <summary>
-    /// Override the test recipient email. If omitted, derived from the course's trainerName.
-    /// </summary>
+    public string? HtmlBodyOverride { get; init; }
     public string? RecipientEmail { get; init; }
 }
