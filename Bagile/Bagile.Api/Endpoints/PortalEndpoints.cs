@@ -77,24 +77,23 @@ public static class PortalEndpoints
 
             var token = GenerateJwt(payload.Email, payload.Name ?? payload.Email, jwtSecret);
 
-            // Auto-create an API key for the user if they don't have an active one
+            // Always create a fresh API key on login — raw keys are hashed and cannot be recovered,
+            // so returning null on subsequent logins would leave the user with no key in localStorage.
+            // Revoke any previous auto-created keys to avoid accumulation.
             var connStr = GetConnectionString(config);
-            string? apiKey = null;
             await using var conn = new NpgsqlConnection(connStr);
 
-            var existingCount = await conn.ExecuteScalarAsync<int>(
-                "SELECT COUNT(*) FROM bagile.api_keys WHERE owner_email = @email AND is_active = TRUE",
+            await conn.ExecuteAsync(
+                @"UPDATE bagile.api_keys SET is_active = FALSE, revoked_at = NOW()
+                  WHERE owner_email = @email AND label = 'Auto-created' AND is_active = TRUE",
                 new { email = payload.Email });
 
-            if (existingCount == 0)
-            {
-                var (rawKey, hash, prefix) = ApiKeyValidator.GenerateKey();
-                await conn.ExecuteAsync(
-                    @"INSERT INTO bagile.api_keys (key_hash, key_prefix, owner_email, owner_name, label)
-                      VALUES (@hash, @prefix, @email, @name, 'Auto-created')",
-                    new { hash, prefix, email = payload.Email, name = payload.Name ?? payload.Email });
-                apiKey = rawKey;
-            }
+            var (rawKey, hash, prefix) = ApiKeyValidator.GenerateKey();
+            await conn.ExecuteAsync(
+                @"INSERT INTO bagile.api_keys (key_hash, key_prefix, owner_email, owner_name, label)
+                  VALUES (@hash, @prefix, @email, @name, 'Auto-created')",
+                new { hash, prefix, email = payload.Email, name = payload.Name ?? payload.Email });
+            var apiKey = rawKey;
 
             return Results.Ok(new
             {
