@@ -40,19 +40,26 @@ function deriveCourseType(course: CourseScheduleDetail): string {
  * Variables that have no value are left as-is so the trainer can see what needs filling.
  */
 function applyVariables(html: string, course: CourseScheduleDetail): string {
-  const formatDate = (d: string | null | undefined) => {
-    if (!d) return "";
-    return new Date(d).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const buildDates = (): string => {
+    if (!course.startDate) return "";
+    const start = new Date(course.startDate);
+    if (!course.endDate || course.endDate === course.startDate) {
+      return start.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+    }
+    const end = new Date(course.endDate);
+    if (start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()) {
+      return `${start.getDate()}–${end.getDate()} ${start.toLocaleDateString("en-GB", { month: "long", year: "numeric" })}`;
+    }
+    if (start.getFullYear() === end.getFullYear()) {
+      return `${start.toLocaleDateString("en-GB", { day: "numeric", month: "long" })} – ${end.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}`;
+    }
+    return `${start.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} – ${end.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}`;
   };
-
-  const startFmt = formatDate(course.startDate);
-  const endFmt = course.endDate && course.endDate !== course.startDate ? formatDate(course.endDate) : "";
-  const dates = endFmt ? `${startFmt} and ${endFmt}` : startFmt;
 
   const replacements: Record<string, string> = {
     "{{course_name}}": course.title ?? "",
-    "{{dates}}": dates,
-    "{{times}}": "",          // not stored on course record — trainer fills in
+    "{{dates}}": buildDates(),
+    "{{times}}": "09:00 \u2013 17:00",
     "{{trainer_name}}": course.trainerName ?? "",
     "{{venue_address}}": course.venueAddress ?? "",
     "{{zoom_url}}": course.meetingUrl ?? "",
