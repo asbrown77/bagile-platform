@@ -12,7 +12,7 @@ export default function AuthenticatedLayout({ children }: { children: React.Reac
   const [atRiskCourses, setAtRiskCourses] = useState(0);
 
   useEffect(() => {
-    if (!apiKey) return;
+    if (!apiKey) return; // null (loading) or "" (missing) — both skip
 
     // Load badge counts for sidebar
     getPendingTransfers(apiKey)

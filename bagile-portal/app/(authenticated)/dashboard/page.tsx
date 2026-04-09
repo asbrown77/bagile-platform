@@ -274,7 +274,11 @@ export default function Dashboard() {
   const [showCancelled, setShowCancelled] = useState(false);
 
   useEffect(() => {
-    if (!apiKey) return;
+    if (apiKey === null) return;          // still reading localStorage
+    if (apiKey === "") {                  // key missing — send to login
+      window.location.replace("/login");
+      return;
+    }
     loadData();
   }, [apiKey]);
 
