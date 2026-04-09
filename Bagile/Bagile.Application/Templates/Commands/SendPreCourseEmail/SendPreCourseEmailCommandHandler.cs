@@ -382,16 +382,17 @@ public class SendPreCourseEmailCommandHandler
         if (days is null)
             return "<p>Your trainer will share the detailed agenda on the day.</p>";
 
-        const string tdDay  = @"style=""padding:10px 0 4px;font-weight:600;color:#003366;font-size:14px;border-bottom:1px solid #e8e8e8;""";
-        const string tdItem = @"style=""padding:3px 0;font-size:14px;""";
+        const string tdDay   = @"style=""padding:10px 0 4px;font-weight:600;color:#003366;font-size:14px;border-bottom:1px solid #e8e8e8;"" colspan=""2""";
+        const string tdLabel = @"style=""padding:3px 14px 3px 0;font-weight:600;color:#212121;white-space:nowrap;vertical-align:top;font-size:13px;""";
+        const string tdValue = @"style=""padding:3px 0;font-size:14px;vertical-align:top;""";
 
         var sb = new System.Text.StringBuilder();
         sb.Append(@"<table width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""border-collapse:collapse;"">");
         foreach (var (day, morning, afternoon) in days)
         {
             sb.Append($"<tr><td {tdDay}>{day}</td></tr>");
-            sb.Append($"<tr><td {tdItem}>{morning}</td></tr>");
-            sb.Append($"<tr><td {tdItem}>{afternoon}</td></tr>");
+            sb.Append($"<tr><td {tdLabel}>Morning</td><td {tdValue}>{morning}</td></tr>");
+            sb.Append($"<tr><td {tdLabel}>Afternoon</td><td {tdValue}>{afternoon}</td></tr>");
         }
         sb.Append("</table>");
         return sb.ToString();
