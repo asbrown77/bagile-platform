@@ -251,22 +251,22 @@ public class SendPreCourseEmailCommandHandler
         "PSM" or "PSMAI" => @"<ul>
   <li>Read the <a href=""https://scrumguides.org"">Scrum Guide</a> (free at scrumguides.org)</li>
   <li>Read the <a href=""https://www.scrum.org/resources/evidence-based-management-guide"">EBM Guide</a></li>
-  <li><a href=""https://www.scrum.org/open-assessments/scrum-open"">Scrum Open assessment</a> — aim for 85%+ before you arrive</li>
+  <li><a href=""https://www.scrum.org/open-assessments/scrum-open"">Scrum Open assessment</a> — try it to see where you're starting from</li>
 </ul>",
         "PSPO" or "PSPOAI" => @"<ul>
   <li>Read the <a href=""https://scrumguides.org"">Scrum Guide</a> (free at scrumguides.org)</li>
   <li>Review the suggested reading for Product Owners on the <a href=""https://www.scrum.org/pathway/product-owner/"">Product Owner learning path</a></li>
-  <li><a href=""https://www.scrum.org/open-assessments/product-owner-open"">Product Owner Open assessment</a> — aim for 85%+ before you arrive</li>
+  <li><a href=""https://www.scrum.org/open-assessments/product-owner-open"">Product Owner Open assessment</a> — try it to see where you're starting from</li>
 </ul>",
         "PSK" => @"<ul>
   <li>Read the <a href=""https://scrumguides.org"">Scrum Guide</a> (free at scrumguides.org)</li>
   <li>Read the <a href=""https://www.scrum.org/resources/kanban-guide-scrum-teams"">Kanban Guide for Scrum Teams</a></li>
-  <li><a href=""https://www.scrum.org/open-assessments/scrum-open"">Scrum Open assessment</a> — good warm-up</li>
+  <li><a href=""https://www.scrum.org/open-assessments/scrum-open"">Scrum Open assessment</a> — try it to see where you're starting from</li>
 </ul>",
         "APS-SD" => @"<ul>
   <li>Read the <a href=""https://scrumguides.org"">Scrum Guide</a> (free at scrumguides.org)</li>
   <li>Basic programming knowledge is helpful — no specific language required</li>
-  <li><a href=""https://www.scrum.org/open-assessments/scrum-open"">Scrum Open assessment</a> — good warm-up</li>
+  <li><a href=""https://www.scrum.org/open-assessments/scrum-open"">Scrum Open assessment</a> — try it to see where you're starting from</li>
 </ul>",
         "PAL-E" => @"<ul>
   <li>Read the <a href=""https://scrumguides.org"">Scrum Guide</a> (free at scrumguides.org)</li>
@@ -277,7 +277,7 @@ public class SendPreCourseEmailCommandHandler
   <li>Read the <a href=""https://scrumguides.org"">Scrum Guide</a> (free at scrumguides.org)</li>
   <li>Read the <a href=""https://www.scrum.org/resources/evidence-based-management-guide"">EBM Guide</a></li>
   <li>Review the <a href=""https://www.scrum.org/pathway/product-owner/"">Product Owner learning path</a> on scrum.org</li>
-  <li><a href=""https://www.scrum.org/open-assessments/product-owner-open"">Product Owner Open assessment</a> — aim for 85%+ before you arrive</li>
+  <li><a href=""https://www.scrum.org/open-assessments/product-owner-open"">Product Owner Open assessment</a> — try it to see where you're starting from</li>
 </ul>",
         "PSM-A" => @"<ul>
   <li>Read the <a href=""https://scrumguides.org"">Scrum Guide</a> thoroughly — many advanced discussions start here</li>
