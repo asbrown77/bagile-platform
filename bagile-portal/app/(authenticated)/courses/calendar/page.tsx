@@ -261,7 +261,7 @@ export default function CalendarPage() {
       if (dateStr < start || dateStr > end) return false;
 
       // Cancelled filter — hide unless toggled on
-      if (!showCancelled && c.status === "cancelled") return false;
+      if (!showCancelled && getCourseDisplayStatus(c) === "cancelled") return false;
 
       // Trainer filter
       if (trainerFilter !== "all") {
