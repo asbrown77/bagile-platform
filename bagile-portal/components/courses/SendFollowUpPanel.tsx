@@ -7,11 +7,13 @@ import { AlertBanner } from "@/components/ui/AlertBanner";
 import {
   CourseScheduleDetail,
   CourseAttendee,
+  CourseContact,
   PostCourseTemplate,
   Trainer,
   sendFollowUpEmail,
   sendFollowUpTestEmail,
   getFollowUpEmailPreview,
+  getCourseContacts,
   getTrainers,
   SendFollowUpResult,
 } from "@/lib/api";
@@ -37,6 +39,8 @@ export function SendFollowUpPanel({
   templateMissing,
 }: Props) {
   const [editedBody, setEditedBody] = useState("");
+  const [contacts, setContacts] = useState<CourseContact[]>([]);
+  const [ccContactIds, setCcContactIds] = useState<Set<number>>(new Set());
   const [showPreview, setShowPreview] = useState(false);
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
@@ -61,6 +65,13 @@ export function SendFollowUpPanel({
     setResult(null);
     setTestSentTo(null);
     setError("");
+    setContacts([]);
+    setCcContactIds(new Set());
+
+    getCourseContacts(apiKey, course.id).then((list) => {
+      setContacts(list);
+      setCcContactIds(new Set(list.filter((c) => c.role === "organiser").map((c) => c.id)));
+    }).catch(() => {});
 
     getTrainers(apiKey)
       .then((list) => {
@@ -86,8 +97,12 @@ export function SendFollowUpPanel({
     setError("");
     setSending(true);
     try {
+      const additionalCc = contacts
+        .filter((c) => ccContactIds.has(c.id) && c.email)
+        .map((c) => c.email);
       const res = await sendFollowUpEmail(apiKey, course.id, {
         htmlBodyOverride: editedBody.trim() || undefined,
+        additionalCc: additionalCc.length > 0 ? additionalCc : undefined,
       });
       setResult(res);
     } catch (e: any) {
@@ -122,6 +137,8 @@ export function SendFollowUpPanel({
 
   function handleClose() {
     setEditedBody("");
+    setContacts([]);
+    setCcContactIds(new Set());
     setResult(null);
     setTestSentTo(null);
     setError("");
@@ -184,6 +201,38 @@ export function SendFollowUpPanel({
             <AlertBanner variant="warning">
               No template found for this course type. Compose your email below or create a template in Settings.
             </AlertBanner>
+          )}
+
+          {/* ── CC contacts ── */}
+          {contacts.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-gray-700 mb-1.5">CC on this email:</p>
+              <div className="space-y-1">
+                {contacts.map((c) => (
+                  <label key={c.id} className="flex items-center gap-2 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={ccContactIds.has(c.id)}
+                      onChange={(e) => {
+                        setCcContactIds((prev) => {
+                          const next = new Set(prev);
+                          e.target.checked ? next.add(c.id) : next.delete(c.id);
+                          return next;
+                        });
+                      }}
+                      className="rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                    />
+                    <span className="text-sm text-gray-700 group-hover:text-gray-900">
+                      {c.name}
+                      <span className="text-gray-400 ml-1">({c.email})</span>
+                      <span className={`ml-1.5 text-xs font-medium px-1.5 py-0.5 rounded-full ${c.role === "organiser" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"}`}>
+                        {c.role}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
           )}
 
           {/* Editable body with Source/Preview toggle */}

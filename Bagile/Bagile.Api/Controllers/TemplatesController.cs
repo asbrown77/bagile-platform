@@ -148,6 +148,7 @@ public class TemplatesController : ControllerBase
                 CourseScheduleId   = courseScheduleId,
                 CourseTypeOverride = request?.CourseTypeOverride,
                 HtmlBodyOverride   = request?.HtmlBodyOverride,
+                AdditionalCc       = request?.AdditionalCc ?? [],
             };
 
             var result = await _mediator.Send(command, ct);
@@ -181,6 +182,7 @@ public record SendFollowUpRequest
 {
     public string? CourseTypeOverride { get; init; }
     public string? HtmlBodyOverride { get; init; }
+    public List<string> AdditionalCc { get; init; } = [];
 }
 
 public record SendFollowUpTestRequest

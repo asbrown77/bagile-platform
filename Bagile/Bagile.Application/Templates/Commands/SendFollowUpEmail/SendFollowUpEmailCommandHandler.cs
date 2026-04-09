@@ -93,11 +93,20 @@ public class SendFollowUpEmailCommandHandler
             "Sending follow-up email for course {CourseId} ({CourseCode}) to {Count} recipients",
             request.CourseScheduleId, course.CourseCode, toEmails.Count);
 
+        var ccList = new List<string> { CcAddress };
+        foreach (var extra in request.AdditionalCc)
+        {
+            if (!string.IsNullOrWhiteSpace(extra) &&
+                !toEmails.Contains(extra, StringComparer.OrdinalIgnoreCase) &&
+                !ccList.Contains(extra, StringComparer.OrdinalIgnoreCase))
+                ccList.Add(extra);
+        }
+
         await _emailService.SendAsync(
             to:       toEmails,
             subject:  subject,
             htmlBody: htmlBody,
-            cc:       [CcAddress],
+            cc:       ccList,
             replyTo:  replyTo,
             ct:       ct);
 

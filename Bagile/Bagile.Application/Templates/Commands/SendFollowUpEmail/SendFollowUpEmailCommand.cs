@@ -17,6 +17,9 @@ public record SendFollowUpEmailCommand : IRequest<SendFollowUpEmailResult>
     /// Supports the compose flow where the trainer edits before sending.
     /// </summary>
     public string? HtmlBodyOverride { get; init; }
+
+    /// <summary>Additional CC addresses, e.g. course organiser chosen in the portal.</summary>
+    public IReadOnlyList<string> AdditionalCc { get; init; } = [];
 }
 
 public record SendFollowUpEmailResult

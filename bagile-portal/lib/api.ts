@@ -754,7 +754,7 @@ export async function getFollowUpEmailPreview(
 export async function sendFollowUpEmail(
   apiKey: string,
   courseScheduleId: number,
-  opts?: { courseTypeOverride?: string; htmlBodyOverride?: string },
+  opts?: { courseTypeOverride?: string; htmlBodyOverride?: string; additionalCc?: string[] },
 ): Promise<SendFollowUpResult> {
   return apiRequest(`/api/templates/post-course/send/${courseScheduleId}`, apiKey, {
     method: "POST",
