@@ -4,6 +4,7 @@ using System.Text;
 using Bagile.Api.Services;
 using Dapper;
 using Google.Apis.Auth;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Npgsql;
 
@@ -21,66 +22,93 @@ public static class PortalEndpoints
 
     private static async Task<IResult> HandleGoogleLogin(
         HttpContext context,
-        IConfiguration config)
+        IConfiguration config,
+        ILoggerFactory loggerFactory)
     {
-        var body = await context.Request.ReadFromJsonAsync<GoogleLoginRequest>();
-        if (body == null || string.IsNullOrWhiteSpace(body.IdToken))
-            return Results.BadRequest(new { error = "idToken is required" });
-
-        GoogleJsonWebSignature.Payload payload;
+        var logger = loggerFactory.CreateLogger("PortalEndpoints");
         try
         {
-            payload = await GoogleJsonWebSignature.ValidateAsync(body.IdToken,
-                new GoogleJsonWebSignature.ValidationSettings
-                {
-                    Audience = new[] { config["Portal:GoogleClientId"] ?? "" }
-                });
+            var body = await context.Request.ReadFromJsonAsync<GoogleLoginRequest>();
+            if (body == null || string.IsNullOrWhiteSpace(body.IdToken))
+                return Results.BadRequest(new { error = "idToken is required" });
+
+            var googleClientId = config["Portal:GoogleClientId"];
+            if (string.IsNullOrWhiteSpace(googleClientId))
+            {
+                logger.LogError("Portal:GoogleClientId is not configured");
+                return Results.Json(new { error = "Server configuration error" }, statusCode: 500);
+            }
+
+            var jwtSecret = config["Portal:JwtSecret"];
+            if (string.IsNullOrWhiteSpace(jwtSecret))
+            {
+                logger.LogError("Portal:JwtSecret is not configured");
+                return Results.Json(new { error = "Server configuration error" }, statusCode: 500);
+            }
+
+            GoogleJsonWebSignature.Payload payload;
+            try
+            {
+                payload = await GoogleJsonWebSignature.ValidateAsync(body.IdToken,
+                    new GoogleJsonWebSignature.ValidationSettings
+                    {
+                        Audience = new[] { googleClientId }
+                    });
+            }
+            catch (InvalidJwtException ex)
+            {
+                logger.LogWarning("Google JWT validation failed: {Message}", ex.Message);
+                return Results.Unauthorized();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error validating Google JWT (possible network issue fetching Google certs)");
+                return Results.Json(new { error = "Token validation failed — please try again" }, statusCode: 502);
+            }
+
+            var allowedEmails = (config["Portal:AllowedEmails"] ?? "")
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+            if (allowedEmails.Length > 0 &&
+                !allowedEmails.Contains(payload.Email, StringComparer.OrdinalIgnoreCase))
+            {
+                return Results.Json(new { error = "Email not authorised" }, statusCode: 403);
+            }
+
+            var token = GenerateJwt(payload.Email, payload.Name ?? payload.Email, jwtSecret);
+
+            // Auto-create an API key for the user if they don't have an active one
+            var connStr = GetConnectionString(config);
+            string? apiKey = null;
+            await using var conn = new NpgsqlConnection(connStr);
+
+            var existingCount = await conn.ExecuteScalarAsync<int>(
+                "SELECT COUNT(*) FROM bagile.api_keys WHERE owner_email = @email AND is_active = TRUE",
+                new { email = payload.Email });
+
+            if (existingCount == 0)
+            {
+                var (rawKey, hash, prefix) = ApiKeyValidator.GenerateKey();
+                await conn.ExecuteAsync(
+                    @"INSERT INTO bagile.api_keys (key_hash, key_prefix, owner_email, owner_name, label)
+                      VALUES (@hash, @prefix, @email, @name, 'Auto-created')",
+                    new { hash, prefix, email = payload.Email, name = payload.Name ?? payload.Email });
+                apiKey = rawKey;
+            }
+
+            return Results.Ok(new
+            {
+                token,
+                email = payload.Email,
+                name = payload.Name,
+                apiKey
+            });
         }
-        catch (InvalidJwtException)
+        catch (Exception ex)
         {
-            return Results.Unauthorized();
+            logger.LogError(ex, "Unhandled exception in HandleGoogleLogin");
+            return Results.Json(new { error = "Internal server error" }, statusCode: 500);
         }
-
-        var allowedEmails = (config["Portal:AllowedEmails"] ?? "")
-            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-        if (allowedEmails.Length > 0 &&
-            !allowedEmails.Contains(payload.Email, StringComparer.OrdinalIgnoreCase))
-        {
-            return Results.Json(new { error = "Email not authorised" }, statusCode: 403);
-        }
-
-        var jwtSecret = config["Portal:JwtSecret"]
-            ?? throw new InvalidOperationException("Portal:JwtSecret not configured");
-
-        var token = GenerateJwt(payload.Email, payload.Name ?? payload.Email, jwtSecret);
-
-        // Auto-create an API key for the user if they don't have an active one
-        var connStr = GetConnectionString(config);
-        string? apiKey = null;
-        await using var conn = new NpgsqlConnection(connStr);
-
-        var existingCount = await conn.ExecuteScalarAsync<int>(
-            "SELECT COUNT(*) FROM bagile.api_keys WHERE owner_email = @email AND is_active = TRUE",
-            new { email = payload.Email });
-
-        if (existingCount == 0)
-        {
-            var (rawKey, hash, prefix) = ApiKeyValidator.GenerateKey();
-            await conn.ExecuteAsync(
-                @"INSERT INTO bagile.api_keys (key_hash, key_prefix, owner_email, owner_name, label)
-                  VALUES (@hash, @prefix, @email, @name, 'Auto-created')",
-                new { hash, prefix, email = payload.Email, name = payload.Name ?? payload.Email });
-            apiKey = rawKey;
-        }
-
-        return Results.Ok(new
-        {
-            token,
-            email = payload.Email,
-            name = payload.Name,
-            apiKey
-        });
     }
 
     private static async Task<IResult> ListKeys(
