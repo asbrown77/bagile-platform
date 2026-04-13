@@ -24,12 +24,15 @@ export default function OrganisationDetailPage() {
   const [history, setHistory] = useState<OrgCourseHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [yearFilter, setYearFilter] = useState<string>("all");
 
   useEffect(() => {
     if (!apiKey || !orgName) return;
+    setLoading(true);
+    const yearNum = yearFilter === "all" ? undefined : Number(yearFilter);
     Promise.all([
-      getOrganisationDetail(apiKey, orgName).catch(() => null),
-      getOrganisationCourseHistory(apiKey, orgName).catch(() => []),
+      getOrganisationDetail(apiKey, orgName, yearNum).catch(() => null),
+      getOrganisationCourseHistory(apiKey, orgName, yearNum).catch(() => []),
     ])
       .then(([detail, courses]) => {
         setOrg(detail);
@@ -37,7 +40,7 @@ export default function OrganisationDetailPage() {
       })
       .catch(() => setError("Failed to load organisation"))
       .finally(() => setLoading(false));
-  }, [apiKey, orgName]);
+  }, [apiKey, orgName, yearFilter]);
 
   const relationshipDays = org?.firstOrderDate
     ? Math.round((Date.now() - new Date(org.firstOrderDate).getTime()) / (1000 * 60 * 60 * 24))
@@ -51,7 +54,19 @@ export default function OrganisationDetailPage() {
 
       <PageHeader
         title={orgName}
-        subtitle={org?.primaryDomain || undefined}
+        subtitle={org?.primaryDomain ? `${org.primaryDomain}${yearFilter !== "all" ? ` — ${yearFilter}` : ""}` : undefined}
+        actions={
+          <div className="inline-flex rounded-lg border border-gray-300 overflow-hidden">
+            {["all", "2026", "2025", "2024"].map((opt) => (
+              <button key={opt} onClick={() => setYearFilter(opt)}
+                className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                  yearFilter === opt ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"
+                } ${opt !== "all" ? "border-l border-gray-300" : ""}`}>
+                {opt === "all" ? "All time" : opt}
+              </button>
+            ))}
+          </div>
+        }
       />
 
       {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 text-sm">{error}</div>}
@@ -65,7 +80,7 @@ export default function OrganisationDetailPage() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <Card label="Total Revenue" value={formatCurrency(org.totalRevenue)} icon={<TrendingUp className="w-4 h-4" />} />
           <Card label="Orders" value={org.totalOrders} icon={<ShoppingCart className="w-4 h-4" />} />
-          <Card label="Students" value={org.totalStudents} icon={<Users className="w-4 h-4" />} />
+          <Card label="Enrolments" value={org.totalEnrolments} icon={<Users className="w-4 h-4" />} />
           <Card
             label="Relationship"
             value={relationshipDays > 365 ? `${Math.round(relationshipDays / 365)}y` : `${relationshipDays}d`}

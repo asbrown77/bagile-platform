@@ -524,12 +524,14 @@ export interface OrgCourseHistory {
   lastRunDate: string | null;
 }
 
-export async function getOrganisationDetail(apiKey: string, name: string): Promise<OrganisationDetail> {
-  return apiRequest(`/api/organisations/${encodeURIComponent(name)}`, apiKey);
+export async function getOrganisationDetail(apiKey: string, name: string, year?: number): Promise<OrganisationDetail> {
+  const params = year ? `?year=${year}` : "";
+  return apiRequest(`/api/organisations/${encodeURIComponent(name)}${params}`, apiKey);
 }
 
-export async function getOrganisationCourseHistory(apiKey: string, name: string): Promise<OrgCourseHistory[]> {
-  return apiRequest(`/api/organisations/${encodeURIComponent(name)}/course-history`, apiKey);
+export async function getOrganisationCourseHistory(apiKey: string, name: string, year?: number): Promise<OrgCourseHistory[]> {
+  const params = year ? `?year=${year}` : "";
+  return apiRequest(`/api/organisations/${encodeURIComponent(name)}/course-history${params}`, apiKey);
 }
 
 export async function getOrganisations(apiKey: string, params?: { name?: string; page?: number; pageSize?: number }): Promise<PagedResult<OrganisationListItem>> {

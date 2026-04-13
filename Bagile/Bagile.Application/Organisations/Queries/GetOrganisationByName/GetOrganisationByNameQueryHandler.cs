@@ -25,6 +25,6 @@ public class GetOrganisationByNameQueryHandler
     {
         _logger.LogInformation("Fetching organisation: Name={Name}", request.Name);
 
-        return await _queries.GetOrganisationByNameAsync(request.Name, ct);
+        return await _queries.GetOrganisationByNameAsync(request.Name, request.Year, ct);
     }
 }

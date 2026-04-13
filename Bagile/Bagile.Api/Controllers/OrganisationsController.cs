@@ -91,12 +91,12 @@ public class OrganisationsController : ControllerBase
     [HttpGet("{name}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetOrganisation(string name)
+    public async Task<IActionResult> GetOrganisation(string name, [FromQuery] int? year = null)
     {
         // URL decode the name in case it contains encoded characters
         var decodedName = HttpUtility.UrlDecode(name);
 
-        var query = new GetOrganisationByNameQuery(decodedName);
+        var query = new GetOrganisationByNameQuery(decodedName, year);
         var result = await _mediator.Send(query);
 
         if (result == null)
@@ -110,12 +110,12 @@ public class OrganisationsController : ControllerBase
     /// </summary>
     [HttpGet("{name}/course-history")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetOrganisationCourseHistory(string name)
+    public async Task<IActionResult> GetOrganisationCourseHistory(string name, [FromQuery] int? year = null)
     {
         // URL decode the name in case it contains encoded characters
         var decodedName = HttpUtility.UrlDecode(name);
 
-        var query = new GetOrganisationCourseHistoryQuery(decodedName);
+        var query = new GetOrganisationCourseHistoryQuery(decodedName, year);
         var result = await _mediator.Send(query);
         return Ok(result);
     }

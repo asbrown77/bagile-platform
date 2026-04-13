@@ -158,10 +158,14 @@ public class OrganisationQueries : IOrganisationQueries
 
     public async Task<OrganisationDetailDto?> GetOrganisationByNameAsync(
         string name,
+        int? year = null,
         CancellationToken ct = default)
     {
         // Match by canonical org name OR by alias lookup.
         // This ensures "NobleProg" finds all bookings across all billing_company variations.
+        var yearOrderFilter = year.HasValue ? " AND EXTRACT(YEAR FROM o.order_date) = @year" : "";
+        var yearCourseFilter = year.HasValue ? " AND EXTRACT(YEAR FROM cs.start_date) = @year" : "";
+
         var sql = @"
             WITH alias_matches AS (
                 -- All company values that map to this org (via aliases or exact name match)
@@ -197,8 +201,8 @@ public class OrganisationQueries : IOrganisationQueries
                     STRING_AGG(DISTINCT SUBSTRING(s.email FROM '@(.*)$'), ', ') AS domains
                 FROM bagile.students s
                 LEFT JOIN bagile.enrolments e ON e.student_id = s.id
-                LEFT JOIN bagile.orders o ON e.order_id = o.id
-                LEFT JOIN bagile.course_schedules cs ON e.course_schedule_id = cs.id
+                LEFT JOIN bagile.orders o ON e.order_id = o.id" + yearOrderFilter + @"
+                LEFT JOIN bagile.course_schedules cs ON e.course_schedule_id = cs.id" + yearCourseFilter + @"
                 WHERE o.status = 'completed'
                   AND LOWER(TRIM(COALESCE(o.billing_company, s.company))) IN (
                     SELECT LOWER(TRIM(alias_value)) FROM alias_matches
@@ -222,13 +226,16 @@ public class OrganisationQueries : IOrganisationQueries
             FROM org_stats os;";
 
         await using var conn = new NpgsqlConnection(_connectionString);
-        return await conn.QueryFirstOrDefaultAsync<OrganisationDetailDto>(sql, new { name });
+        return await conn.QueryFirstOrDefaultAsync<OrganisationDetailDto>(sql, new { name, year });
     }
 
     public async Task<IEnumerable<OrganisationCourseHistoryDto>> GetOrganisationCourseHistoryAsync(
         string organisationName,
+        int? year = null,
         CancellationToken ct = default)
     {
+        var yearFilter = year.HasValue ? " AND EXTRACT(YEAR FROM cs.start_date) = @year" : "";
+
         var sql = @"
             WITH alias_matches AS (
                 SELECT unnest(org.aliases) AS alias_value
@@ -256,11 +263,11 @@ public class OrganisationQueries : IOrganisationQueries
             WHERE LOWER(TRIM(COALESCE(o.billing_company, s.company))) IN (
                 SELECT LOWER(TRIM(alias_value)) FROM alias_matches
             )
-              AND e.status NOT IN ('cancelled', 'transferred')
+              AND e.status NOT IN ('cancelled', 'transferred')" + yearFilter + @"
             GROUP BY COALESCE(cs.sku, 'PRIVATE'), COALESCE(cs.name, 'Private Course')
             ORDER BY TotalCount DESC, LastRunDate DESC NULLS LAST;";
 
         await using var conn = new NpgsqlConnection(_connectionString);
-        return await conn.QueryAsync<OrganisationCourseHistoryDto>(sql, new { organisationName });
+        return await conn.QueryAsync<OrganisationCourseHistoryDto>(sql, new { organisationName, year });
     }
 }

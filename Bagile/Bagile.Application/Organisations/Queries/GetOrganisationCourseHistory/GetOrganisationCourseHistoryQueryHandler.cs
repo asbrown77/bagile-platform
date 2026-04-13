@@ -27,6 +27,6 @@ public class GetOrganisationCourseHistoryQueryHandler
             "Fetching course history for organisation: Name={Name}",
             request.OrganisationName);
 
-        return await _queries.GetOrganisationCourseHistoryAsync(request.OrganisationName, ct);
+        return await _queries.GetOrganisationCourseHistoryAsync(request.OrganisationName, request.Year, ct);
     }
 }

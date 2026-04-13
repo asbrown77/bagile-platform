@@ -35,6 +35,7 @@ public interface IOrganisationQueries
     /// </summary>
     Task<OrganisationDetailDto?> GetOrganisationByNameAsync(
         string name,
+        int? year = null,
         CancellationToken ct = default);
 
     /// <summary>
@@ -42,5 +43,6 @@ public interface IOrganisationQueries
     /// </summary>
     Task<IEnumerable<OrganisationCourseHistoryDto>> GetOrganisationCourseHistoryAsync(
         string organisationName,
+        int? year = null,
         CancellationToken ct = default);
 }

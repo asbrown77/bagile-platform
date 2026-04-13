@@ -3,5 +3,5 @@ using Bagile.Application.Organisations.DTOs;
 
 namespace Bagile.Application.Organisations.Queries.GetOrganisationByName;
 
-public record GetOrganisationByNameQuery(string Name)
+public record GetOrganisationByNameQuery(string Name, int? Year = null)
     : IRequest<OrganisationDetailDto?>;
