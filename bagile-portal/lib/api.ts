@@ -544,6 +544,42 @@ export async function getOrganisations(apiKey: string, params?: { name?: string;
   return apiRequest(`/api/organisations?${qs}`, apiKey);
 }
 
+// ── Organisation Config ──────────────────────────────────
+
+export interface OrgConfig {
+  id: number;
+  name: string;
+  aliases: string[];
+  primaryDomain: string | null;
+  partnerType: string | null;
+  ptnTier: string | null;
+  discountRate: number | null;
+  contactEmail: string | null;
+}
+
+export async function getOrgConfig(apiKey: string, name: string): Promise<OrgConfig | null> {
+  const res = await fetch(`${API_URL}/api/organisations/${encodeURIComponent(name)}/config`, {
+    headers: { "X-Api-Key": apiKey },
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function updateOrgConfig(
+  apiKey: string,
+  name: string,
+  aliases: string[],
+  primaryDomain: string | null,
+): Promise<OrgConfig | null> {
+  const res = await fetch(`${API_URL}/api/organisations/${encodeURIComponent(name)}/config`, {
+    method: "PUT",
+    headers: { "X-Api-Key": apiKey, "Content-Type": "application/json" },
+    body: JSON.stringify({ aliases, primaryDomain }),
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
+
 // ── Organisation Type-ahead ──────────────────────────────
 
 export interface OrgSummary {

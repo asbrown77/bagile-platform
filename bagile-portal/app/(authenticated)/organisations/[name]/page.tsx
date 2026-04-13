@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useApiKey } from "@/lib/hooks/useApiKey";
 import {
-  OrganisationDetail, OrgCourseHistory, CourseAttendee,
+  OrganisationDetail, OrgCourseHistory, CourseAttendee, OrgConfig,
   getOrganisationDetail, getOrganisationCourseHistory, getCourseAttendees,
+  getOrgConfig, updateOrgConfig,
   formatCurrency, formatDate
 } from "@/lib/api";
 import { SlideOver } from "@/components/ui/SlideOver";
@@ -15,7 +16,7 @@ import { AlertBanner } from "@/components/ui/AlertBanner";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SkeletonCard, SkeletonRow } from "@/components/ui/Skeleton";
 import { Badge } from "@/components/ui/Badge";
-import { Building2, ShoppingCart, Users, TrendingUp, Calendar } from "lucide-react";
+import { Building2, ShoppingCart, Users, TrendingUp, Calendar, Settings } from "lucide-react";
 import Link from "next/link";
 
 export default function OrganisationDetailPage() {
@@ -32,10 +33,24 @@ export default function OrganisationDetailPage() {
   const [courseAttendees, setCourseAttendees] = useState<CourseAttendee[]>([]);
   const [attendeesLoading, setAttendeesLoading] = useState(false);
 
+  // Config slide-over state
+  const [orgConfig, setOrgConfig] = useState<OrgConfig | null>(null);
+  const [configOpen, setConfigOpen] = useState(false);
+  const [configAliases, setConfigAliases] = useState<string[]>([]);
+  const [configDomain, setConfigDomain] = useState("");
+  const [newAlias, setNewAlias] = useState("");
+  const [configSaving, setConfigSaving] = useState(false);
+
   // All-time fetch — only for Relationship KPI, unaffected by year filter
   useEffect(() => {
     if (!apiKey || !orgName) return;
     getOrganisationDetail(apiKey, orgName, undefined).then(setAllTimeOrg).catch(() => null);
+  }, [apiKey, orgName]);
+
+  // Config fetch — keyed on orgName only; config doesn't change with year
+  useEffect(() => {
+    if (!apiKey || !orgName) return;
+    getOrgConfig(apiKey, orgName).then(setOrgConfig);
   }, [apiKey, orgName]);
 
   useEffect(() => {
@@ -66,6 +81,32 @@ export default function OrganisationDetailPage() {
     }
   }
 
+  function openConfig() {
+    setConfigAliases(orgConfig?.aliases ?? []);
+    setConfigDomain(orgConfig?.primaryDomain ?? "");
+    setConfigOpen(true);
+  }
+
+  async function saveConfig() {
+    if (!orgConfig) return;
+    setConfigSaving(true);
+    try {
+      const updated = await updateOrgConfig(
+        apiKey!, orgName,
+        configAliases.map(a => a.trim()).filter(Boolean),
+        configDomain.trim() || null,
+      );
+      if (updated) {
+        setOrgConfig(updated);
+        // Re-trigger year-filtered fetch in case aliases changed how org resolves
+        setYearFilter(f => f);
+      }
+      setConfigOpen(false);
+    } finally {
+      setConfigSaving(false);
+    }
+  }
+
   const relationshipDays = allTimeOrg?.firstOrderDate
     ? Math.round((Date.now() - new Date(allTimeOrg.firstOrderDate).getTime()) / (1000 * 60 * 60 * 24))
     : 0;
@@ -80,15 +121,24 @@ export default function OrganisationDetailPage() {
         title={orgName}
         subtitle={org?.primaryDomain ? `${org.primaryDomain}${yearFilter !== "all" ? ` — ${yearFilter}` : ""}` : undefined}
         actions={
-          <div className="inline-flex rounded-lg border border-gray-300 overflow-hidden">
-            {["all", "2026", "2025", "2024"].map((opt) => (
-              <button key={opt} onClick={() => setYearFilter(opt)}
-                className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                  yearFilter === opt ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"
-                } ${opt !== "all" ? "border-l border-gray-300" : ""}`}>
-                {opt === "all" ? "All time" : opt}
-              </button>
-            ))}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={openConfig}
+              title="Configure organisation"
+              className="p-1.5 rounded-lg border border-gray-300 bg-white text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
+            <div className="inline-flex rounded-lg border border-gray-300 overflow-hidden">
+              {["all", "2026", "2025", "2024"].map((opt) => (
+                <button key={opt} onClick={() => setYearFilter(opt)}
+                  className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                    yearFilter === opt ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"
+                  } ${opt !== "all" ? "border-l border-gray-300" : ""}`}>
+                  {opt === "all" ? "All time" : opt}
+                </button>
+              ))}
+            </div>
           </div>
         }
       />
@@ -203,6 +253,99 @@ export default function OrganisationDetailPage() {
             ))}
           </div>
         )}
+      </SlideOver>
+
+      {/* Configure organisation slide-over */}
+      <SlideOver
+        open={configOpen}
+        onClose={() => setConfigOpen(false)}
+        title="Configure Organisation"
+        subtitle={orgName}
+      >
+        <div className="space-y-5">
+          {/* Primary Domain */}
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Primary Domain</label>
+            <input
+              type="text"
+              value={configDomain}
+              onChange={e => setConfigDomain(e.target.value)}
+              placeholder="e.g. example.com"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            />
+            <p className="text-xs text-gray-400 mt-1">Shown on the org detail page. Leave blank to auto-detect from student emails.</p>
+          </div>
+
+          {/* Aliases */}
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-2">Billing Company Aliases</label>
+            <p className="text-xs text-gray-400 mb-3">All billing_company values that should map to this organisation. The analytics queries use these to consolidate orders.</p>
+
+            {/* Existing aliases as chips */}
+            <div className="flex flex-wrap gap-2 mb-3">
+              {configAliases.map((alias, i) => (
+                <span key={i} className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-700 border border-gray-200">
+                  {alias}
+                  <button
+                    onClick={() => setConfigAliases(prev => prev.filter((_, j) => j !== i))}
+                    className="text-gray-400 hover:text-red-500 ml-0.5"
+                  >
+                    &times;
+                  </button>
+                </span>
+              ))}
+              {configAliases.length === 0 && (
+                <p className="text-xs text-gray-400 italic">No aliases yet</p>
+              )}
+            </div>
+
+            {/* Add alias input */}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newAlias}
+                onChange={e => setNewAlias(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === "Enter" && newAlias.trim()) {
+                    setConfigAliases(prev => [...prev, newAlias.trim()]);
+                    setNewAlias("");
+                  }
+                }}
+                placeholder="Type alias and press Enter"
+                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              />
+              <button
+                onClick={() => {
+                  if (newAlias.trim()) {
+                    setConfigAliases(prev => [...prev, newAlias.trim()]);
+                    setNewAlias("");
+                  }
+                }}
+                className="px-3 py-2 bg-brand-600 text-white rounded-lg text-sm hover:bg-brand-700"
+              >
+                Add
+              </button>
+            </div>
+          </div>
+
+          {/* Note if org not in table */}
+          {!orgConfig && (
+            <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              This organisation is not in the organisations table yet. Configuration will only work for registered organisations.
+            </p>
+          )}
+
+          {/* Save */}
+          <div className="pt-2 border-t border-gray-100">
+            <button
+              onClick={saveConfig}
+              disabled={configSaving || !orgConfig}
+              className="w-full py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {configSaving ? "Saving\u2026" : "Save changes"}
+            </button>
+          </div>
+        </div>
       </SlideOver>
     </>
   );

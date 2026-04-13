@@ -4,7 +4,9 @@ using Bagile.Application.Organisations.Queries.GetOrganisations;
 using Bagile.Application.Organisations.Queries.GetOrganisationByName;
 using Bagile.Application.Organisations.Queries.GetOrganisationCourseHistory;
 using Bagile.Application.Organisations.Queries.SearchOrganisations;
+using Bagile.Application.Organisations.Queries.GetOrgConfig;
 using Bagile.Application.Organisations.Commands.CreateOrganisation;
+using Bagile.Application.Organisations.Commands.UpdateOrgConfig;
 using System.Web;
 
 namespace Bagile.Api.Controllers;
@@ -106,6 +108,42 @@ public class OrganisationsController : ControllerBase
     }
 
     /// <summary>
+    /// Get full configuration (aliases, primary domain) for an organisation.
+    /// Returns 404 if the org is not in the organisations table.
+    /// </summary>
+    [HttpGet("{name}/config")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetOrgConfig(string name)
+    {
+        var decodedName = HttpUtility.UrlDecode(name);
+        var result = await _mediator.Send(new GetOrgConfigQuery(decodedName));
+        if (result == null) return NotFound(new { error = "Organisation not found in organisations table" });
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Update aliases and primary domain for an organisation.
+    /// </summary>
+    [HttpPut("{name}/config")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateOrgConfig(string name, [FromBody] UpdateOrgConfigRequest request)
+    {
+        var decodedName = HttpUtility.UrlDecode(name);
+        var existing = await _mediator.Send(new GetOrgConfigQuery(decodedName));
+        if (existing == null) return NotFound(new { error = "Organisation not found in organisations table" });
+
+        var result = await _mediator.Send(new UpdateOrgConfigCommand
+        {
+            Id            = existing.Id,
+            Aliases       = request.Aliases,
+            PrimaryDomain = request.PrimaryDomain?.Trim(),
+        });
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Get course history for a specific organisation
     /// </summary>
     [HttpGet("{name}/course-history")]
@@ -125,4 +163,10 @@ public record CreateOrganisationRequest
 {
     public string Name { get; init; } = "";
     public string? Acronym { get; init; }
+}
+
+public record UpdateOrgConfigRequest
+{
+    public List<string> Aliases { get; init; } = new();
+    public string? PrimaryDomain { get; init; }
 }

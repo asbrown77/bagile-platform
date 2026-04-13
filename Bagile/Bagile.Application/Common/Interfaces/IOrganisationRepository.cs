@@ -13,4 +13,15 @@ public interface IOrganisationRepository
     /// Throws if a duplicate name already exists.
     /// </summary>
     Task<OrganisationSummaryDto> CreateAsync(string name, string? acronym, CancellationToken ct = default);
+
+    /// <summary>
+    /// Get full configuration for an organisation, matched by name or alias.
+    /// Returns null if not found in the organisations table.
+    /// </summary>
+    Task<OrgConfigDto?> GetConfigByNameAsync(string name, CancellationToken ct = default);
+
+    /// <summary>
+    /// Update aliases and primary domain for an organisation. Returns the updated record.
+    /// </summary>
+    Task<OrgConfigDto?> UpdateConfigAsync(long id, List<string> aliases, string? primaryDomain, CancellationToken ct = default);
 }
