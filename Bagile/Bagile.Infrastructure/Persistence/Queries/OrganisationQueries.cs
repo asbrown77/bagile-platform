@@ -167,7 +167,10 @@ public class OrganisationQueries : IOrganisationQueries
                 LEFT JOIN bagile.enrolments e ON e.student_id = s.id
                 LEFT JOIN bagile.orders o ON e.order_id = o.id
                 LEFT JOIN bagile.course_schedules cs ON e.course_schedule_id = cs.id
-                WHERE COALESCE(s.company, o.billing_company) = @name
+                WHERE COALESCE(s.company, o.billing_company) = ANY(
+                    SELECT unnest(aliases) FROM bagile.organisations WHERE name ILIKE @name
+                    UNION SELECT @name
+                )
                 GROUP BY COALESCE(s.company, o.billing_company)
             )
             SELECT 
@@ -202,7 +205,10 @@ public class OrganisationQueries : IOrganisationQueries
             JOIN bagile.students s ON e.student_id = s.id
             LEFT JOIN bagile.course_schedules cs ON e.course_schedule_id = cs.id
             LEFT JOIN bagile.orders o ON e.order_id = o.id
-            WHERE COALESCE(s.company, o.billing_company) = @organisationName
+            WHERE COALESCE(s.company, o.billing_company) = ANY(
+                SELECT unnest(aliases) FROM bagile.organisations WHERE name ILIKE @organisationName
+                UNION SELECT @organisationName
+            )
             GROUP BY COALESCE(cs.sku, 'PRIVATE'), COALESCE(cs.name, 'Private Course')
             ORDER BY TotalCount DESC, LastRunDate DESC NULLS LAST;";
 
