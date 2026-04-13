@@ -118,6 +118,35 @@ _"I can see revenue, partner value, course demand, and make scheduling decisions
 
 Items below are prioritised but not yet scheduled.
 
+### P1 — Organisation Data Quality
+
+**Problem:** The platform has widespread organisation data quality issues affecting ~680 orgs. Root cause: `Auto-detect organisation from email domain` (Sprint 20) matched against **student email domains**, not billing company domains. Training resellers (NobleProg, QA Ltd, Knowledge Train etc.) book on behalf of end clients — so their students have client email addresses, not reseller addresses. This created duplicate org entries with wrong primary domains, making organisation pages show no history or wrong defaults.
+
+**Impact observed (13 Apr 2026 audit):**
+- NobleProg split into 2 entries — `NOBLEPROG (UK) LTD` (domain: `gpa.gov.uk`) and `NobleProg (UK) Ltd` (domain: `companieshouse.gov.uk`). History split, neither shows NobleProg's real domain.
+- QA Ltd — **3 separate entries** (`qa.com` nowhere, domains: `astraappivate.co.uk`, `baesystems.com`, `fujitsu.com`)
+- Frazer-Nash Consultancy — **3 entries** (same domain, name casing/punctuation varies)
+- LearnQuest s.r.o — **2 entries** (domains: `capgemini.com`, `ibm.com`)
+- BAgile Limited / Bagile Limited — **2 entries**
+- BHF / bhf.org.uk — **2 entries**
+- JISC / Jisc — **2 entries**
+- 1inch — **3 entries**
+- Blank org name `""` — **323 enrolments** (largest "org") — students not matched to any org
+- Several orgs with `gmail.com` or irrelevant domains
+
+| # | Item | Size | Status |
+|---|------|------|--------|
+| O1 | Add `primary_domain` field to organisations table — manually set, overrides auto-detect | S | **DONE** (V46 migration) |
+| O2 | Seed primary domains for known partners: NobleProg, QA, Knowledge Train, LearnQuest, Indicia, K21, Invensis, etc. + expand aliases | S | **DONE** (V46 migration) |
+| O3 | Organisation merge tool in portal settings — pick primary org, merge duplicates into it (move all enrolment org references) | L | Deferred |
+| O4 | Fix org list query — LEFT JOIN against organisations aliases for canonical names, use primary_domain, filter blanks | M | **DONE** (OrganisationQueries.cs rewrite) |
+| O5 | Organisation detail page — show `primaryDomain`, allow admin to override it | S | |
+| O6 | Data cleanup script — merge known duplicates (NobleProg ×2, QA ×3, Frazer-Nash ×3, etc.) | M | |
+
+**Definition of done:** NobleProg shows as one entry with domain `nobleprog.com`, full course history visible (PSPO Jan, PSPO Mar, PSMA Apr, PSPO-A Jun 25), and clicking from the portal shows correct defaults.
+
+---
+
 ### P2 — Payment Visibility
 
 | ID | Item | Who Needs It | Status |
@@ -158,6 +187,14 @@ Items below are prioritised but not yet scheduled.
 ---
 
 ## Completed
+
+### Sprint 25 — "Organisation Data Quality" (13 Apr 2026)
+- [x] V46 migration: `primary_domain` column on organisations table, seeded for all known partners
+- [x] Expanded aliases for NobleProg, QA Ltd, BAgile, BHF, JISC to consolidate duplicate portal entries
+- [x] Rewrote `GetOrganisationsAsync` — LEFT JOIN against organisations aliases for canonical name resolution, blank org filtering
+- [x] Rewrote `CountOrganisationsAsync` — same normalisation for consistent pagination
+- [x] Rewrote `GetOrganisationByNameAsync` — alias-based lookup consolidates all billing_company variations
+- [x] Rewrote `GetOrganisationCourseHistoryAsync` — alias-based lookup for complete course history
 
 ### Sprint 21 extras (2 Apr 2026)
 - [x] Trainers table + API + settings UI + dropdown on course panels

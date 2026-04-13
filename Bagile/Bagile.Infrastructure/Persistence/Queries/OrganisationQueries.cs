@@ -1,4 +1,4 @@
-﻿using Bagile.Application.Common.Interfaces;
+using Bagile.Application.Common.Interfaces;
 using Bagile.Application.Organisations.DTOs;
 using Dapper;
 using Npgsql;
@@ -43,6 +43,38 @@ public class OrganisationQueries : IOrganisationQueries
         });
     }
 
+    /// <summary>
+    /// CTE fragment that resolves raw company names to canonical organisation names.
+    /// LEFT JOINs against bagile.organisations using case-insensitive alias matching.
+    /// Unknown orgs (no match) fall back to the raw company value.
+    /// Blank/null company values are excluded.
+    /// </summary>
+    private const string NormalisedCompanyCte = @"
+        -- Gather all company name occurrences from students and orders
+        raw_companies AS (
+            SELECT COALESCE(s.company, o.billing_company) AS company_value,
+                   s.id AS student_id,
+                   s.email AS student_email,
+                   e.id AS enrolment_id,
+                   o.id AS order_id
+            FROM bagile.students s
+            LEFT JOIN bagile.enrolments e ON e.student_id = s.id
+            LEFT JOIN bagile.orders o ON e.order_id = o.id
+            WHERE COALESCE(s.company, o.billing_company) IS NOT NULL
+              AND NULLIF(TRIM(COALESCE(s.company, o.billing_company)), '') IS NOT NULL
+        ),
+        -- Resolve each company value to its canonical org name via alias matching
+        resolved AS (
+            SELECT rc.*,
+                   COALESCE(org.name, rc.company_value) AS canonical_name,
+                   org.primary_domain AS org_primary_domain
+            FROM raw_companies rc
+            LEFT JOIN bagile.organisations org
+                   ON LOWER(TRIM(rc.company_value)) = ANY(
+                       SELECT LOWER(TRIM(a)) FROM UNNEST(org.aliases) a
+                   )
+        )";
+
     public async Task<IEnumerable<OrganisationDto>> GetOrganisationsAsync(
         string? name,
         string? domain,
@@ -51,44 +83,31 @@ public class OrganisationQueries : IOrganisationQueries
         CancellationToken ct = default)
     {
         var sql = @"
-            WITH org_names AS (
-                -- Get unique organisation names from orders (billing_company)
-                SELECT DISTINCT 
-                    o.billing_company AS org_name
-                FROM bagile.orders o
-                WHERE o.billing_company IS NOT NULL 
-                    AND TRIM(o.billing_company) != ''
-                
-                UNION
-                
-                -- Get unique organisation names from students (company)
-                SELECT DISTINCT 
-                    s.company AS org_name
-                FROM bagile.students s
-                WHERE s.company IS NOT NULL 
-                    AND TRIM(s.company) != ''
-            ),
+            WITH " + NormalisedCompanyCte + @",
             org_stats AS (
-                SELECT 
-                    COALESCE(s.company, o.billing_company) AS org_name,
-                    COUNT(DISTINCT s.id) AS total_students,
-                    COUNT(DISTINCT e.id) AS total_enrolments,
-                    STRING_AGG(DISTINCT SUBSTRING(s.email FROM '@(.*)$'), ', ') AS domains
-                FROM bagile.students s
-                LEFT JOIN bagile.enrolments e ON e.student_id = s.id
-                LEFT JOIN bagile.orders o ON e.order_id = o.id
-                WHERE COALESCE(s.company, o.billing_company) IS NOT NULL
-                GROUP BY COALESCE(s.company, o.billing_company)
+                SELECT
+                    r.canonical_name AS org_name,
+                    COALESCE(
+                        MAX(r.org_primary_domain),
+                        SPLIT_PART(
+                            STRING_AGG(DISTINCT SUBSTRING(r.student_email FROM '@(.*)$'), ', '),
+                            ', ', 1
+                        )
+                    ) AS primary_domain,
+                    COUNT(DISTINCT r.student_id) AS total_students,
+                    COUNT(DISTINCT r.enrolment_id) AS total_enrolments
+                FROM resolved r
+                GROUP BY r.canonical_name
             )
-            SELECT 
+            SELECT
                 os.org_name AS Name,
-                SPLIT_PART(os.domains, ', ', 1) AS PrimaryDomain,
+                os.primary_domain AS PrimaryDomain,
                 os.total_students AS TotalStudents,
                 os.total_enrolments AS TotalEnrolments
             FROM org_stats os
             WHERE 1=1
             " + (name != null ? " AND os.org_name ILIKE @namePattern" : "") + @"
-            " + (domain != null ? " AND os.domains ILIKE @domainPattern" : "") + @"
+            " + (domain != null ? " AND os.primary_domain ILIKE @domainPattern" : "") + @"
             ORDER BY os.total_enrolments DESC, os.org_name
             LIMIT @pageSize OFFSET @offset;";
 
@@ -108,36 +127,25 @@ public class OrganisationQueries : IOrganisationQueries
         CancellationToken ct = default)
     {
         var sql = @"
-            WITH org_names AS (
-                SELECT DISTINCT 
-                    o.billing_company AS org_name
-                FROM bagile.orders o
-                WHERE o.billing_company IS NOT NULL 
-                    AND TRIM(o.billing_company) != ''
-                
-                UNION
-                
-                SELECT DISTINCT 
-                    s.company AS org_name
-                FROM bagile.students s
-                WHERE s.company IS NOT NULL 
-                    AND TRIM(s.company) != ''
-            ),
+            WITH " + NormalisedCompanyCte + @",
             org_stats AS (
-                SELECT 
-                    COALESCE(s.company, o.billing_company) AS org_name,
-                    STRING_AGG(DISTINCT SUBSTRING(s.email FROM '@(.*)$'), ', ') AS domains
-                FROM bagile.students s
-                LEFT JOIN bagile.enrolments e ON e.student_id = s.id
-                LEFT JOIN bagile.orders o ON e.order_id = o.id
-                WHERE COALESCE(s.company, o.billing_company) IS NOT NULL
-                GROUP BY COALESCE(s.company, o.billing_company)
+                SELECT
+                    r.canonical_name AS org_name,
+                    COALESCE(
+                        MAX(r.org_primary_domain),
+                        SPLIT_PART(
+                            STRING_AGG(DISTINCT SUBSTRING(r.student_email FROM '@(.*)$'), ', '),
+                            ', ', 1
+                        )
+                    ) AS primary_domain
+                FROM resolved r
+                GROUP BY r.canonical_name
             )
             SELECT COUNT(*)
             FROM org_stats os
             WHERE 1=1
             " + (name != null ? " AND os.org_name ILIKE @namePattern" : "") + @"
-            " + (domain != null ? " AND os.domains ILIKE @domainPattern" : "");
+            " + (domain != null ? " AND os.primary_domain ILIKE @domainPattern" : "");
 
         await using var conn = new NpgsqlConnection(_connectionString);
         return await conn.ExecuteScalarAsync<int>(sql, new
@@ -151,10 +159,33 @@ public class OrganisationQueries : IOrganisationQueries
         string name,
         CancellationToken ct = default)
     {
+        // Match by canonical org name OR by alias lookup.
+        // This ensures "NobleProg" finds all bookings across all billing_company variations.
         var sql = @"
-            WITH org_stats AS (
-                SELECT 
-                    COALESCE(s.company, o.billing_company) AS org_name,
+            WITH alias_matches AS (
+                -- All company values that map to this org (via aliases or exact name match)
+                SELECT unnest(org.aliases) AS alias_value
+                FROM bagile.organisations org
+                WHERE org.name ILIKE @name
+                   OR LOWER(TRIM(@name)) = ANY(
+                       SELECT LOWER(TRIM(a)) FROM UNNEST(org.aliases) a
+                   )
+
+                UNION
+
+                SELECT @name AS alias_value
+            ),
+            org_stats AS (
+                SELECT
+                    COALESCE(
+                        (SELECT org.name FROM bagile.organisations org
+                         WHERE org.name ILIKE @name
+                            OR LOWER(TRIM(@name)) = ANY(
+                                SELECT LOWER(TRIM(a)) FROM UNNEST(org.aliases) a
+                            )
+                         LIMIT 1),
+                        @name
+                    ) AS org_name,
                     COUNT(DISTINCT s.id) AS total_students,
                     COUNT(DISTINCT e.id) AS total_enrolments,
                     COUNT(DISTINCT o.id) AS total_orders,
@@ -167,15 +198,17 @@ public class OrganisationQueries : IOrganisationQueries
                 LEFT JOIN bagile.enrolments e ON e.student_id = s.id
                 LEFT JOIN bagile.orders o ON e.order_id = o.id
                 LEFT JOIN bagile.course_schedules cs ON e.course_schedule_id = cs.id
-                WHERE COALESCE(s.company, o.billing_company) = ANY(
-                    SELECT unnest(aliases) FROM bagile.organisations WHERE name ILIKE @name
-                    UNION SELECT @name
+                WHERE LOWER(TRIM(COALESCE(s.company, o.billing_company))) IN (
+                    SELECT LOWER(TRIM(alias_value)) FROM alias_matches
                 )
-                GROUP BY COALESCE(s.company, o.billing_company)
             )
-            SELECT 
+            SELECT
                 os.org_name AS Name,
-                SPLIT_PART(os.domains, ', ', 1) AS PrimaryDomain,
+                COALESCE(
+                    (SELECT org.primary_domain FROM bagile.organisations org
+                     WHERE org.name = os.org_name LIMIT 1),
+                    SPLIT_PART(os.domains, ', ', 1)
+                ) AS PrimaryDomain,
                 os.total_students AS TotalStudents,
                 os.total_enrolments AS TotalEnrolments,
                 os.total_orders AS TotalOrders,
@@ -194,7 +227,19 @@ public class OrganisationQueries : IOrganisationQueries
         CancellationToken ct = default)
     {
         var sql = @"
-            SELECT 
+            WITH alias_matches AS (
+                SELECT unnest(org.aliases) AS alias_value
+                FROM bagile.organisations org
+                WHERE org.name ILIKE @organisationName
+                   OR LOWER(TRIM(@organisationName)) = ANY(
+                       SELECT LOWER(TRIM(a)) FROM UNNEST(org.aliases) a
+                   )
+
+                UNION
+
+                SELECT @organisationName AS alias_value
+            )
+            SELECT
                 COALESCE(cs.sku, 'PRIVATE') AS CourseCode,
                 COALESCE(cs.name, 'Private Course') AS CourseTitle,
                 COUNT(CASE WHEN cs.is_public = true THEN 1 END) AS PublicCount,
@@ -205,9 +250,8 @@ public class OrganisationQueries : IOrganisationQueries
             JOIN bagile.students s ON e.student_id = s.id
             LEFT JOIN bagile.course_schedules cs ON e.course_schedule_id = cs.id
             LEFT JOIN bagile.orders o ON e.order_id = o.id
-            WHERE COALESCE(s.company, o.billing_company) = ANY(
-                SELECT unnest(aliases) FROM bagile.organisations WHERE name ILIKE @organisationName
-                UNION SELECT @organisationName
+            WHERE LOWER(TRIM(COALESCE(s.company, o.billing_company))) IN (
+                SELECT LOWER(TRIM(alias_value)) FROM alias_matches
             )
             GROUP BY COALESCE(cs.sku, 'PRIVATE'), COALESCE(cs.name, 'Private Course')
             ORDER BY TotalCount DESC, LastRunDate DESC NULLS LAST;";
