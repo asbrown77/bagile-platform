@@ -24,9 +24,18 @@ public class GetCourseAttendeesQueryHandler
         CancellationToken ct)
     {
         _logger.LogInformation(
-            "Fetching attendees for course schedule: ScheduleId={ScheduleId}",
-            request.ScheduleId);
+            "Fetching attendees for course schedule: ScheduleId={ScheduleId}, BillingCompany={BillingCompany}",
+            request.ScheduleId, request.BillingCompany);
 
-        return await _queries.GetCourseAttendeesAsync(request.ScheduleId, ct);
+        var attendees = await _queries.GetCourseAttendeesAsync(request.ScheduleId, ct);
+
+        if (!string.IsNullOrWhiteSpace(request.BillingCompany))
+        {
+            attendees = attendees.Where(a =>
+                !string.IsNullOrEmpty(a.BillingCompany) &&
+                a.BillingCompany.Contains(request.BillingCompany, StringComparison.OrdinalIgnoreCase));
+        }
+
+        return attendees;
     }
 }

@@ -11,4 +11,5 @@ public record OrganisationCourseHistoryDto
     public int PrivateCount { get; init; }
     public int TotalCount { get; init; }
     public DateTime? LastRunDate { get; init; }
+    public long CourseScheduleId { get; init; }
 }

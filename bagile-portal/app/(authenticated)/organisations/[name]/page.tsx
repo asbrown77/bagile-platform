@@ -4,9 +4,11 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useApiKey } from "@/lib/hooks/useApiKey";
 import {
-  OrganisationDetail, OrgCourseHistory,
-  getOrganisationDetail, getOrganisationCourseHistory, formatCurrency, formatDate
+  OrganisationDetail, OrgCourseHistory, CourseAttendee,
+  getOrganisationDetail, getOrganisationCourseHistory, getCourseAttendees,
+  formatCurrency, formatDate
 } from "@/lib/api";
+import { SlideOver } from "@/components/ui/SlideOver";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { AlertBanner } from "@/components/ui/AlertBanner";
@@ -25,6 +27,9 @@ export default function OrganisationDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [yearFilter, setYearFilter] = useState<string>("all");
+  const [selectedCourse, setSelectedCourse] = useState<OrgCourseHistory | null>(null);
+  const [courseAttendees, setCourseAttendees] = useState<CourseAttendee[]>([]);
+  const [attendeesLoading, setAttendeesLoading] = useState(false);
 
   useEffect(() => {
     if (!apiKey || !orgName) return;
@@ -41,6 +46,18 @@ export default function OrganisationDetailPage() {
       .catch(() => setError("Failed to load organisation"))
       .finally(() => setLoading(false));
   }, [apiKey, orgName, yearFilter]);
+
+  async function handleCourseClick(course: OrgCourseHistory) {
+    setSelectedCourse(course);
+    setAttendeesLoading(true);
+    setCourseAttendees([]);
+    try {
+      const attendees = await getCourseAttendees(apiKey!, course.courseScheduleId, orgName);
+      setCourseAttendees(attendees);
+    } finally {
+      setAttendeesLoading(false);
+    }
+  }
 
   const relationshipDays = org?.firstOrderDate
     ? Math.round((Date.now() - new Date(org.firstOrderDate).getTime()) / (1000 * 60 * 60 * 24))
@@ -124,7 +141,7 @@ export default function OrganisationDetailPage() {
           <tbody>
             {loading && Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} cols={5} />)}
             {!loading && history.map((h) => (
-              <tr key={h.courseCode} className="border-t border-gray-100 hover:bg-gray-50">
+              <tr key={h.courseCode} onClick={() => handleCourseClick(h)} className="border-t border-gray-100 hover:bg-gray-50 cursor-pointer">
                 <td className="px-4 py-3">
                   <p className="font-medium text-gray-900">{h.courseTitle || h.courseCode}</p>
                   <p className="text-xs text-gray-400 font-mono">{h.courseCode}</p>
@@ -143,6 +160,57 @@ export default function OrganisationDetailPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Attendees slide-over */}
+      <SlideOver
+        open={!!selectedCourse}
+        onClose={() => setSelectedCourse(null)}
+        title={selectedCourse?.courseTitle || selectedCourse?.courseCode || ""}
+        subtitle={`${orgName} attendees`}
+      >
+        {attendeesLoading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="animate-pulse">
+                <div className="h-4 bg-gray-200 rounded w-3/4 mb-1" />
+                <div className="h-3 bg-gray-100 rounded w-1/2" />
+              </div>
+            ))}
+          </div>
+        ) : courseAttendees.length === 0 ? (
+          <EmptyState
+            icon={<Users className="w-10 h-10" />}
+            title="No attendees"
+            description="No attendees from this organisation on this course"
+          />
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {courseAttendees.map((a) => (
+              <div key={a.enrolmentId} className="py-3 first:pt-0">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-gray-900">{a.name}</p>
+                  <StatusBadge status={a.status} />
+                </div>
+                <p className="text-xs text-gray-500 mt-0.5">{a.email}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </SlideOver>
     </>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const s = status.toLowerCase();
+  let color = "bg-gray-100 text-gray-700";
+  if (s === "active" || s === "completed") color = "bg-green-50 text-green-700";
+  else if (s === "cancelled") color = "bg-red-50 text-red-700";
+  else if (s === "transferred" || s === "pending_transfer") color = "bg-amber-50 text-amber-700";
+
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${color}`}>
+      {status}
+    </span>
   );
 }

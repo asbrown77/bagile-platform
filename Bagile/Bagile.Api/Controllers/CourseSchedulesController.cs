@@ -80,9 +80,9 @@ public class CourseSchedulesController : ControllerBase
     /// </summary>
     [HttpGet("{id}/attendees")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetCourseAttendees(long id)
+    public async Task<IActionResult> GetCourseAttendees(long id, [FromQuery] string? billingCompany = null)
     {
-        var query = new GetCourseAttendeesQuery(id);
+        var query = new GetCourseAttendeesQuery(id, billingCompany);
         var result = await _mediator.Send(query);
         return Ok(result);
     }

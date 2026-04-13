@@ -255,7 +255,8 @@ public class OrganisationQueries : IOrganisationQueries
                 COUNT(CASE WHEN cs.is_public = true THEN 1 END) AS PublicCount,
                 COUNT(CASE WHEN cs.is_public = false OR cs.is_public IS NULL THEN 1 END) AS PrivateCount,
                 COUNT(*) AS TotalCount,
-                MAX(cs.start_date) AS LastRunDate
+                MAX(cs.start_date) AS LastRunDate,
+                MAX(cs.id) AS CourseScheduleId
             FROM bagile.enrolments e
             JOIN bagile.students s ON e.student_id = s.id
             LEFT JOIN bagile.course_schedules cs ON e.course_schedule_id = cs.id

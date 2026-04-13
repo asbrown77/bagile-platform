@@ -147,8 +147,9 @@ export interface CourseAttendee {
   orderAttendeeCount: number | null;
 }
 
-export async function getCourseAttendees(apiKey: string, courseId: number): Promise<CourseAttendee[]> {
-  return apiRequest(`/api/course-schedules/${courseId}/attendees`, apiKey);
+export async function getCourseAttendees(apiKey: string, courseId: number, billingCompany?: string): Promise<CourseAttendee[]> {
+  const qs = billingCompany ? `?billingCompany=${encodeURIComponent(billingCompany)}` : "";
+  return apiRequest(`/api/course-schedules/${courseId}/attendees${qs}`, apiKey);
 }
 
 // ── Revenue ──────────────────────────────────────────────
@@ -522,6 +523,7 @@ export interface OrgCourseHistory {
   privateCount: number;
   totalCount: number;
   lastRunDate: string | null;
+  courseScheduleId: number;
 }
 
 export async function getOrganisationDetail(apiKey: string, name: string, year?: number): Promise<OrganisationDetail> {
