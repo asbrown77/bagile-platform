@@ -27,9 +27,16 @@ export default function OrganisationDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [yearFilter, setYearFilter] = useState<string>("all");
+  const [allTimeOrg, setAllTimeOrg] = useState<OrganisationDetail | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<OrgCourseHistory | null>(null);
   const [courseAttendees, setCourseAttendees] = useState<CourseAttendee[]>([]);
   const [attendeesLoading, setAttendeesLoading] = useState(false);
+
+  // All-time fetch — only for Relationship KPI, unaffected by year filter
+  useEffect(() => {
+    if (!apiKey || !orgName) return;
+    getOrganisationDetail(apiKey, orgName, undefined).then(setAllTimeOrg).catch(() => null);
+  }, [apiKey, orgName]);
 
   useEffect(() => {
     if (!apiKey || !orgName) return;
@@ -59,8 +66,8 @@ export default function OrganisationDetailPage() {
     }
   }
 
-  const relationshipDays = org?.firstOrderDate
-    ? Math.round((Date.now() - new Date(org.firstOrderDate).getTime()) / (1000 * 60 * 60 * 24))
+  const relationshipDays = allTimeOrg?.firstOrderDate
+    ? Math.round((Date.now() - new Date(allTimeOrg.firstOrderDate).getTime()) / (1000 * 60 * 60 * 24))
     : 0;
 
   return (
@@ -101,7 +108,7 @@ export default function OrganisationDetailPage() {
           <Card
             label="Relationship"
             value={relationshipDays > 365 ? `${Math.round(relationshipDays / 365)}y` : `${relationshipDays}d`}
-            subtitle={org.firstOrderDate ? `Since ${formatDate(org.firstOrderDate)}` : "—"}
+            subtitle={allTimeOrg?.firstOrderDate ? `Since ${formatDate(allTimeOrg.firstOrderDate)}` : "—"}
             icon={<Calendar className="w-4 h-4" />}
           />
         </div>
