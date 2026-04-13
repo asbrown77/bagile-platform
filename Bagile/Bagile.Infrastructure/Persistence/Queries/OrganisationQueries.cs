@@ -270,24 +270,55 @@ public class OrganisationQueries : IOrganisationQueries
                 UNION
 
                 SELECT @organisationName AS alias_value
+            ),
+            -- Enrolment-based history (public and private courses booked via WooCommerce)
+            enrolment_history AS (
+                SELECT
+                    COALESCE(cs.sku, 'PRIVATE') AS CourseCode,
+                    COALESCE(cs.name, 'Private Course') AS CourseTitle,
+                    COUNT(CASE WHEN cs.is_public = true THEN 1 END) AS PublicCount,
+                    COUNT(CASE WHEN cs.is_public = false OR cs.is_public IS NULL THEN 1 END) AS PrivateCount,
+                    COUNT(*) AS TotalCount,
+                    MAX(cs.start_date) AS LastRunDate,
+                    MAX(cs.id) AS CourseScheduleId
+                FROM bagile.enrolments e
+                JOIN bagile.students s ON e.student_id = s.id
+                LEFT JOIN bagile.course_schedules cs ON e.course_schedule_id = cs.id
+                LEFT JOIN bagile.orders o ON e.order_id = o.id
+                WHERE LOWER(TRIM(COALESCE(o.billing_company, s.company))) IN (
+                    SELECT LOWER(TRIM(alias_value)) FROM alias_matches
+                )
+                  AND e.status NOT IN ('cancelled', 'transferred')" + yearFilter + @"
+                GROUP BY COALESCE(cs.sku, 'PRIVATE'), COALESCE(cs.name, 'Private Course')
+            ),
+            -- Direct private course records (backfilled from Xero, no enrolments)
+            -- Excluded if the SKU already appears in enrolment_history to avoid duplicates
+            private_course_history AS (
+                SELECT
+                    COALESCE(cs.sku, 'PRIVATE') AS CourseCode,
+                    COALESCE(cs.name, 'Private Course') AS CourseTitle,
+                    0 AS PublicCount,
+                    COALESCE(cs.capacity, 0) AS PrivateCount,
+                    COALESCE(cs.capacity, 0) AS TotalCount,
+                    cs.start_date AS LastRunDate,
+                    cs.id AS CourseScheduleId
+                FROM bagile.course_schedules cs
+                JOIN bagile.organisations org ON cs.client_organisation_id = org.id
+                WHERE cs.is_public = false
+                  AND cs.source_system = 'xero'
+                  AND (
+                      org.name ILIKE @organisationName
+                      OR LOWER(TRIM(@organisationName)) = ANY(
+                          SELECT LOWER(TRIM(a)) FROM UNNEST(org.aliases) a
+                      )
+                  )" + (year.HasValue ? " AND EXTRACT(YEAR FROM cs.start_date) = @year" : "") + @"
+                  AND COALESCE(cs.sku, 'PRIVATE') NOT IN (SELECT CourseCode FROM enrolment_history)
             )
-            SELECT
-                COALESCE(cs.sku, 'PRIVATE') AS CourseCode,
-                COALESCE(cs.name, 'Private Course') AS CourseTitle,
-                COUNT(CASE WHEN cs.is_public = true THEN 1 END) AS PublicCount,
-                COUNT(CASE WHEN cs.is_public = false OR cs.is_public IS NULL THEN 1 END) AS PrivateCount,
-                COUNT(*) AS TotalCount,
-                MAX(cs.start_date) AS LastRunDate,
-                MAX(cs.id) AS CourseScheduleId
-            FROM bagile.enrolments e
-            JOIN bagile.students s ON e.student_id = s.id
-            LEFT JOIN bagile.course_schedules cs ON e.course_schedule_id = cs.id
-            LEFT JOIN bagile.orders o ON e.order_id = o.id
-            WHERE LOWER(TRIM(COALESCE(o.billing_company, s.company))) IN (
-                SELECT LOWER(TRIM(alias_value)) FROM alias_matches
-            )
-              AND e.status NOT IN ('cancelled', 'transferred')" + yearFilter + @"
-            GROUP BY COALESCE(cs.sku, 'PRIVATE'), COALESCE(cs.name, 'Private Course')
+            SELECT CourseCode, CourseTitle, PublicCount, PrivateCount, TotalCount, LastRunDate, CourseScheduleId
+            FROM enrolment_history
+            UNION ALL
+            SELECT CourseCode, CourseTitle, PublicCount, PrivateCount, TotalCount, LastRunDate, CourseScheduleId
+            FROM private_course_history
             ORDER BY TotalCount DESC, LastRunDate DESC NULLS LAST;";
 
         await using var conn = new NpgsqlConnection(_connectionString);
