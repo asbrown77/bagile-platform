@@ -52,16 +52,17 @@ public class OrganisationQueries : IOrganisationQueries
     private const string NormalisedCompanyCte = @"
         -- Gather all company name occurrences from students and orders
         raw_companies AS (
-            SELECT COALESCE(s.company, o.billing_company) AS company_value,
+            SELECT COALESCE(o.billing_company, s.company) AS company_value,
                    s.id AS student_id,
                    s.email AS student_email,
                    e.id AS enrolment_id,
                    o.id AS order_id
             FROM bagile.students s
             LEFT JOIN bagile.enrolments e ON e.student_id = s.id
+                AND e.status NOT IN ('cancelled', 'transferred')
             LEFT JOIN bagile.orders o ON e.order_id = o.id
-            WHERE COALESCE(s.company, o.billing_company) IS NOT NULL
-              AND NULLIF(TRIM(COALESCE(s.company, o.billing_company)), '') IS NOT NULL
+            WHERE COALESCE(o.billing_company, s.company) IS NOT NULL
+              AND NULLIF(TRIM(COALESCE(o.billing_company, s.company)), '') IS NOT NULL
         ),
         -- Resolve each company value to its canonical org name via alias matching
         resolved AS (
@@ -189,7 +190,7 @@ public class OrganisationQueries : IOrganisationQueries
                     COUNT(DISTINCT s.id) AS total_students,
                     COUNT(DISTINCT e.id) AS total_enrolments,
                     COUNT(DISTINCT o.id) AS total_orders,
-                    COALESCE(SUM(o.total_amount), 0) AS total_revenue,
+                    COALESCE(SUM(o.net_total), 0) AS total_revenue,
                     MIN(o.order_date) AS first_order_date,
                     MAX(o.order_date) AS last_order_date,
                     MAX(cs.start_date) AS last_course_date,
@@ -198,9 +199,11 @@ public class OrganisationQueries : IOrganisationQueries
                 LEFT JOIN bagile.enrolments e ON e.student_id = s.id
                 LEFT JOIN bagile.orders o ON e.order_id = o.id
                 LEFT JOIN bagile.course_schedules cs ON e.course_schedule_id = cs.id
-                WHERE LOWER(TRIM(COALESCE(s.company, o.billing_company))) IN (
+                WHERE o.status = 'completed'
+                  AND LOWER(TRIM(COALESCE(o.billing_company, s.company))) IN (
                     SELECT LOWER(TRIM(alias_value)) FROM alias_matches
                 )
+                  AND e.status NOT IN ('cancelled', 'transferred')
             )
             SELECT
                 os.org_name AS Name,
@@ -250,9 +253,10 @@ public class OrganisationQueries : IOrganisationQueries
             JOIN bagile.students s ON e.student_id = s.id
             LEFT JOIN bagile.course_schedules cs ON e.course_schedule_id = cs.id
             LEFT JOIN bagile.orders o ON e.order_id = o.id
-            WHERE LOWER(TRIM(COALESCE(s.company, o.billing_company))) IN (
+            WHERE LOWER(TRIM(COALESCE(o.billing_company, s.company))) IN (
                 SELECT LOWER(TRIM(alias_value)) FROM alias_matches
             )
+              AND e.status NOT IN ('cancelled', 'transferred')
             GROUP BY COALESCE(cs.sku, 'PRIVATE'), COALESCE(cs.name, 'Private Course')
             ORDER BY TotalCount DESC, LastRunDate DESC NULLS LAST;";
 

@@ -15,10 +15,10 @@ public class AnalyticsQueries : IAnalyticsQueries
     }
 
     public async Task<IEnumerable<OrganisationAnalyticsDto>> GetOrganisationAnalyticsAsync(
-        int year, string sortBy = "spend", CancellationToken ct = default)
+        int? year = null, string sortBy = "spend", CancellationToken ct = default)
     {
-        var yearStart = new DateTime(year, 1, 1);
-        var yearEnd = new DateTime(year, 12, 31);
+        var yearStart = year.HasValue ? new DateTime(year.Value, 1, 1) : (DateTime?)null;
+        var yearEnd   = year.HasValue ? new DateTime(year.Value, 12, 31, 23, 59, 59) : (DateTime?)null;
 
         var orderByClause = sortBy switch
         {
@@ -27,6 +27,10 @@ public class AnalyticsQueries : IAnalyticsQueries
             "recency" => "total_spend DESC",
             _ => "total_spend DESC"
         };
+
+        var yearFilter = year.HasValue
+            ? "AND o.order_date >= @yearStart AND o.order_date <= @yearEnd"
+            : "";
 
         var sql = $@"
             WITH order_companies AS (
@@ -40,13 +44,14 @@ public class AnalyticsQueries : IAnalyticsQueries
                     COALESCE(SUM(o.net_total), 0) AS total_spend
                 FROM bagile.orders o
                 LEFT JOIN bagile.organisations org ON (
-                    o.billing_company = ANY(org.aliases)
-                    OR o.billing_company ILIKE org.name
+                    LOWER(TRIM(o.billing_company)) = ANY(
+                        SELECT LOWER(TRIM(a)) FROM UNNEST(org.aliases) a
+                    )
                 )
                 LEFT JOIN bagile.enrolments e ON e.order_id = o.id
                     AND e.status NOT IN ('cancelled', 'transferred')
                 WHERE o.status = 'completed'
-                  AND o.order_date >= @yearStart AND o.order_date <= @yearEnd
+                  {yearFilter}
                   AND o.billing_company IS NOT NULL AND o.billing_company != ''
                 GROUP BY COALESCE(org.name, o.billing_company),
                          org.partner_type, org.ptn_tier, org.discount_rate
@@ -188,8 +193,9 @@ public class AnalyticsQueries : IAnalyticsQueries
                     COUNT(DISTINCT e.student_id) AS delegates
                 FROM bagile.orders o
                 LEFT JOIN bagile.organisations org ON (
-                    o.billing_company = ANY(org.aliases)
-                    OR o.billing_company ILIKE org.name
+                    LOWER(TRIM(o.billing_company)) = ANY(
+                        SELECT LOWER(TRIM(a)) FROM UNNEST(org.aliases) a
+                    )
                 )
                 LEFT JOIN bagile.enrolments e ON e.order_id = o.id
                     AND e.status NOT IN ('cancelled', 'transferred')

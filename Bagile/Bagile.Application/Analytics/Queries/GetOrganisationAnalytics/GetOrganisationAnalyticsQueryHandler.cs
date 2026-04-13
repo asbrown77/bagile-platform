@@ -18,12 +18,12 @@ public class GetOrganisationAnalyticsQueryHandler
         GetOrganisationAnalyticsQuery request,
         CancellationToken ct)
     {
-        int year = request.Year ?? DateTime.UtcNow.Year;
+        int? year = request.Year; // null = all time
         var orgs = await _queries.GetOrganisationAnalyticsAsync(year, request.SortBy, ct);
 
         return new OrganisationAnalyticsResultDto
         {
-            Year = year,
+            Year = year ?? 0,
             Organisations = orgs
         };
     }

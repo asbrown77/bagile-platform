@@ -5,7 +5,7 @@ namespace Bagile.Application.Common.Interfaces;
 public interface IAnalyticsQueries
 {
     Task<IEnumerable<OrganisationAnalyticsDto>> GetOrganisationAnalyticsAsync(
-        int year, string sortBy = "spend", CancellationToken ct = default);
+        int? year = null, string sortBy = "spend", CancellationToken ct = default);
 
     Task<IEnumerable<PartnerAnalyticsDto>> GetPartnerAnalyticsAsync(
         int? year = null, CancellationToken ct = default);
