@@ -33,38 +33,57 @@ public class AnalyticsQueries : IAnalyticsQueries
             : "";
 
         var sql = $@"
-            WITH order_companies AS (
+            WITH orders_resolved AS (
+                -- One row per order; resolve billing_company to canonical org name
                 SELECT
+                    o.id AS order_id,
                     COALESCE(org.name, o.billing_company) AS company,
                     org.partner_type,
                     org.ptn_tier,
                     org.discount_rate,
-                    COUNT(DISTINCT o.id) AS order_count,
-                    COUNT(DISTINCT e.student_id) AS delegate_count,
-                    COALESCE(SUM(o.net_total), 0) AS total_spend
+                    o.net_total
                 FROM bagile.orders o
                 LEFT JOIN bagile.organisations org ON (
                     LOWER(TRIM(o.billing_company)) = ANY(
                         SELECT LOWER(TRIM(a)) FROM UNNEST(org.aliases) a
                     )
                 )
-                LEFT JOIN bagile.enrolments e ON e.order_id = o.id
-                    AND e.status NOT IN ('cancelled', 'transferred')
                 WHERE o.status = 'completed'
                   {yearFilter}
                   AND o.billing_company IS NOT NULL AND o.billing_company != ''
-                GROUP BY COALESCE(org.name, o.billing_company),
-                         org.partner_type, org.ptn_tier, org.discount_rate
+            ),
+            order_stats AS (
+                -- Revenue and order count per company — no enrolment join, so no fanout
+                SELECT
+                    company,
+                    partner_type,
+                    ptn_tier,
+                    discount_rate,
+                    COUNT(DISTINCT order_id) AS order_count,
+                    COALESCE(SUM(net_total), 0) AS total_spend
+                FROM orders_resolved
+                GROUP BY company, partner_type, ptn_tier, discount_rate
+            ),
+            delegate_stats AS (
+                -- Delegate count per company — separate enrolment join
+                SELECT
+                    r.company,
+                    COUNT(DISTINCT e.student_id) AS delegate_count
+                FROM orders_resolved r
+                JOIN bagile.enrolments e ON e.order_id = r.order_id
+                    AND e.status NOT IN ('cancelled', 'transferred')
+                GROUP BY r.company
             )
             SELECT
-                company,
-                partner_type AS PartnerType,
-                ptn_tier AS PtnTier,
-                discount_rate AS DiscountRate,
-                order_count AS OrderCount,
-                delegate_count AS DelegateCount,
-                total_spend AS TotalSpend
-            FROM order_companies
+                os.company AS company,
+                os.partner_type AS PartnerType,
+                os.ptn_tier AS PtnTier,
+                os.discount_rate AS DiscountRate,
+                os.order_count AS OrderCount,
+                COALESCE(ds.delegate_count, 0) AS DelegateCount,
+                os.total_spend AS TotalSpend
+            FROM order_stats os
+            LEFT JOIN delegate_stats ds ON ds.company = os.company
             ORDER BY {orderByClause}
             LIMIT 100;";
 
@@ -79,39 +98,63 @@ public class AnalyticsQueries : IAnalyticsQueries
         var yearStart = new DateTime(targetYear, 1, 1);
 
         var sql = @"
+            WITH order_spend AS (
+                -- Revenue per partner org — no enrolment join, so no fanout
+                SELECT
+                    org.id AS org_id,
+                    COUNT(DISTINCT o.id) AS order_count,
+                    COALESCE(SUM(o.net_total), 0) AS total_spend
+                FROM bagile.organisations org
+                LEFT JOIN bagile.orders o ON (
+                    o.billing_company = ANY(org.aliases)
+                    AND o.status = 'completed'
+                    AND o.order_date >= @yearStart
+                )
+                WHERE org.partner_type = 'ptn'
+                GROUP BY org.id
+            ),
+            delegate_count AS (
+                -- Delegate count per partner org — separate enrolment join
+                SELECT
+                    org.id AS org_id,
+                    COUNT(DISTINCT e.student_id) AS delegate_count
+                FROM bagile.organisations org
+                LEFT JOIN bagile.orders o ON (
+                    o.billing_company = ANY(org.aliases)
+                    AND o.status = 'completed'
+                    AND o.order_date >= @yearStart
+                )
+                LEFT JOIN bagile.enrolments e ON e.order_id = o.id
+                    AND e.status NOT IN ('cancelled', 'transferred')
+                WHERE org.partner_type = 'ptn'
+                GROUP BY org.id
+            )
             SELECT
                 org.name AS Name,
                 org.ptn_tier AS PtnTier,
                 org.discount_rate AS DiscountRate,
                 org.contact_email AS ContactEmail,
-                COUNT(DISTINCT o.id) AS BookingsThisYear,
-                COUNT(DISTINCT e.student_id) AS DelegatesThisYear,
-                COALESCE(SUM(o.net_total), 0) AS SpendThisYear,
+                os.order_count AS BookingsThisYear,
+                COALESCE(dc.delegate_count, 0) AS DelegatesThisYear,
+                os.total_spend AS SpendThisYear,
                 CASE
-                    WHEN COUNT(DISTINCT e.student_id) >= 75 THEN 'ptn33'
-                    WHEN COUNT(DISTINCT e.student_id) >= 20 THEN 'ptn25'
-                    WHEN COUNT(DISTINCT e.student_id) >= 10 THEN 'ptn20'
-                    WHEN COUNT(DISTINCT e.student_id) >= 5 THEN 'ptn15'
+                    WHEN COALESCE(dc.delegate_count, 0) >= 75 THEN 'ptn33'
+                    WHEN COALESCE(dc.delegate_count, 0) >= 20 THEN 'ptn25'
+                    WHEN COALESCE(dc.delegate_count, 0) >= 10 THEN 'ptn20'
+                    WHEN COALESCE(dc.delegate_count, 0) >= 5 THEN 'ptn15'
                     ELSE 'ptn10'
                 END AS CalculatedTier,
                 CASE
-                    WHEN COUNT(DISTINCT e.student_id) >= 75 THEN 33
-                    WHEN COUNT(DISTINCT e.student_id) >= 20 THEN 25
-                    WHEN COUNT(DISTINCT e.student_id) >= 10 THEN 20
-                    WHEN COUNT(DISTINCT e.student_id) >= 5 THEN 15
+                    WHEN COALESCE(dc.delegate_count, 0) >= 75 THEN 33
+                    WHEN COALESCE(dc.delegate_count, 0) >= 20 THEN 25
+                    WHEN COALESCE(dc.delegate_count, 0) >= 10 THEN 20
+                    WHEN COALESCE(dc.delegate_count, 0) >= 5 THEN 15
                     ELSE 10
                 END AS CalculatedDiscount
             FROM bagile.organisations org
-            LEFT JOIN bagile.orders o ON (
-                o.billing_company = ANY(org.aliases)
-                AND o.status = 'completed'
-                AND o.order_date >= @yearStart
-            )
-            LEFT JOIN bagile.enrolments e ON e.order_id = o.id
-                AND e.status NOT IN ('cancelled', 'transferred')
+            JOIN order_spend os ON os.org_id = org.id
+            LEFT JOIN delegate_count dc ON dc.org_id = org.id
             WHERE org.partner_type = 'ptn'
-            GROUP BY org.id, org.name, org.ptn_tier,
-                     org.discount_rate, org.contact_email
             ORDER BY SpendThisYear DESC;";
 
         await using var conn = new NpgsqlConnection(_connectionString);

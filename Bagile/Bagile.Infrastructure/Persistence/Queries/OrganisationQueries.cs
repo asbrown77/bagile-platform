@@ -163,7 +163,6 @@ public class OrganisationQueries : IOrganisationQueries
     {
         // Match by canonical org name OR by alias lookup.
         // This ensures "NobleProg" finds all bookings across all billing_company variations.
-        var yearOrderFilter = year.HasValue ? " AND EXTRACT(YEAR FROM o.order_date) = @year" : "";
         var yearCourseFilter = year.HasValue ? " AND EXTRACT(YEAR FROM cs.start_date) = @year" : "";
 
         var sql = @"
@@ -180,6 +179,36 @@ public class OrganisationQueries : IOrganisationQueries
 
                 SELECT @name AS alias_value
             ),
+            order_revenue AS (
+                -- Revenue aggregated at order level — no student/enrolment fanout
+                SELECT
+                    COUNT(DISTINCT o.id) AS total_orders,
+                    COALESCE(SUM(o.net_total), 0) AS total_revenue,
+                    MIN(o.order_date) AS first_order_date,
+                    MAX(o.order_date) AS last_order_date
+                FROM bagile.orders o
+                WHERE o.status = 'completed'
+                  AND LOWER(TRIM(o.billing_company)) IN (
+                    SELECT LOWER(TRIM(alias_value)) FROM alias_matches
+                  )" + (year.HasValue ? " AND EXTRACT(YEAR FROM o.order_date) = @year" : "") + @"
+            ),
+            student_stats AS (
+                -- Students, enrolments, course dates via student-side join
+                SELECT
+                    COUNT(DISTINCT s.id) AS total_students,
+                    COUNT(DISTINCT e.id) AS total_enrolments,
+                    MAX(cs.start_date) AS last_course_date,
+                    STRING_AGG(DISTINCT SUBSTRING(s.email FROM '@(.*)$'), ', ') AS domains
+                FROM bagile.students s
+                LEFT JOIN bagile.enrolments e ON e.student_id = s.id
+                LEFT JOIN bagile.orders o ON e.order_id = o.id
+                LEFT JOIN bagile.course_schedules cs ON e.course_schedule_id = cs.id" + yearCourseFilter + @"
+                WHERE o.status = 'completed'
+                  AND LOWER(TRIM(COALESCE(o.billing_company, s.company))) IN (
+                    SELECT LOWER(TRIM(alias_value)) FROM alias_matches
+                )
+                  AND e.status NOT IN ('cancelled', 'transferred')
+            ),
             org_stats AS (
                 SELECT
                     COALESCE(
@@ -191,23 +220,16 @@ public class OrganisationQueries : IOrganisationQueries
                          LIMIT 1),
                         @name
                     ) AS org_name,
-                    COUNT(DISTINCT s.id) AS total_students,
-                    COUNT(DISTINCT e.id) AS total_enrolments,
-                    COUNT(DISTINCT o.id) AS total_orders,
-                    COALESCE(SUM(o.net_total), 0) AS total_revenue,
-                    MIN(o.order_date) AS first_order_date,
-                    MAX(o.order_date) AS last_order_date,
-                    MAX(cs.start_date) AS last_course_date,
-                    STRING_AGG(DISTINCT SUBSTRING(s.email FROM '@(.*)$'), ', ') AS domains
-                FROM bagile.students s
-                LEFT JOIN bagile.enrolments e ON e.student_id = s.id
-                LEFT JOIN bagile.orders o ON e.order_id = o.id" + yearOrderFilter + @"
-                LEFT JOIN bagile.course_schedules cs ON e.course_schedule_id = cs.id" + yearCourseFilter + @"
-                WHERE o.status = 'completed'
-                  AND LOWER(TRIM(COALESCE(o.billing_company, s.company))) IN (
-                    SELECT LOWER(TRIM(alias_value)) FROM alias_matches
-                )
-                  AND e.status NOT IN ('cancelled', 'transferred')
+                    ss.total_students,
+                    ss.total_enrolments,
+                    ore.total_orders,
+                    ore.total_revenue,
+                    ore.first_order_date,
+                    ore.last_order_date,
+                    ss.last_course_date,
+                    ss.domains
+                FROM order_revenue ore
+                CROSS JOIN student_stats ss
             )
             SELECT
                 os.org_name AS Name,
