@@ -58,19 +58,16 @@ export default function OrganisationsPage() {
     <>
       <PageHeader title="Organisations" subtitle={`Companies by bookings and spend${yearFilter === "all" ? " — all time" : ` — ${yearFilter}`}`}
         actions={
-          <div className="inline-flex rounded-lg border border-gray-300 overflow-hidden">
-            {["all", "2026", "2025", "2024"].map((opt) => (
-              <button
-                key={opt}
-                onClick={() => setYearFilter(opt)}
-                className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                  yearFilter === opt ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"
-                } ${opt !== "all" ? "border-l border-gray-300" : ""}`}
-              >
-                {opt === "all" ? "All time" : opt}
-              </button>
+          <select
+            value={yearFilter}
+            onChange={(e) => setYearFilter(e.target.value)}
+            className="px-3 py-1.5 text-xs font-medium border border-gray-300 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-500"
+          >
+            <option value="all">All time</option>
+            {Array.from({ length: new Date().getFullYear() - 2020 }, (_, i) => String(new Date().getFullYear() - i)).map((y) => (
+              <option key={y} value={y}>{y}</option>
             ))}
-          </div>
+          </select>
         }
       />
 
