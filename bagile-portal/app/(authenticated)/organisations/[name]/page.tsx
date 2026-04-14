@@ -111,6 +111,15 @@ export default function OrganisationDetailPage() {
     ? Math.round((Date.now() - new Date(allTimeOrg.firstOrderDate).getTime()) / (1000 * 60 * 60 * 24))
     : 0;
 
+  const availableYears = (() => {
+    if (!allTimeOrg?.firstOrderDate) return [];
+    const start = new Date(allTimeOrg.firstOrderDate).getFullYear();
+    const end = new Date().getFullYear();
+    const years: string[] = [];
+    for (let y = end; y >= start; y--) years.push(String(y));
+    return years;
+  })();
+
   return (
     <>
       <div className="mb-2">
@@ -130,11 +139,11 @@ export default function OrganisationDetailPage() {
               <Settings className="w-4 h-4" />
             </button>
             <div className="inline-flex rounded-lg border border-gray-300 overflow-hidden">
-              {["all", "2026", "2025", "2024"].map((opt) => (
+              {["all", ...availableYears].map((opt, i) => (
                 <button key={opt} onClick={() => setYearFilter(opt)}
                   className={`px-3 py-1.5 text-xs font-medium transition-colors ${
                     yearFilter === opt ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"
-                  } ${opt !== "all" ? "border-l border-gray-300" : ""}`}>
+                  } ${i > 0 ? "border-l border-gray-300" : ""}`}>
                   {opt === "all" ? "All time" : opt}
                 </button>
               ))}
