@@ -404,6 +404,24 @@ server.tool(
 );
 
 // ============================================================
+// PLANNED COURSES & CALENDAR (Sprint 26)
+// ============================================================
+
+server.tool(
+  "list_planned_courses",
+  "Get the calendar feed — unified view of planned courses and live course schedules with gateway publication status. Use date range to filter.",
+  {
+    from: z.string().optional().describe("Start date (YYYY-MM-DD, default: start of current month)"),
+    to: z.string().optional().describe("End date (YYYY-MM-DD, default: end of current month)"),
+    trainerId: z.number().optional().describe("Filter by trainer ID (1=Alex Brown, 2=Chris Bexon)"),
+  },
+  async (params) => {
+    const result = await apiGet("/api/calendar", params);
+    return { content: [{ type: "text" as const, text: formatResult(result) }] };
+  }
+);
+
+// ============================================================
 // HEALTH CHECK
 // ============================================================
 

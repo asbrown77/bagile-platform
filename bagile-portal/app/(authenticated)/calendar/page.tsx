@@ -1,0 +1,875 @@
+"use client";
+
+import { useEffect, useState, useCallback, useRef } from "react";
+import FullCalendar from "@fullcalendar/react";
+import dayGridPlugin from "@fullcalendar/daygrid";
+import { useApiKey } from "@/lib/hooks/useApiKey";
+import {
+  CalendarEvent,
+  Trainer,
+  getCalendarEvents,
+  getTrainers,
+  createPlannedCourse,
+  publishGateway,
+  updatePlannedCourse,
+  formatDate,
+} from "@/lib/api";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { AlertBanner } from "@/components/ui/AlertBanner";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+import { SlideOver } from "@/components/ui/SlideOver";
+import { Plus, Calendar as CalendarIcon, Lock, AlertCircle, ExternalLink, Users, X, Loader2 } from "lucide-react";
+import {
+  getBadgeSrc,
+  getCourseCodeDisplay,
+  getCourseDisplayName,
+  getStatusColour,
+  getStatusBadgeVariant,
+  getStatusLabel,
+  isDeadlineUrgent,
+  getApplicableGateways,
+  COURSE_TYPE_OPTIONS,
+} from "@/lib/calendarHelpers";
+import { getTrainerColour, trainerInitials } from "@/lib/courseColours";
+
+// ── Types for FullCalendar ──────────────────────────────────
+
+interface FCEventExtended {
+  calendarEvent: CalendarEvent;
+}
+
+// ── Toast notification ──────────────────────────────────────
+
+function Toast({ message, type, onClose }: { message: string; type: "success" | "error"; onClose: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onClose, 4000);
+    return () => clearTimeout(t);
+  }, [onClose]);
+
+  return (
+    <div className={`fixed bottom-4 right-4 z-[100] px-4 py-3 rounded-lg shadow-lg text-sm font-medium
+      ${type === "success" ? "bg-green-600 text-white" : "bg-red-600 text-white"}`}>
+      {message}
+    </div>
+  );
+}
+
+// ── Course block (FullCalendar event content) ───────────────
+
+function CourseBlock({ event }: { event: CalendarEvent; compact?: boolean }) {
+  const badgeSrc = getBadgeSrc(event.courseType);
+  const codeDisplay = getCourseCodeDisplay(event.courseType);
+  const initials = event.trainerInitials || trainerInitials(event.trainerName);
+  const avatarColour = getTrainerColour(initials);
+  const statusColour = getStatusColour(event.status);
+  const deadlineUrgent = isDeadlineUrgent(event.decisionDeadline);
+  const isCancelled = event.status === "cancelled";
+
+  // Enrolment display
+  const enrolDisplay = event.status === "planned"
+    ? `0 \u{1F4DD}`
+    : `${event.enrolmentCount}/${event.minimumEnrolments}`;
+
+  return (
+    <div
+      className={`flex items-center gap-1.5 px-1.5 py-1 rounded text-xs cursor-pointer overflow-hidden relative
+        ${isCancelled ? "opacity-50" : "hover:opacity-90"}`}
+      style={{ borderLeft: `3px solid ${statusColour}` }}
+    >
+      {/* Badge image or abbreviation */}
+      {badgeSrc ? (
+        <img src={badgeSrc} alt={event.courseType} className="w-5 h-5 rounded-sm shrink-0 object-contain" />
+      ) : (
+        <div className="w-5 h-5 rounded-sm bg-gray-200 text-gray-600 text-[8px] font-bold flex items-center justify-center shrink-0">
+          {event.courseType.slice(0, 3)}
+        </div>
+      )}
+
+      {/* Course code + trainer */}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1">
+          <span className={`font-semibold text-gray-800 truncate ${isCancelled ? "line-through" : ""}`}>
+            {codeDisplay}
+          </span>
+          <span className="text-gray-400 shrink-0">&middot;</span>
+          <span
+            className="inline-flex items-center justify-center rounded-full text-white font-bold shrink-0"
+            style={{ backgroundColor: avatarColour, width: 14, height: 14, fontSize: 7 }}
+          >
+            {initials}
+          </span>
+        </div>
+        <div className="text-[10px] text-gray-500">{enrolDisplay}</div>
+      </div>
+
+      {/* Private indicator */}
+      {event.isPrivate && (
+        <Lock className="w-3 h-3 text-gray-400 absolute top-0.5 right-0.5" />
+      )}
+
+      {/* Deadline urgent dot */}
+      {deadlineUrgent && (
+        <span className="absolute bottom-0.5 right-0.5 w-2 h-2 rounded-full bg-red-500" title="Decision deadline approaching" />
+      )}
+    </div>
+  );
+}
+
+// ── Add Course Modal ────────────────────────────────────────
+
+interface AddCourseModalProps {
+  open: boolean;
+  onClose: () => void;
+  onSubmit: (data: {
+    courseType: string;
+    trainerId: number;
+    startDate: string;
+    endDate: string;
+    isVirtual: boolean;
+    venue?: string;
+    notes?: string;
+    decisionDeadline?: string;
+    isPrivate: boolean;
+  }) => Promise<void>;
+  trainers: Trainer[];
+}
+
+function AddCourseModal({ open, onClose, onSubmit, trainers }: AddCourseModalProps) {
+  const [courseType, setCourseType] = useState("PSM");
+  const [trainerId, setTrainerId] = useState(0);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [isVirtual, setIsVirtual] = useState(true);
+  const [venue, setVenue] = useState("");
+  const [notes, setNotes] = useState("");
+  const [decisionDeadline, setDecisionDeadline] = useState("");
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  // Default trainer to first available
+  useEffect(() => {
+    if (trainers.length > 0 && trainerId === 0) {
+      setTrainerId(trainers[0].id);
+    }
+  }, [trainers, trainerId]);
+
+  function reset() {
+    setCourseType("PSM");
+    setTrainerId(trainers[0]?.id || 0);
+    setStartDate("");
+    setEndDate("");
+    setIsVirtual(true);
+    setVenue("");
+    setNotes("");
+    setDecisionDeadline("");
+    setIsPrivate(false);
+    setError("");
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!startDate || !endDate) { setError("Start and end date are required"); return; }
+    if (!trainerId) { setError("Please select a trainer"); return; }
+    setSubmitting(true);
+    setError("");
+    try {
+      await onSubmit({
+        courseType,
+        trainerId,
+        startDate,
+        endDate,
+        isVirtual,
+        venue: !isVirtual ? venue : undefined,
+        notes: notes || undefined,
+        decisionDeadline: decisionDeadline || undefined,
+        isPrivate,
+      });
+      reset();
+      onClose();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to create course");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="fixed inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900">Add Planned Course</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
+          {error && <AlertBanner variant="danger">{error}</AlertBanner>}
+
+          {/* Course Type */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Course Type</label>
+            <select
+              value={courseType}
+              onChange={(e) => setCourseType(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+            >
+              {COURSE_TYPE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Trainer */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Trainer</label>
+            <select
+              value={trainerId}
+              onChange={(e) => setTrainerId(Number(e.target.value))}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+            >
+              {trainers.map((t) => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Dates */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => {
+                  setStartDate(e.target.value);
+                  if (!endDate || endDate < e.target.value) setEndDate(e.target.value);
+                }}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                min={startDate}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+              />
+            </div>
+          </div>
+
+          {/* Virtual / Onsite */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Format</label>
+            <div className="flex rounded-lg border border-gray-200 overflow-hidden w-fit">
+              <button
+                type="button"
+                onClick={() => setIsVirtual(true)}
+                className={`px-4 py-2 text-sm font-medium transition-colors
+                  ${isVirtual ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+              >
+                Virtual
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsVirtual(false)}
+                className={`px-4 py-2 text-sm font-medium border-l border-gray-200 transition-colors
+                  ${!isVirtual ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+              >
+                Onsite
+              </button>
+            </div>
+          </div>
+
+          {/* Venue (onsite only) */}
+          {!isVirtual && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Venue</label>
+              <input
+                type="text"
+                value={venue}
+                onChange={(e) => setVenue(e.target.value)}
+                placeholder="e.g. Bristol, NHS Wales offices"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+              />
+            </div>
+          )}
+
+          {/* Private toggle */}
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={isPrivate}
+              onChange={(e) => setIsPrivate(e.target.checked)}
+              className="rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+            />
+            <span className="text-sm text-gray-700">Private course</span>
+          </label>
+
+          {/* Decision Deadline */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Decision Deadline</label>
+            <input
+              type="date"
+              value={decisionDeadline}
+              onChange={(e) => setDecisionDeadline(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+            />
+            <p className="text-xs text-gray-400 mt-1">Defaults to 10 days before start date if left blank</p>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+              placeholder="Optional notes..."
+            />
+          </div>
+
+          {/* Submit */}
+          <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+            <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating...</> : "Create Course"}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ── Side Panel (course detail) ──────────────────────────────
+
+interface SidePanelProps {
+  event: CalendarEvent | null;
+  onClose: () => void;
+  onPublish: (eventId: string, gateway: string) => Promise<void>;
+  onCancel: (eventId: string) => Promise<void>;
+}
+
+function SidePanel({ event, onClose, onPublish, onCancel }: SidePanelProps) {
+  const [publishing, setPublishing] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+
+  if (!event) return null;
+
+  const badgeSrc = getBadgeSrc(event.courseType);
+  const displayName = getCourseDisplayName(event.courseType);
+  const codeDisplay = getCourseCodeDisplay(event.courseType);
+  const applicableGateways = getApplicableGateways(event.courseType, event.isPrivate);
+  const isCancelled = event.status === "cancelled";
+
+  // Date range display
+  const startFormatted = formatDate(event.startDate);
+  const endFormatted = event.startDate !== event.endDate ? formatDate(event.endDate) : null;
+  const dateRange = endFormatted ? `${startFormatted} - ${endFormatted}` : startFormatted;
+
+  // Enrolment bar (percentage)
+  const fillPct = event.minimumEnrolments > 0
+    ? Math.min(100, Math.round((event.enrolmentCount / event.minimumEnrolments) * 100))
+    : 0;
+
+  async function handlePublish(gateway: string) {
+    setPublishing(gateway);
+    try {
+      await onPublish(event!.id, gateway);
+    } finally {
+      setPublishing(null);
+    }
+  }
+
+  async function handleCancel() {
+    setCancelling(true);
+    try {
+      await onCancel(event!.id);
+      onClose();
+    } finally {
+      setCancelling(false);
+      setConfirmCancel(false);
+    }
+  }
+
+  const gatewayLabel = (type: string) => {
+    switch (type) {
+      case "ecommerce": return "E-commerce";
+      case "scrumorg": return "Scrum.org";
+      case "icagile": return "IC Agile";
+      default: return type;
+    }
+  };
+
+  return (
+    <SlideOver open={!!event} onClose={onClose} title={codeDisplay} subtitle={displayName}>
+      <div className="space-y-6">
+        {/* Badge + dates */}
+        <div className="flex items-start gap-4">
+          {badgeSrc ? (
+            <img src={badgeSrc} alt={event.courseType} className="w-12 h-12 rounded-lg object-contain" />
+          ) : (
+            <div className="w-12 h-12 rounded-lg bg-gray-100 text-gray-500 text-sm font-bold flex items-center justify-center">
+              {event.courseType.slice(0, 3)}
+            </div>
+          )}
+          <div>
+            <p className="text-sm font-medium text-gray-900">{dateRange}</p>
+            <p className="text-sm text-gray-500">
+              {event.trainerName || event.trainerInitials}
+              {event.isVirtual ? " (Virtual)" : event.venue ? ` (${event.venue})` : " (Onsite)"}
+            </p>
+            {event.isPrivate && (
+              <span className="inline-flex items-center gap-1 mt-1 text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full font-medium">
+                <Lock className="w-3 h-3" /> Private
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Status badge */}
+        <div>
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Status</p>
+          <Badge variant={getStatusBadgeVariant(event.status)} dot>{getStatusLabel(event.status)}</Badge>
+        </div>
+
+        {/* Decision deadline */}
+        {event.decisionDeadline && (
+          <div>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Decision Deadline</p>
+            <p className={`text-sm ${isDeadlineUrgent(event.decisionDeadline) ? "text-red-600 font-semibold" : "text-gray-700"}`}>
+              {formatDate(event.decisionDeadline)}
+              {isDeadlineUrgent(event.decisionDeadline) && (
+                <span className="ml-2 inline-flex items-center gap-1 text-xs text-red-500">
+                  <AlertCircle className="w-3 h-3" /> Approaching
+                </span>
+              )}
+            </p>
+          </div>
+        )}
+
+        {/* Enrolment bar */}
+        {event.status !== "planned" && (
+          <div>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Enrolment</p>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 bg-gray-100 rounded-full h-2">
+                <div
+                  className={`h-2 rounded-full transition-all ${fillPct >= 100 ? "bg-green-500" : fillPct >= 50 ? "bg-amber-400" : "bg-red-400"}`}
+                  style={{ width: `${fillPct}%` }}
+                />
+              </div>
+              <span className="text-sm font-medium text-gray-700">{event.enrolmentCount}/{event.minimumEnrolments}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Notes */}
+        {event.notes && (
+          <div>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Notes</p>
+            <p className="text-sm text-gray-700 whitespace-pre-wrap">{event.notes}</p>
+          </div>
+        )}
+
+        {/* Gateway checklist */}
+        <div>
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Gateway Checklist</p>
+          <div className="space-y-2">
+            {applicableGateways.map((gwType) => {
+              const gwStatus = event.gateways.find((g) => g.type === gwType);
+              const isPublished = gwStatus?.published || false;
+              const url = gwStatus?.url;
+              const isIcAgile = gwType === "icagile";
+
+              return (
+                <div key={gwType} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
+                  <div className="flex items-center gap-2">
+                    {isPublished ? (
+                      <span className="w-5 h-5 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xs font-bold">
+                        &#10003;
+                      </span>
+                    ) : (
+                      <span className="w-5 h-5 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center text-xs">
+                        &mdash;
+                      </span>
+                    )}
+                    <span className="text-sm font-medium text-gray-700">{gatewayLabel(gwType)}</span>
+                  </div>
+
+                  {isIcAgile ? (
+                    <span className="text-xs text-gray-400 italic">Coming soon</span>
+                  ) : isPublished && url ? (
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-brand-600 hover:text-brand-700 flex items-center gap-1 font-medium"
+                    >
+                      View <ExternalLink className="w-3 h-3" />
+                    </a>
+                  ) : !isPublished && !isCancelled ? (
+                    <button
+                      onClick={() => handlePublish(gwType)}
+                      disabled={publishing === gwType}
+                      className="text-xs text-brand-600 hover:text-brand-700 font-medium disabled:opacity-50 flex items-center gap-1"
+                    >
+                      {publishing === gwType ? (
+                        <><Loader2 className="w-3 h-3 animate-spin" /> Publishing...</>
+                      ) : (
+                        "Publish \u2192"
+                      )}
+                    </button>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* External links */}
+        <div>
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Links</p>
+          <div className="space-y-1">
+            {event.gateways.filter((g) => g.published && g.url).map((g) => (
+              <a
+                key={g.type}
+                href={g.url!}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-sm text-brand-600 hover:text-brand-700"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                {gatewayLabel(g.type)} listing
+              </a>
+            ))}
+            {/* Attendees link — only for schedule-based courses */}
+            {event.id.startsWith("schedule-") && (
+              <a
+                href={`/courses/${event.id.replace("schedule-", "")}`}
+                className="flex items-center gap-2 text-sm text-brand-600 hover:text-brand-700"
+              >
+                <Users className="w-3.5 h-3.5" /> View attendees
+              </a>
+            )}
+          </div>
+        </div>
+
+        {/* Cancel button */}
+        {!isCancelled && (
+          <div className="pt-4 border-t border-gray-100">
+            {!confirmCancel ? (
+              <Button variant="danger" size="sm" onClick={() => setConfirmCancel(true)}>
+                Cancel Course
+              </Button>
+            ) : (
+              <div className="p-3 bg-red-50 rounded-lg border border-red-200">
+                <p className="text-sm text-red-700 mb-3">
+                  Are you sure you want to cancel this course? This action cannot be undone.
+                </p>
+                <div className="flex gap-2">
+                  <Button variant="danger" size="sm" onClick={handleCancel} disabled={cancelling}>
+                    {cancelling ? "Cancelling..." : "Yes, Cancel"}
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => setConfirmCancel(false)}>
+                    No, Keep It
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </SlideOver>
+  );
+}
+
+// ── Main Calendar Page ──────────────────────────────────────
+
+export default function CalendarPage() {
+  const apiKey = useApiKey();
+  const calendarRef = useRef<FullCalendar>(null);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [trainers, setTrainers] = useState<Trainer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [trainerFilter, setTrainerFilter] = useState<string>("all");
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [currentRange, setCurrentRange] = useState<{ from: string; to: string } | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+  // Load trainers on mount
+  useEffect(() => {
+    if (!apiKey) return;
+    getTrainers(apiKey).then(setTrainers).catch(() => {});
+  }, [apiKey]);
+
+  // Load calendar events when range changes
+  const loadEvents = useCallback(async () => {
+    if (!apiKey || !currentRange) return;
+    setLoading(true);
+    setError("");
+    try {
+      const data = await getCalendarEvents(apiKey, currentRange.from, currentRange.to);
+      setEvents(data);
+    } catch {
+      setError("Failed to load calendar events");
+    } finally {
+      setLoading(false);
+    }
+  }, [apiKey, currentRange]);
+
+  useEffect(() => { loadEvents(); }, [loadEvents]);
+
+  // Filter events by trainer (client-side)
+  const filteredEvents = events.filter((e) => {
+    if (trainerFilter === "all") return true;
+    const initials = e.trainerInitials || trainerInitials(e.trainerName);
+    return initials === trainerFilter;
+  });
+
+  // Convert to FullCalendar events
+  const fcEvents = filteredEvents.map((e) => ({
+    id: e.id,
+    start: e.startDate.split("T")[0],
+    // FullCalendar dayGrid end is exclusive, so add 1 day
+    end: addOneDay(e.endDate.split("T")[0]),
+    extendedProps: { calendarEvent: e } as FCEventExtended,
+    display: "block" as const,
+    backgroundColor: "transparent",
+    borderColor: "transparent",
+  }));
+
+  // Handlers
+  async function handleAddCourse(data: Parameters<AddCourseModalProps["onSubmit"]>[0]) {
+    if (!apiKey) return;
+    await createPlannedCourse(apiKey, data);
+    setToast({ message: "Course created", type: "success" });
+    await loadEvents();
+  }
+
+  async function handlePublish(eventId: string, gateway: string) {
+    if (!apiKey) return;
+    try {
+      await publishGateway(apiKey, eventId, gateway);
+      setToast({ message: `Published to ${gateway}`, type: "success" });
+      await loadEvents();
+      // Refresh selected event if it's the same one
+      if (selectedEvent?.id === eventId) {
+        const refreshed = events.find((e) => e.id === eventId);
+        if (refreshed) setSelectedEvent(refreshed);
+      }
+    } catch (err) {
+      setToast({ message: err instanceof Error ? err.message : "Publish failed", type: "error" });
+    }
+  }
+
+  async function handleCancel(eventId: string) {
+    if (!apiKey) return;
+    const numericId = eventId.replace(/\D/g, "");
+    try {
+      await updatePlannedCourse(apiKey, Number(numericId), { status: "cancelled" });
+      setToast({ message: "Course cancelled", type: "success" });
+      await loadEvents();
+    } catch (err) {
+      setToast({ message: err instanceof Error ? err.message : "Cancel failed", type: "error" });
+    }
+  }
+
+  function handleDatesSet(info: { startStr: string; endStr: string }) {
+    // FullCalendar passes ISO strings; extract date portion
+    const from = info.startStr.split("T")[0];
+    const to = info.endStr.split("T")[0];
+    setCurrentRange({ from, to });
+  }
+
+  // After loadEvents completes, sync selectedEvent with latest data
+  useEffect(() => {
+    if (selectedEvent) {
+      const updated = events.find((e) => e.id === selectedEvent.id);
+      if (updated) setSelectedEvent(updated);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [events]);
+
+  return (
+    <>
+      <PageHeader
+        title="Course Calendar"
+        actions={
+          <Button size="sm" onClick={() => setShowAddModal(true)}>
+            <Plus className="w-4 h-4" /> Add Course
+          </Button>
+        }
+      />
+
+      {error && <div className="mb-4"><AlertBanner variant="danger">{error}</AlertBanner></div>}
+
+      {/* Trainer filter */}
+      <div className="flex items-center gap-3 mb-4">
+        <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Trainer</span>
+        <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+          {["all", "AB", "CB"].map((t, i) => (
+            <button
+              key={t}
+              onClick={() => setTrainerFilter(t)}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors
+                ${trainerFilter === t ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}
+                ${i > 0 ? "border-l border-gray-200" : ""}`}
+            >
+              {t === "all" ? "All" : t}
+            </button>
+          ))}
+        </div>
+        {loading && <span className="text-xs text-gray-400">Loading...</span>}
+      </div>
+
+      {/* FullCalendar */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden calendar-container">
+        <FullCalendar
+          ref={calendarRef}
+          plugins={[dayGridPlugin]}
+          initialView="dayGridMonth"
+          headerToolbar={{
+            left: "prev,next today",
+            center: "title",
+            right: "dayGridMonth,dayGridWeek",
+          }}
+          events={fcEvents}
+          datesSet={handleDatesSet}
+          eventClick={(info) => {
+            const ext = info.event.extendedProps as FCEventExtended;
+            setSelectedEvent(ext.calendarEvent);
+          }}
+          eventContent={(arg) => {
+            const ext = arg.event.extendedProps as FCEventExtended;
+            return <CourseBlock event={ext.calendarEvent} />;
+          }}
+          height="auto"
+          fixedWeekCount={false}
+          firstDay={1}
+          dayMaxEvents={4}
+        />
+      </div>
+
+      {/* Side panel */}
+      <SidePanel
+        event={selectedEvent}
+        onClose={() => setSelectedEvent(null)}
+        onPublish={handlePublish}
+        onCancel={handleCancel}
+      />
+
+      {/* Add course modal */}
+      <AddCourseModal
+        open={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSubmit={handleAddCourse}
+        trainers={trainers}
+      />
+
+      {/* Toast */}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
+      {/* Calendar CSS overrides */}
+      <style>{`
+        .calendar-container .fc {
+          font-family: var(--font-sans);
+        }
+        .calendar-container .fc .fc-toolbar-title {
+          font-size: 1rem;
+          font-weight: 600;
+          color: #111827;
+        }
+        .calendar-container .fc .fc-button {
+          background: white;
+          border: 1px solid #e5e7eb;
+          color: #374151;
+          font-size: 0.75rem;
+          font-weight: 500;
+          padding: 0.375rem 0.75rem;
+          border-radius: 0.5rem;
+          box-shadow: none;
+        }
+        .calendar-container .fc .fc-button:hover {
+          background: #f9fafb;
+        }
+        .calendar-container .fc .fc-button-active {
+          background: #003366 !important;
+          color: white !important;
+          border-color: #003366 !important;
+        }
+        .calendar-container .fc .fc-button:focus {
+          box-shadow: 0 0 0 2px rgba(0, 51, 102, 0.3);
+        }
+        .calendar-container .fc .fc-col-header-cell {
+          background: #f9fafb;
+          font-size: 0.75rem;
+          font-weight: 500;
+          color: #6b7280;
+          text-transform: uppercase;
+          padding: 0.5rem 0;
+        }
+        .calendar-container .fc .fc-daygrid-day-number {
+          font-size: 0.75rem;
+          font-weight: 500;
+          color: #6b7280;
+          padding: 0.25rem 0.5rem;
+        }
+        .calendar-container .fc .fc-day-today {
+          background: #eff6ff !important;
+        }
+        .calendar-container .fc .fc-day-today .fc-daygrid-day-number {
+          background: #2563eb;
+          color: white;
+          border-radius: 9999px;
+          width: 1.5rem;
+          height: 1.5rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .calendar-container .fc .fc-daygrid-day-frame {
+          min-height: 90px;
+        }
+        .calendar-container .fc .fc-event {
+          margin: 1px 2px;
+          border-radius: 0.25rem;
+        }
+        .calendar-container .fc .fc-daygrid-more-link {
+          font-size: 0.625rem;
+          color: #6b7280;
+          font-weight: 500;
+        }
+        .calendar-container .fc .fc-toolbar {
+          padding: 0.75rem 1rem;
+        }
+        .calendar-container .fc .fc-prev-button,
+        .calendar-container .fc .fc-next-button {
+          padding: 0.25rem 0.5rem;
+        }
+      `}</style>
+    </>
+  );
+}
+
+/** Add one day to a YYYY-MM-DD string (for FullCalendar exclusive end). */
+function addOneDay(dateStr: string): string {
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + 1);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}

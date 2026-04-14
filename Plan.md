@@ -18,6 +18,118 @@ _"I can see revenue, partner value, course demand, and make scheduling decisions
 
 *All sprints through 19 complete.*
 
+---
+
+---
+
+### Sprint 26 — "Course Calendar v1"
+**Goal:** Replace the Google Sheet with a live portal calendar. Courses can be planned (portal-only), go partially live (e-commerce only), or fully live (all applicable gateways). Side panel shows gateway checklist and drives the publish workflow.
+
+**We'll know it worked when:** Alex opens the portal calendar, creates a planned course, drags it to the right date, clicks Go Live, and both WooCommerce and Scrum.org are set up — without touching either system directly.
+
+**Mock:** `agent/docs/mocks/portal-calendar-mock.html`
+
+---
+
+#### Course Status Model
+
+| Status | Meaning | Calendar colour |
+|---|---|---|
+| **Planned** | Portal only — not in WooCommerce, not on any gateway | Grey |
+| **Partial Live** | Some gateways published, not all | Amber |
+| **Live** | All applicable gateways published | Green / Dark green |
+| **Cancelled** | Cancelled, visible 30 days for audit | Red |
+
+#### Gateway Model
+
+Each course type has a set of applicable gateways. A course is **Live** when all its gateways are checked. Gateways are configurable per course type (settings page, Sprint 27+).
+
+| Course type | E-commerce | Scrum.org | IC Agile | Notes |
+|---|---|---|---|---|
+| Scrum.org courses (PSM, PSPO, PSK, PAL-E, EBM, APS-SD, PSM-A, PSPO-A, PSM-AI, PSPO-AI) | ✓ | ✓ | — | APS-SD is Scrum.org certified |
+| IC Agile courses (ICP-*) | ✓ | — | ✓ | ICP-tagged |
+| Internal BAgile courses | ✓ | — | — | No external gateway |
+| Private / onsite | ✓ | — | — | No external gateway |
+
+Side panel shows only the gateways applicable to that course type. Each gateway row shows published status + link + action button.
+
+---
+
+| # | Item | Size | Status |
+|---|------|------|--------|
+| **Design** | | | |
+| D1 | UX refinement of mock — typography, spacing, colour system, responsive behaviour | M | READY |
+| D2 | Course block design system — badge image, status colour, `!` deadline dot, `🔒` private indicator | S | READY |
+| D3 | Side panel — gateway checklist design (E-commerce row, Scrum.org row, IC Agile row, each with status + action) | M | READY |
+| D4 | Empty state designs — no courses this month, no trainer match | XS | READY |
+| **Data model** | | | |
+| M1 | `planned_courses` table — portal-only courses (id, courseType, trainer, startDate, endDate, isVirtual, notes, decisionDeadline) | S | READY |
+| M2 | `course_publications` table — (courseId, gateway, publishedAt, externalUrl) — tracks what's been published where | S | READY |
+| M3 | Gateway config — hardcoded map of courseType → applicable gateways for Sprint 26; settings UI deferred | XS | READY |
+| **API** | | | |
+| A1 | `POST /api/planned-courses` — create a planned course (portal only) | S | READY |
+| A2 | `PATCH /api/planned-courses/{id}` — update dates, trainer, notes | S | READY |
+| A3 | `GET /api/calendar` — unified feed: planned courses + WooCommerce-synced courses, with gateway publication status | M | READY |
+| A4 | `POST /api/planned-courses/{id}/publish/ecommerce` — create WooCommerce product, mark gateway published | L | READY |
+| A5 | `POST /api/planned-courses/{id}/publish/scrumorg` — create Scrum.org listing via Playwright, mark gateway published | L | READY |
+| A6 | `DELETE /api/planned-courses/{id}` — delete a planned course (only if no gateways published) | XS | READY |
+| A7 | Add `decisionDeadline` to planned courses + course schedules | XS | READY |
+| **Frontend** | | | |
+| F1 | Calendar page route + FullCalendar.js (month view) | M | READY |
+| F2 | Course block component — badge, code, trainer, enrolment/status, Partial Live amber state | M | READY |
+| F3 | Trainer filter (All / Alex / Chris) | S | READY |
+| F4 | Decision deadline `!` indicator — red dot when deadline within 5 days | S | READY |
+| F5 | Private course `🔒` indicator | XS | READY |
+| F6 | Side panel — gateway checklist, enrolment bar, links, Cancel button | L | READY |
+| F7 | "Go Live" flow — tick E-commerce → triggers WooCommerce publish, tick Scrum.org → triggers Scrum.org publish | M | READY |
+| F8 | Week view toggle | S | READY |
+| F9 | Calendar nav link in dashboard header | XS | READY |
+| F10 | "Add planned course" button — form: course type, trainer, dates, virtual/onsite | M | READY |
+
+**Total:** ~8–10 days dev, 2 days design. Target: 2-week sprint.
+
+### 3 Amigos — Course Calendar
+
+**Tester:**
+- Planned courses must never be visible publicly — portal login required
+- Partial Live state must show correctly when E-commerce is ticked but Scrum.org is not
+- `!` deadline dot appears/disappears correctly as deadline approaches and passes
+- Deleting a planned course must be blocked once any gateway is published
+- Side panel Cancel requires confirmation — destructive action
+- Trainer filter must not lose the selected month when switching
+- Gateway checklist must only show gateways applicable to that course type (no Scrum.org row for internal courses)
+
+**Dev:**
+- FullCalendar events: `{id, title, start, end, extendedProps: {status, trainer, enrolmentCount, minimum, isPrivate, decisionDeadline, gateways: [{type, published, url}]}}`
+- Badge images: `/public/badges/` mapped by courseCode prefix (copy from `Images/scrum.org/Cert. Assessment Badges/.../400x400/`)
+- Gateway publish endpoints are long-running — return 202 Accepted, poll for completion or use websocket notification
+- WooCommerce publish (A4): reuse existing product creation script logic, return product URL on completion
+- Scrum.org publish (A5): Playwright automation — copy latest course for trainer, edit dates + registration URL, return listing URL
+- Status transitions: planned→partial live→live, any→cancelled. Cancelled is terminal.
+- `decisionDeadline` default = start date minus 10 days
+
+**PO:**
+- Google Sheet stays until Alex has used the portal calendar for one full scheduling cycle
+- Private courses show as Live/green regardless of enrolment count (pre-confirmed)
+- Cancelled courses stay visible 30 days then hidden
+- IC Agile gateway (A5 equivalent) is deferred — stub the row in the checklist, mark "coming soon"
+- Internal BAgile courses are a future course type — no need to configure now, architecture supports it
+
+---
+
+### Sprint 27 — "Course Calendar v2 + Gateway Config" _(deferred)_
+_After v1 is live and used for a full month._
+
+- Course types settings page — list of all course types, configure applicable gateways per type
+- Internal BAgile course type support
+- IC Agile gateway publish automation
+- Drag-to-reschedule for planned courses
+- Monthly revenue total in calendar footer
+- List view (table) for dense weeks
+- Mobile responsive calendar
+
+---
+
 ### Sprint 11: Course Management Hub
 **Goal:** The course detail page is a trainer's daily tool — everything needed to run a course in one place.
 **We'll know it worked when:** A trainer can click a course, see attendees, export for Scrum.org with country codes, and manage cancellations/transfers from the dashboard.

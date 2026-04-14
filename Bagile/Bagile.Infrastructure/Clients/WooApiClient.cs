@@ -146,6 +146,113 @@ public class WooApiClient : IWooApiClient
     }
 
     // ------------------------------------------------------------
+    // Search Products
+    // ------------------------------------------------------------
+    public async Task<IReadOnlyList<WooProductDto>> SearchProductsAsync(
+        string keyword,
+        int perPage = 10,
+        string status = "publish",
+        CancellationToken ct = default)
+    {
+        var url = $"/wp-json/wc/v3/products?search={Uri.EscapeDataString(keyword)}&per_page={perPage}&status={status}&orderby=date&order=desc";
+        _logger.LogInformation("Searching Woo products: {Url}", url);
+
+        var items = await SafeGet<List<WooProductDto>>(url, ct);
+        return items?.AsReadOnly() ?? (IReadOnlyList<WooProductDto>)Array.Empty<WooProductDto>();
+    }
+
+    // ------------------------------------------------------------
+    // Get Full Product (raw JSON with all meta)
+    // ------------------------------------------------------------
+    public async Task<JsonDocument?> GetProductFullAsync(long productId, CancellationToken ct = default)
+    {
+        var url = $"/wp-json/wc/v3/products/{productId}";
+        _logger.LogInformation("Fetching full Woo product {ProductId}", productId);
+        return await SafeGet<JsonDocument>(url, ct);
+    }
+
+    // ------------------------------------------------------------
+    // Create Product
+    // ------------------------------------------------------------
+    public async Task<JsonDocument?> CreateProductAsync(JsonElement productPayload, CancellationToken ct = default)
+    {
+        const string url = "/wp-json/wc/v3/products";
+        _logger.LogInformation("Creating Woo product");
+
+        try
+        {
+            var content = new StringContent(
+                productPayload.GetRawText(),
+                Encoding.UTF8,
+                "application/json");
+
+            var response = await _http.PostAsync(url, content, ct);
+            var body = await response.Content.ReadAsStringAsync(ct);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("WooCommerce create product failed: {Status} {Body}",
+                    response.StatusCode, body);
+                return null;
+            }
+
+            return JsonDocument.Parse(body);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating Woo product");
+            return null;
+        }
+    }
+
+    // ------------------------------------------------------------
+    // Update Product
+    // ------------------------------------------------------------
+    public async Task<JsonDocument?> UpdateProductAsync(long productId, JsonElement updatePayload, CancellationToken ct = default)
+    {
+        var url = $"/wp-json/wc/v3/products/{productId}";
+        _logger.LogInformation("Updating Woo product {ProductId}", productId);
+
+        try
+        {
+            var content = new StringContent(
+                updatePayload.GetRawText(),
+                Encoding.UTF8,
+                "application/json");
+
+            var request = new HttpRequestMessage(HttpMethod.Put, url) { Content = content };
+            var response = await _http.SendAsync(request, ct);
+            var body = await response.Content.ReadAsStringAsync(ct);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("WooCommerce update product failed: {Status} {Body}",
+                    response.StatusCode, body);
+                return null;
+            }
+
+            return JsonDocument.Parse(body);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating Woo product {ProductId}", productId);
+            return null;
+        }
+    }
+
+    // ------------------------------------------------------------
+    // Get All Tags
+    // ------------------------------------------------------------
+    public async Task<IReadOnlyList<WooTagDto>> GetAllTagsAsync(CancellationToken ct = default)
+    {
+        var url = "/wp-json/wc/v3/products/tags?per_page=100";
+        _logger.LogInformation("Fetching Woo product tags");
+
+        var tags = await SafeGet<List<WooTagDto>>(url, ct);
+        return tags?.AsReadOnly() ?? (IReadOnlyList<WooTagDto>)Array.Empty<WooTagDto>();
+    }
+
+    // ------------------------------------------------------------
     // URL builder
     // ------------------------------------------------------------
     private string BuildProductUrl(

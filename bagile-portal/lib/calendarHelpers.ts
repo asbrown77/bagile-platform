@@ -1,0 +1,150 @@
+/**
+ * Calendar helpers — badge mapping, status colours, gateway config.
+ * Sprint 26: Course Calendar v1.
+ */
+
+/** Map courseType code to badge image filename in /public/badges/. */
+const BADGE_MAP: Record<string, string> = {
+  PSM: "PSM-I.png",
+  PSMA: "PSM-II.png",
+  PSPO: "PSPO-I.png",
+  PSPOA: "PSPO-II.png",
+  PSMAI: "PSM-AI.png",
+  PSPOAI: "PSPO-AI.png",
+  PSK: "PSK-I.png",
+  PALE: "PAL-I.png",
+  EBM: "PAL-EBM.png",
+  PSU: "PSU.png",
+  PSFS: "PSFS.png",
+};
+
+export function getBadgeSrc(courseType: string): string | null {
+  const key = courseType.toUpperCase().replace(/[-_\s]/g, "");
+  return BADGE_MAP[key] ? `/badges/${BADGE_MAP[key]}` : null;
+}
+
+/** Friendly course type display names. */
+const COURSE_NAMES: Record<string, string> = {
+  PSM: "Professional Scrum Master",
+  PSMA: "Professional Scrum Master II",
+  PSPO: "Professional Scrum Product Owner",
+  PSPOA: "Professional Scrum Product Owner II",
+  PSMAI: "Professional Scrum Master with AI Essentials",
+  PSPOAI: "Professional Scrum Product Owner with AI Essentials",
+  PSK: "Professional Scrum with Kanban",
+  PALE: "Professional Agile Leadership Essentials",
+  EBM: "Evidence-Based Management",
+  PSU: "Professional Scrum with UX",
+  PSFS: "Professional Scrum Facilitation Skills",
+  APSSD: "Applying Professional Scrum for Software Development",
+};
+
+export function getCourseDisplayName(courseType: string): string {
+  const key = courseType.toUpperCase().replace(/[-_\s]/g, "");
+  return COURSE_NAMES[key] || courseType;
+}
+
+/** Human-readable code with hyphens: PSMAI -> PSM-AI, PSPOA -> PSPO-A */
+const CODE_DISPLAY: Record<string, string> = {
+  PSM: "PSM",
+  PSMA: "PSM-A",
+  PSPO: "PSPO",
+  PSPOA: "PSPO-A",
+  PSMAI: "PSM-AI",
+  PSPOAI: "PSPO-AI",
+  PSK: "PSK",
+  PALE: "PAL-E",
+  EBM: "EBM",
+  PSU: "PSU",
+  PSFS: "PSFS",
+  APSSD: "APS-SD",
+};
+
+export function getCourseCodeDisplay(courseType: string): string {
+  const key = courseType.toUpperCase().replace(/[-_\s]/g, "");
+  return CODE_DISPLAY[key] || courseType;
+}
+
+/** Calendar status left-border colours. */
+export const STATUS_COLOURS: Record<string, string> = {
+  planned: "#9ca3af",
+  partial_live: "#f59e0b",
+  live: "#22c55e",
+  cancelled: "#ef4444",
+};
+
+export function getStatusColour(status: string): string {
+  return STATUS_COLOURS[status] || STATUS_COLOURS.planned;
+}
+
+/** Status badge variant mapping for the Badge component. */
+export function getStatusBadgeVariant(status: string): "neutral" | "warning" | "success" | "danger" {
+  switch (status) {
+    case "planned": return "neutral";
+    case "partial_live": return "warning";
+    case "live": return "success";
+    case "cancelled": return "danger";
+    default: return "neutral";
+  }
+}
+
+export function getStatusLabel(status: string): string {
+  switch (status) {
+    case "planned": return "Planned";
+    case "partial_live": return "Partial Live";
+    case "live": return "Live";
+    case "cancelled": return "Cancelled";
+    default: return status;
+  }
+}
+
+/** Whether a decision deadline is urgent (within 5 days of today). */
+export function isDeadlineUrgent(deadline: string | null): boolean {
+  if (!deadline) return false;
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const dl = new Date(deadline);
+  dl.setHours(0, 0, 0, 0);
+  const diff = (dl.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+  return diff >= 0 && diff <= 5;
+}
+
+/** Scrum.org course types that need the scrum.org gateway. */
+const SCRUMORG_TYPES = new Set([
+  "PSM", "PSPO", "PSK", "PALE", "EBM", "APSSD",
+  "PSMA", "PSPOA", "PSMAI", "PSPOAI",
+]);
+
+/** ICP course types that need ICAgile gateway. */
+function isIcpCourseType(courseType: string): boolean {
+  return courseType.toUpperCase().startsWith("ICP");
+}
+
+/**
+ * Returns the applicable gateway types for a course.
+ * Always includes ecommerce. Scrum.org for scrum.org courses, icagile for ICP.
+ */
+export function getApplicableGateways(courseType: string, isPrivate: boolean): string[] {
+  if (isPrivate) return ["ecommerce"];
+  const key = courseType.toUpperCase().replace(/[-_\s]/g, "");
+  const gateways = ["ecommerce"];
+  if (SCRUMORG_TYPES.has(key)) gateways.push("scrumorg");
+  if (isIcpCourseType(courseType)) gateways.push("icagile");
+  return gateways;
+}
+
+/** All course type options for the Add Course form. */
+export const COURSE_TYPE_OPTIONS = [
+  { value: "PSM", label: "PSM" },
+  { value: "PSPO", label: "PSPO" },
+  { value: "PSMA", label: "PSM-A" },
+  { value: "PSPOA", label: "PSPO-A" },
+  { value: "PSMAI", label: "PSM-AI" },
+  { value: "PSPOAI", label: "PSPO-AI" },
+  { value: "PSK", label: "PSK" },
+  { value: "PALE", label: "PAL-E" },
+  { value: "EBM", label: "EBM" },
+  { value: "APSSD", label: "APS-SD" },
+  { value: "PSFS", label: "PSFS" },
+  { value: "PSU", label: "PSU" },
+];

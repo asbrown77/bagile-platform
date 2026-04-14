@@ -1064,3 +1064,90 @@ export interface EmailSendLog {
 export async function getEmailSendLog(apiKey: string, courseScheduleId: number): Promise<EmailSendLog[]> {
   return apiRequest(`/api/course-schedules/${courseScheduleId}/email-log`, apiKey);
 }
+
+// ── Calendar (Sprint 26) ─────────────────────────────────
+
+export interface GatewayStatus {
+  type: string;
+  published: boolean;
+  url: string | null;
+}
+
+export interface CalendarEvent {
+  id: string;                    // "planned-123" or "schedule-456"
+  courseType: string;
+  trainerInitials: string | null;
+  trainerName: string | null;
+  startDate: string;
+  endDate: string;
+  isVirtual: boolean;
+  isPrivate: boolean;
+  status: string;                // planned | partial_live | live | cancelled
+  decisionDeadline: string | null;
+  enrolmentCount: number;
+  minimumEnrolments: number;
+  venue: string | null;
+  notes: string | null;
+  gateways: GatewayStatus[];
+}
+
+export async function getCalendarEvents(
+  apiKey: string,
+  from: string,
+  to: string,
+): Promise<CalendarEvent[]> {
+  const qs = new URLSearchParams({ from, to });
+  return apiRequest(`/api/calendar?${qs}`, apiKey);
+}
+
+export interface CreatePlannedCourseRequest {
+  courseType: string;
+  trainerId: number;
+  startDate: string;
+  endDate: string;
+  isVirtual: boolean;
+  venue?: string;
+  notes?: string;
+  decisionDeadline?: string;
+  isPrivate: boolean;
+}
+
+export async function createPlannedCourse(
+  apiKey: string,
+  data: CreatePlannedCourseRequest,
+): Promise<{ id: number }> {
+  return apiRequest("/api/planned-courses", apiKey, { method: "POST", body: data });
+}
+
+export async function updatePlannedCourse(
+  apiKey: string,
+  id: number,
+  data: Partial<CreatePlannedCourseRequest & { status: string }>,
+): Promise<unknown> {
+  return apiRequest(`/api/planned-courses/${id}`, apiKey, { method: "PATCH", body: data });
+}
+
+export async function deletePlannedCourse(
+  apiKey: string,
+  id: number,
+): Promise<void> {
+  const res = await fetch(`${API_URL}/api/planned-courses/${id}`, {
+    method: "DELETE",
+    headers: { "X-Api-Key": apiKey },
+  });
+  if (res.status === 409) throw new Error("Cannot delete a course that has been published to one or more gateways.");
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+}
+
+export async function publishGateway(
+  apiKey: string,
+  courseId: string,
+  gateway: string,
+): Promise<unknown> {
+  // courseId is "planned-123" — extract numeric part
+  const numericId = courseId.replace(/\D/g, "");
+  return apiRequest(`/api/planned-courses/${numericId}/publish/${gateway}`, apiKey, {
+    method: "POST",
+    timeoutMs: 60000,
+  });
+}

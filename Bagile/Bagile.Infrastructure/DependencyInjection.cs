@@ -3,7 +3,7 @@ using Bagile.Domain.Repositories;
 using Bagile.Infrastructure.Email;
 using Bagile.Infrastructure.Persistence.Queries;
 using Bagile.Infrastructure.Repositories;
-using Microsoft.Extensions.Configuration;
+using Bagile.Infrastructure.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bagile.Infrastructure;
@@ -23,6 +23,8 @@ public static class DependencyInjection
         services.AddScoped<ITransferQueries>(_ => new TransferQueries(connectionString));
         services.AddScoped<IRevenueQueries>(_ => new RevenueQueries(connectionString));
         services.AddScoped<IAnalyticsQueries>(_ => new AnalyticsQueries(connectionString));
+        services.AddScoped<ICalendarQueries>(_ => new CalendarQueries(connectionString));
+        services.AddScoped<IPlannedCourseQueries>(_ => new PlannedCourseQueries(connectionString));
 
         // Register repositories (write path)
         services.AddScoped<ICourseScheduleRepository>(_ => new CourseScheduleRepository(connectionString));
@@ -34,6 +36,12 @@ public static class DependencyInjection
         services.AddScoped<IPreCourseTemplateRepository>(_ => new PreCourseTemplateRepository(connectionString));
         services.AddScoped<IEmailSendLogRepository>(_ => new EmailSendLogRepository(connectionString));
         services.AddScoped<IOrganisationRepository>(_ => new OrganisationRepository(connectionString));
+        services.AddScoped<IPlannedCourseRepository>(_ => new PlannedCourseRepository(connectionString));
+        services.AddScoped<ICoursePublicationRepository>(_ => new CoursePublicationRepository(connectionString));
+
+        // Publish services (WooCommerce + Scrum.org)
+        services.AddScoped<IWooCommercePublishService, WooCommercePublishService>();
+        services.AddScoped<IScrumOrgPublishService, ScrumOrgPublishService>();
 
         // Email service (SMTP — see Smtp:* in appsettings)
         services.AddScoped<IEmailService, SmtpEmailService>();
