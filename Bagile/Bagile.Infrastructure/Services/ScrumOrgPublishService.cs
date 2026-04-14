@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text.Json;
 using Bagile.Application.Common.Interfaces;
+using Bagile.Domain.Repositories;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -21,13 +22,24 @@ public class ScrumOrgPublishService : IScrumOrgPublishService
     private readonly string _username;
     private readonly string _password;
 
-    public ScrumOrgPublishService(IConfiguration config, ILogger<ScrumOrgPublishService> logger)
+    public ScrumOrgPublishService(
+        IConfiguration config,
+        IServiceConfigRepository serviceConfig,
+        ILogger<ScrumOrgPublishService> logger)
     {
         _logger = logger;
         _scriptPath = config["ScrumOrg:ScriptPath"]
             ?? Path.Combine(AppContext.BaseDirectory, "scripts", "publish-scrumorg.js");
-        _username = config["ScrumOrg:Username"] ?? "";
-        _password = config["ScrumOrg:Password"] ?? "";
+
+        // DB-first: use values from service_config if set, fall back to IConfiguration.
+        var cfgUsername = config["ScrumOrg:Username"] ?? "";
+        var cfgPassword = config["ScrumOrg:Password"] ?? "";
+
+        var dbUsername = serviceConfig.GetAsync("scrumorg.username").GetAwaiter().GetResult();
+        var dbPassword = serviceConfig.GetAsync("scrumorg.password").GetAwaiter().GetResult();
+
+        _username = !string.IsNullOrWhiteSpace(dbUsername) ? dbUsername : cfgUsername;
+        _password = !string.IsNullOrWhiteSpace(dbPassword) ? dbPassword : cfgPassword;
     }
 
     public async Task<ScrumOrgPublishResult?> CreateListingAsync(

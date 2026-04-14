@@ -1151,3 +1151,20 @@ export async function publishGateway(
     timeoutMs: 60000,
   });
 }
+
+// ── Service Config (credentials stored in DB) ────────────
+
+export async function getServiceConfig(apiKey: string): Promise<Record<string, string>> {
+  return apiRequest<Record<string, string>>("/api/settings/service-config", apiKey);
+}
+
+export async function setServiceConfig(
+  apiKey: string,
+  key: string,
+  value: string,
+): Promise<void> {
+  await apiRequest<void>(`/api/settings/service-config/${encodeURIComponent(key)}`, apiKey, {
+    method: "PUT",
+    body: { value },
+  });
+}

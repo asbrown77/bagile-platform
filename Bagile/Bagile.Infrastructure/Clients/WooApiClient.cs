@@ -1,6 +1,7 @@
 ﻿using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using Bagile.Domain.Repositories;
 using Bagile.Infrastructure.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -12,14 +13,27 @@ public class WooApiClient : IWooApiClient
     private readonly HttpClient _http;
     private readonly ILogger<WooApiClient> _logger;
 
-    public WooApiClient(HttpClient http, IConfiguration cfg, ILogger<WooApiClient> logger)
+    public WooApiClient(
+        HttpClient http,
+        IConfiguration cfg,
+        IServiceConfigRepository serviceConfig,
+        ILogger<WooApiClient> logger)
     {
         _http = http;
         _logger = logger;
 
         var baseUrl = cfg["WooCommerce:BaseUrl"]!;
-        var key = cfg["WooCommerce:ConsumerKey"]!;
-        var secret = cfg["WooCommerce:ConsumerSecret"]!;
+
+        // DB-first: use values from service_config if set, fall back to IConfiguration.
+        var key    = cfg["WooCommerce:ConsumerKey"]    ?? "";
+        var secret = cfg["WooCommerce:ConsumerSecret"] ?? "";
+
+        var dbKey    = serviceConfig.GetAsync("woocommerce.consumer_key").GetAwaiter().GetResult();
+        var dbSecret = serviceConfig.GetAsync("woocommerce.consumer_secret").GetAwaiter().GetResult();
+
+        if (!string.IsNullOrWhiteSpace(dbKey))    key    = dbKey;
+        if (!string.IsNullOrWhiteSpace(dbSecret)) secret = dbSecret;
+
         var creds = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{key}:{secret}"));
 
         _http.BaseAddress = new Uri(baseUrl);

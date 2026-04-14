@@ -38,6 +38,7 @@ public static class DependencyInjection
         services.AddScoped<IOrganisationRepository>(_ => new OrganisationRepository(connectionString));
         services.AddScoped<IPlannedCourseRepository>(_ => new PlannedCourseRepository(connectionString));
         services.AddScoped<ICoursePublicationRepository>(_ => new CoursePublicationRepository(connectionString));
+        services.AddSingleton<IServiceConfigRepository>(_ => new ServiceConfigRepository(connectionString));
 
         // Publish services (WooCommerce + Scrum.org)
         services.AddScoped<IWooCommercePublishService, WooCommercePublishService>();

@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Bagile.Domain.Repositories;
 using Bagile.Infrastructure.Clients;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
@@ -20,7 +21,7 @@ public class WooApiClientTests
             .Build();
 
         var httpClient = new HttpClient();
-        _client = new WooApiClient(httpClient, config, NullLogger<WooApiClient>.Instance);
+        _client = new WooApiClient(httpClient, config, NullServiceConfigRepository.Instance, NullLogger<WooApiClient>.Instance);
     }
 
     [Test]

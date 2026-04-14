@@ -1,4 +1,5 @@
-﻿using Bagile.Infrastructure.Clients;
+﻿using Bagile.Domain.Repositories;
+using Bagile.Infrastructure.Clients;
 using Bagile.Infrastructure.Models;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
@@ -235,7 +236,11 @@ public class WooApiClientPaginationTests
             })
             .Build();
 
-        return new WooApiClient(httpClient, config, NullLogger<WooApiClient>.Instance);
+        var nullServiceConfig = new Mock<IServiceConfigRepository>();
+        nullServiceConfig.Setup(r => r.GetAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                         .ReturnsAsync((string?)null);
+
+        return new WooApiClient(httpClient, config, nullServiceConfig.Object, NullLogger<WooApiClient>.Instance);
     }
 
     private void VerifyPageWasFetched(Mock<HttpMessageHandler> mockHandler, int page)

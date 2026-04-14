@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ApiKey, CreateKeyResponse, loginWithGoogle, listKeys, createKey, revokeKey, PostCourseTemplate, listPostCourseTemplates, upsertPostCourseTemplate, PreCourseTemplate, getPreCourseTemplates, updatePreCourseTemplate, Trainer, getTrainers, createTrainer, updateTrainer, deleteTrainer } from "@/lib/api";
+import { ApiKey, CreateKeyResponse, loginWithGoogle, listKeys, createKey, revokeKey, PostCourseTemplate, listPostCourseTemplates, upsertPostCourseTemplate, PreCourseTemplate, getPreCourseTemplates, updatePreCourseTemplate, Trainer, getTrainers, createTrainer, updateTrainer, deleteTrainer, getServiceConfig, setServiceConfig } from "@/lib/api";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { AlertBanner } from "@/components/ui/AlertBanner";
@@ -12,13 +12,14 @@ import { loadConfig, saveConfig, type PortalConfig } from "@/lib/config";
 
 // ── Tab definitions ───────────────────────────────────────
 
-type Tab = "general" | "post-course" | "pre-course" | "trainers";
+type Tab = "general" | "post-course" | "pre-course" | "trainers" | "integrations";
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: "general",    label: "General" },
-  { id: "post-course", label: "Post-Course" },
-  { id: "pre-course",  label: "Pre-Course" },
-  { id: "trainers",   label: "Trainers" },
+  { id: "general",      label: "General" },
+  { id: "post-course",  label: "Post-Course" },
+  { id: "pre-course",   label: "Pre-Course" },
+  { id: "trainers",     label: "Trainers" },
+  { id: "integrations", label: "Integrations" },
 ];
 
 // ── Root export (wraps in Suspense for useSearchParams) ───
@@ -338,6 +339,9 @@ function SettingsContent() {
 
       {/* Trainers tab */}
       {activeTab === "trainers" && <TrainersEditor />}
+
+      {/* Integrations tab */}
+      {activeTab === "integrations" && <IntegrationsEditor />}
     </>
   );
 }
@@ -414,6 +418,178 @@ function CourseThresholds() {
         Courses within <strong>{config.atRiskDays} day{config.atRiskDays !== 1 ? "s" : ""}</strong> with
         fewer than <strong>{config.minEnrolments}</strong> enrolments → "At Risk".
       </div>
+    </div>
+  );
+}
+
+// ── Integrations Editor ───────────────────────────────────────
+
+const MASK = "********";
+
+interface IntegrationField {
+  key: string;
+  label: string;
+  type: "text" | "password";
+}
+
+interface IntegrationSection {
+  title: string;
+  description: string;
+  fields: IntegrationField[];
+}
+
+const INTEGRATION_SECTIONS: IntegrationSection[] = [
+  {
+    title: "WooCommerce API",
+    description: "Credentials for syncing courses and orders with bagile.co.uk.",
+    fields: [
+      { key: "woocommerce.consumer_key",    label: "Consumer Key",    type: "text" },
+      { key: "woocommerce.consumer_secret", label: "Consumer Secret", type: "password" },
+    ],
+  },
+  {
+    title: "Scrum.org",
+    description: "Login credentials used by the automated course listing script.",
+    fields: [
+      { key: "scrumorg.username", label: "Username", type: "text" },
+      { key: "scrumorg.password", label: "Password", type: "password" },
+    ],
+  },
+];
+
+function IntegrationsEditor() {
+  const [apiKey, setApiKey] = useState<string>("");
+  // fieldValues holds the current display value for each key
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
+  // dirtyKeys tracks which fields the user has actually typed into
+  const [dirtyKeys, setDirtyKeys] = useState<Set<string>>(new Set());
+  const [saving, setSaving] = useState<Record<string, boolean>>({});
+  const [saved, setSaved] = useState<Record<string, boolean>>({});
+  const [saveError, setSaveError] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const key = localStorage.getItem("bagile_api_key") ?? "";
+    setApiKey(key);
+  }, []);
+
+  const loadConfig = useCallback(async () => {
+    if (!apiKey) return;
+    setLoading(true);
+    try {
+      const data = await getServiceConfig(apiKey);
+      // For masked values, show placeholder; for others show actual value.
+      const initial: Record<string, string> = {};
+      for (const [k, v] of Object.entries(data)) {
+        initial[k] = v; // may be "********" or ""
+      }
+      setFieldValues(initial);
+      setDirtyKeys(new Set());
+    } catch {
+      // silently skip — api key may not be set yet
+    } finally {
+      setLoading(false);
+    }
+  }, [apiKey]);
+
+  useEffect(() => { loadConfig(); }, [loadConfig]);
+
+  function handleChange(key: string, value: string) {
+    setFieldValues((prev) => ({ ...prev, [key]: value }));
+    setDirtyKeys((prev) => new Set(prev).add(key));
+  }
+
+  async function handleSaveSection(section: IntegrationSection) {
+    const sectionKey = section.title;
+    setSaving((s) => ({ ...s, [sectionKey]: true }));
+    setSaveError((e) => ({ ...e, [sectionKey]: "" }));
+    try {
+      for (const field of section.fields) {
+        if (!dirtyKeys.has(field.key)) continue; // not changed — skip
+        const value = fieldValues[field.key] ?? "";
+        if (value === MASK) continue; // mask sentinel — skip
+        await setServiceConfig(apiKey, field.key, value);
+      }
+      setSaved((s) => ({ ...s, [sectionKey]: true }));
+      setDirtyKeys((prev) => {
+        const next = new Set(prev);
+        section.fields.forEach((f) => next.delete(f.key));
+        return next;
+      });
+      setTimeout(() => setSaved((s) => ({ ...s, [sectionKey]: false })), 2500);
+      // Reload to get fresh masks from API
+      await loadConfig();
+    } catch (err: any) {
+      setSaveError((e) => ({ ...e, [sectionKey]: err?.message ?? "Failed to save" }));
+    } finally {
+      setSaving((s) => ({ ...s, [sectionKey]: false }));
+    }
+  }
+
+  if (!apiKey) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8 text-center max-w-md">
+        <p className="text-sm text-gray-500">Set your API key on the General tab to manage integrations.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {INTEGRATION_SECTIONS.map((section) => {
+        const sectionKey = section.title;
+        const isSaving = saving[sectionKey] ?? false;
+        const wasSaved = saved[sectionKey] ?? false;
+        const error = saveError[sectionKey] ?? "";
+        const hasDirtyField = section.fields.some((f) => dirtyKeys.has(f.key));
+
+        return (
+          <div key={sectionKey} className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <h2 className="text-base font-semibold text-gray-900 mb-1">{section.title}</h2>
+            <p className="text-sm text-gray-500 mb-4">{section.description}</p>
+
+            {loading ? (
+              <p className="text-sm text-gray-400">Loading...</p>
+            ) : (
+              <div className="space-y-3">
+                {section.fields.map((field) => {
+                  const currentVal = fieldValues[field.key] ?? "";
+                  const isMasked = currentVal === MASK && !dirtyKeys.has(field.key);
+                  return (
+                    <div key={field.key}>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {field.label}
+                      </label>
+                      <input
+                        type={field.type}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 font-mono"
+                        value={isMasked ? "" : currentVal}
+                        placeholder={isMasked ? MASK : ""}
+                        onChange={(e) => handleChange(field.key, e.target.value)}
+                        autoComplete="off"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+
+            <div className="flex items-center gap-3 mt-4">
+              <Button
+                onClick={() => handleSaveSection(section)}
+                disabled={isSaving || !hasDirtyField || loading}
+                size="md"
+              >
+                <Save className="w-4 h-4" />
+                {isSaving ? "Saving..." : "Save"}
+              </Button>
+              {wasSaved && <span className="text-sm text-green-600 font-medium">Saved!</span>}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

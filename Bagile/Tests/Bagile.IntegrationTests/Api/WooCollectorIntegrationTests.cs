@@ -1,4 +1,5 @@
-﻿using Bagile.EtlService.Collectors;
+﻿using Bagile.Domain.Repositories;
+using Bagile.EtlService.Collectors;
 using Bagile.EtlService.Projectors;
 using Bagile.Infrastructure.Clients;
 using FluentAssertions;
@@ -23,7 +24,7 @@ public class WooCollectorIntegrationTests
             .AddJsonFile("appsettings.Development.json")
             .Build();
 
-        var client = new WooApiClient(new HttpClient(), config, NullLogger<WooApiClient>.Instance);
+        var client = new WooApiClient(new HttpClient(), config, NullServiceConfigRepository.Instance, NullLogger<WooApiClient>.Instance);
         _collector = new WooOrderCollector(client, NullLogger<WooOrderCollector>.Instance);
     }
 
