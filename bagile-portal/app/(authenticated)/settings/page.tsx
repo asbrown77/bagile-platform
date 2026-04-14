@@ -440,11 +440,19 @@ interface IntegrationSection {
 
 const INTEGRATION_SECTIONS: IntegrationSection[] = [
   {
-    title: "WooCommerce API",
-    description: "Credentials for syncing courses and orders with bagile.co.uk.",
+    title: "WooCommerce REST API",
+    description: "WordPress Application Password for the REST API — used to create and update course products programmatically.",
     fields: [
-      { key: "woocommerce.consumer_key",    label: "Consumer Key",    type: "text" },
-      { key: "woocommerce.consumer_secret", label: "Consumer Secret", type: "password" },
+      { key: "woocommerce.consumer_key",    label: "WP Username",           type: "text" },
+      { key: "woocommerce.consumer_secret", label: "WP Application Password", type: "password" },
+    ],
+  },
+  {
+    title: "WordPress Admin (Playwright)",
+    description: "Admin login for browser automation — used for FooEvents ticket management and wp-admin operations.",
+    fields: [
+      { key: "woocommerce.admin_username", label: "Admin Username", type: "text" },
+      { key: "woocommerce.admin_password", label: "Admin Password", type: "password" },
     ],
   },
   {
