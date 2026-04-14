@@ -78,11 +78,10 @@ else
     app.UseExceptionHandler("/error");
 }
 
-// Error handler — expose detail temporarily for debugging Sprint 26
+// Error handler
 app.Map("/error", (HttpContext ctx) =>
 {
-    var ex = ctx.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>()?.Error;
-    return Results.Problem(ex?.ToString() ?? "An unexpected error occurred.");
+    return Results.Problem("An unexpected error occurred. Please contact support.");
 });
 
 // Swagger

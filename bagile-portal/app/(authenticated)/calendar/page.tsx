@@ -721,23 +721,45 @@ export default function CalendarPage() {
 
       {error && <div className="mb-4"><AlertBanner variant="danger">{error}</AlertBanner></div>}
 
-      {/* Trainer filter */}
-      <div className="flex items-center gap-3 mb-4">
-        <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Trainer</span>
-        <div className="flex rounded-lg border border-gray-200 overflow-hidden">
-          {["all", "AB", "CB"].map((t, i) => (
-            <button
-              key={t}
-              onClick={() => setTrainerFilter(t)}
-              className={`px-3 py-1.5 text-xs font-medium transition-colors
-                ${trainerFilter === t ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}
-                ${i > 0 ? "border-l border-gray-200" : ""}`}
-            >
-              {t === "all" ? "All" : t}
-            </button>
-          ))}
+      {/* Toolbar: trainer filter + status legend */}
+      <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
+        {/* Trainer filter */}
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Trainer</span>
+          <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+            {["all", "AB", "CB"].map((t, i) => (
+              <button
+                key={t}
+                onClick={() => setTrainerFilter(t)}
+                className={`px-3 py-1.5 text-xs font-medium transition-colors
+                  ${trainerFilter === t ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}
+                  ${i > 0 ? "border-l border-gray-200" : ""}`}
+              >
+                {t === "all" ? "All" : t}
+              </button>
+            ))}
+          </div>
+          {loading && <span className="text-xs text-gray-400">Loading...</span>}
         </div>
-        {loading && <span className="text-xs text-gray-400">Loading...</span>}
+
+        {/* Status legend */}
+        <div className="flex items-center gap-4 flex-wrap">
+          {[
+            { colour: "#9ca3af", label: "Planned" },
+            { colour: "#f59e0b", label: "Partial live" },
+            { colour: "#22c55e", label: "Live" },
+            { colour: "#ef4444", label: "Cancelled" },
+          ].map(({ colour, label }) => (
+            <div key={label} className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: colour }} />
+              <span className="text-xs text-gray-500">{label}</span>
+            </div>
+          ))}
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+            <span className="text-xs text-gray-500">Decision due</span>
+          </div>
+        </div>
       </div>
 
       {/* FullCalendar */}
