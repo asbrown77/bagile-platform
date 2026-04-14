@@ -17,6 +17,7 @@ import Link from "next/link";
 import { getCourseDisplayStatus } from "@/lib/courseStatus";
 import { loadConfig } from "@/lib/config";
 import { getCourseColour, getTrainerColour, trainerInitials } from "@/lib/courseColours";
+import { toDateStr, addDays, getWeekStart } from "@/lib/dateUtils";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MONTH_NAMES = [
@@ -35,30 +36,6 @@ const STATUS_BG: Record<string, string> = {
   monitor:    "bg-amber-50 border-gray-200",
   cancelled:  "bg-gray-50 border-gray-100 opacity-50",
 };
-
-/** Format a Date as YYYY-MM-DD using local time (not UTC) to avoid off-by-one
- *  errors in BST/CET where midnight local = prior day in UTC. */
-function toDateStr(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-function addDays(d: Date, n: number): Date {
-  const r = new Date(d);
-  r.setDate(r.getDate() + n);
-  return r;
-}
-
-function getWeekStart(d: Date): Date {
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  const monday = new Date(d);
-  monday.setDate(d.getDate() + diff);
-  monday.setHours(0, 0, 0, 0);
-  return monday;
-}
 
 interface CourseTileProps {
   course: CourseScheduleItem;

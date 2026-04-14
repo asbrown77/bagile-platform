@@ -33,6 +33,7 @@ import {
   COURSE_TYPE_OPTIONS,
 } from "@/lib/calendarHelpers";
 import { getTrainerColour, trainerInitials } from "@/lib/courseColours";
+import { addOneDayStr } from "@/lib/dateUtils";
 
 // ── Types for FullCalendar ──────────────────────────────────
 
@@ -648,7 +649,7 @@ export default function CalendarPage() {
     id: e.id,
     start: e.startDate.split("T")[0],
     // FullCalendar dayGrid end is exclusive, so add 1 day
-    end: addOneDay(e.endDate.split("T")[0]),
+    end: addOneDayStr(e.endDate.split("T")[0]),
     extendedProps: { calendarEvent: e } as FCEventExtended,
     display: "block" as const,
     backgroundColor: "transparent",
@@ -868,12 +869,3 @@ export default function CalendarPage() {
   );
 }
 
-/** Add one day to a YYYY-MM-DD string (for FullCalendar exclusive end). */
-function addOneDay(dateStr: string): string {
-  const d = new Date(dateStr);
-  d.setDate(d.getDate() + 1);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}

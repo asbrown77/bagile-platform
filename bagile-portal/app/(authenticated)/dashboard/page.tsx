@@ -22,38 +22,13 @@ import {
   getCourseColour, getTrainerColour, trainerInitials,
 } from "@/lib/courseColours";
 import { loadConfig } from "@/lib/config";
+import { toDateStr, addDays, getWeekStart } from "@/lib/dateUtils";
 
-// ── Calendar helpers (duplicated from calendar page to avoid coupling) ───────
+// ── Calendar helpers ─────────────────────────────────────────────────────────
 
 const DAY_NAMES_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-/** Format a Date as YYYY-MM-DD using local time (not UTC) to avoid timezone
- *  off-by-one errors in BST/CET. toISOString() would give the UTC date which
- *  can be a day behind for dates at midnight in UTC+1 or later. */
-function toDateStr(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-function addDays(d: Date, n: number): Date {
-  const r = new Date(d);
-  r.setDate(r.getDate() + n);
-  return r;
-}
-
-/** Returns Monday of the ISO week containing d. */
-function getWeekStart(d: Date): Date {
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  const monday = new Date(d);
-  monday.setDate(d.getDate() + diff);
-  monday.setHours(0, 0, 0, 0);
-  return monday;
-}
 
 // ── Week strip compact pill component ───────────────────────────────────────
 
