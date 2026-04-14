@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
+import timeGridPlugin from "@fullcalendar/timegrid";
 import { useApiKey } from "@/lib/hooks/useApiKey";
 import {
   CalendarEvent,
@@ -617,7 +618,10 @@ export default function CalendarPage() {
 
   // Load calendar events when range changes
   const loadEvents = useCallback(async () => {
-    if (!apiKey || !currentRange) return;
+    if (!apiKey || !currentRange) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError("");
     try {
@@ -739,12 +743,12 @@ export default function CalendarPage() {
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden calendar-container">
         <FullCalendar
           ref={calendarRef}
-          plugins={[dayGridPlugin]}
+          plugins={[dayGridPlugin, timeGridPlugin]}
           initialView="dayGridMonth"
           headerToolbar={{
             left: "prev,next today",
             center: "title",
-            right: "dayGridMonth,dayGridWeek",
+            right: "dayGridMonth,timeGridWeek",
           }}
           events={fcEvents}
           datesSet={handleDatesSet}
