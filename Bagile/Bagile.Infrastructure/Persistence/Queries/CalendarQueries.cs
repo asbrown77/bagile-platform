@@ -119,17 +119,17 @@ public class CalendarQueries : ICalendarQueries
         // For live courses, trainer is stored as free text (trainer_name).
         // We need to join to trainers table if trainerId filter is specified.
         var sql = @"
-            SELECT cs.id,
-                   COALESCE(cs.sku, '') AS sku,
-                   cs.start_date,
-                   cs.end_date,
-                   cs.format_type,
-                   cs.is_public,
-                   cs.status,
-                   cs.trainer_name,
-                   cs.venue_address AS venue,
-                   cs.notes,
-                   COUNT(e.id) AS enrolment_count
+            SELECT cs.id                          AS Id,
+                   COALESCE(cs.sku, '')           AS Sku,
+                   cs.start_date                  AS StartDate,
+                   cs.end_date                    AS EndDate,
+                   cs.format_type                 AS FormatType,
+                   cs.is_public                   AS IsPublic,
+                   cs.status                      AS Status,
+                   cs.trainer_name                AS TrainerName,
+                   cs.venue_address               AS Venue,
+                   cs.notes                       AS Notes,
+                   COUNT(e.id)::int               AS EnrolmentCount
             FROM bagile.course_schedules cs
             LEFT JOIN bagile.enrolments e ON e.course_schedule_id = cs.id
                 AND e.status NOT IN ('cancelled', 'transferred')
