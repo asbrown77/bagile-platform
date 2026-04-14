@@ -20,7 +20,7 @@ import { AlertBanner } from "@/components/ui/AlertBanner";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { SlideOver } from "@/components/ui/SlideOver";
-import { Plus, Calendar as CalendarIcon, Lock, AlertCircle, ExternalLink, Users, X, Loader2 } from "lucide-react";
+import { Plus, Calendar as CalendarIcon, Lock, AlertCircle, ExternalLink, Users, X, Loader2, LayoutList } from "lucide-react";
 import {
   getBadgeSrc,
   getCourseCodeDisplay,
@@ -596,6 +596,166 @@ function SidePanel({ event, onClose, onPublish, onCancel }: SidePanelProps) {
   );
 }
 
+// ── Course List View ────────────────────────────────────────
+
+function CourseListRow({ event, onClick }: { event: CalendarEvent; onClick: () => void }) {
+  const badgeSrc = getBadgeSrc(event.courseType);
+  const codeDisplay = getCourseCodeDisplay(event.courseType);
+  const initials = event.trainerInitials || trainerInitials(event.trainerName);
+  const avatarColour = getTrainerColour(initials);
+  const deadlineUrgent = isDeadlineUrgent(event.decisionDeadline);
+  const isCancelled = event.status === "cancelled";
+  const applicableGateways = getApplicableGateways(event.courseType, event.isPrivate);
+
+  const fmt = (d: string) =>
+    new Date(d).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+  const dateStr =
+    event.startDate.split("T")[0] !== event.endDate.split("T")[0]
+      ? `${fmt(event.startDate)} – ${fmt(event.endDate)}`
+      : fmt(event.startDate);
+
+  return (
+    <tr
+      onClick={onClick}
+      className={`border-b border-gray-100 cursor-pointer transition-colors hover:bg-gray-50 ${isCancelled ? "opacity-50" : ""}`}
+    >
+      {/* Date */}
+      <td className="px-4 py-3 w-52">
+        <div className="flex items-center gap-2">
+          {deadlineUrgent && (
+            <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" title="Decision deadline approaching" />
+          )}
+          <span className={`text-sm text-gray-700 whitespace-nowrap ${isCancelled ? "line-through" : ""}`}>
+            {dateStr}
+          </span>
+        </div>
+      </td>
+      {/* Badge */}
+      <td className="px-3 py-3 w-12">
+        {badgeSrc ? (
+          <img src={badgeSrc} alt={event.courseType} className="w-8 h-8 object-contain" />
+        ) : (
+          <div className="w-8 h-8 rounded bg-gray-100 flex items-center justify-center text-[9px] font-bold text-gray-500">
+            {event.courseType.slice(0, 3)}
+          </div>
+        )}
+      </td>
+      {/* Course code */}
+      <td className="px-3 py-3 min-w-[80px]">
+        <div className="flex items-center gap-1.5">
+          <span className="text-sm font-semibold text-gray-800">{codeDisplay}</span>
+          {event.isPrivate && <Lock className="w-3 h-3 text-gray-400" />}
+        </div>
+      </td>
+      {/* Trainer avatar */}
+      <td className="px-3 py-3 w-12">
+        <span
+          className="inline-flex items-center justify-center rounded-full text-white font-bold"
+          style={{ backgroundColor: avatarColour, width: 24, height: 24, fontSize: 10 }}
+        >
+          {initials}
+        </span>
+      </td>
+      {/* Status */}
+      <td className="px-3 py-3">
+        <Badge variant={getStatusBadgeVariant(event.status)}>{getStatusLabel(event.status)}</Badge>
+      </td>
+      {/* Enrolments */}
+      <td className="px-3 py-3 text-sm text-gray-600 w-16 text-center">
+        {event.status === "planned" ? "–" : `${event.enrolmentCount}/${event.minimumEnrolments}`}
+      </td>
+      {/* Gateways */}
+      <td className="px-3 py-3">
+        <div className="flex items-center gap-2">
+          {applicableGateways.map((gw) => {
+            const gwStatus = event.gateways?.find((g) => g.type === gw);
+            const published = gwStatus?.published ?? false;
+            const label = gw === "ecommerce" ? "E" : gw === "scrumorg" ? "S" : "I";
+            return (
+              <span key={gw} className="flex items-center gap-0.5" title={`${gw}: ${published ? "published" : "not published"}`}>
+                <span className={`w-2 h-2 rounded-full ${published ? "bg-green-500" : "bg-gray-300"}`} />
+                <span className="text-[10px] text-gray-400">{label}</span>
+              </span>
+            );
+          })}
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+function CourseListView({
+  events,
+  loading,
+  onSelect,
+}: {
+  events: CalendarEvent[];
+  loading: boolean;
+  onSelect: (e: CalendarEvent) => void;
+}) {
+  if (loading) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-12 flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+      </div>
+    );
+  }
+
+  if (events.length === 0) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-12 text-center text-gray-500 text-sm">
+        No courses found.
+      </div>
+    );
+  }
+
+  // Group by month
+  const sorted = [...events].sort((a, b) => a.startDate.localeCompare(b.startDate));
+  const grouped: { month: string; label: string; events: CalendarEvent[] }[] = [];
+  for (const e of sorted) {
+    const month = e.startDate.substring(0, 7);
+    let group = grouped.find((g) => g.month === month);
+    if (!group) {
+      group = {
+        month,
+        label: new Date(month + "-01").toLocaleString("en-GB", { month: "long", year: "numeric" }),
+        events: [],
+      };
+      grouped.push(group);
+    }
+    group.events.push(e);
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <table className="w-full">
+        <thead>
+          <tr className="border-b border-gray-200 bg-gray-50">
+            <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
+            <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider" colSpan={2}>Course</th>
+            <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Trainer</th>
+            <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+            <th className="px-3 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Enrols</th>
+            <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Gateways</th>
+          </tr>
+        </thead>
+        {grouped.map(({ month, label, events: monthEvents }) => (
+          <tbody key={month}>
+            <tr className="bg-gray-50 border-t border-b border-gray-200">
+              <td colSpan={7} className="px-4 py-2">
+                <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">{label}</span>
+              </td>
+            </tr>
+            {monthEvents.map((e) => (
+              <CourseListRow key={e.id} event={e} onClick={() => onSelect(e)} />
+            ))}
+          </tbody>
+        ))}
+      </table>
+    </div>
+  );
+}
+
 // ── Main Calendar Page ──────────────────────────────────────
 
 export default function CalendarPage() {
@@ -606,6 +766,10 @@ export default function CalendarPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [trainerFilter, setTrainerFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
+  const [listEvents, setListEvents] = useState<CalendarEvent[]>([]);
+  const [listLoading, setListLoading] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [currentRange, setCurrentRange] = useState<{ from: string; to: string } | null>(null);
@@ -616,6 +780,18 @@ export default function CalendarPage() {
     if (!apiKey) return;
     getTrainers(apiKey).then(setTrainers).catch(() => {});
   }, [apiKey]);
+
+  // Load all upcoming events when switching to list view
+  useEffect(() => {
+    if (viewMode !== "list" || !apiKey) return;
+    setListLoading(true);
+    const today = new Date().toISOString().split("T")[0];
+    const yearAhead = new Date(Date.now() + 366 * 24 * 3600 * 1000).toISOString().split("T")[0];
+    getCalendarEvents(apiKey, today, yearAhead)
+      .then(setListEvents)
+      .catch(() => {})
+      .finally(() => setListLoading(false));
+  }, [viewMode, apiKey]);
 
   // Load calendar events when range changes
   const loadEvents = useCallback(async () => {
@@ -637,12 +813,19 @@ export default function CalendarPage() {
 
   useEffect(() => { loadEvents(); }, [loadEvents]);
 
-  // Filter events by trainer (client-side)
-  const filteredEvents = events.filter((e) => {
-    if (trainerFilter === "all") return true;
-    const initials = e.trainerInitials || trainerInitials(e.trainerName);
-    return initials === trainerFilter;
-  });
+  // Filter events by trainer + status (client-side)
+  const applyFilters = (source: CalendarEvent[]) =>
+    source.filter((e) => {
+      if (trainerFilter !== "all") {
+        const initials = e.trainerInitials || trainerInitials(e.trainerName);
+        if (initials !== trainerFilter) return false;
+      }
+      if (statusFilter !== "all" && e.status !== statusFilter) return false;
+      return true;
+    });
+
+  const filteredEvents = applyFilters(events);
+  const filteredListEvents = applyFilters(listEvents);
 
   // Convert to FullCalendar events
   const fcEvents = filteredEvents.map((e) => ({
@@ -721,11 +904,25 @@ export default function CalendarPage() {
 
       {error && <div className="mb-4"><AlertBanner variant="danger">{error}</AlertBanner></div>}
 
-      {/* Toolbar: trainer filter + status legend */}
+      {/* Toolbar */}
       <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
-        {/* Trainer filter */}
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Trainer</span>
+        {/* Left: view toggle + trainer filter */}
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* View toggle */}
+          <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+            {([{ key: "calendar", icon: <CalendarIcon className="w-3.5 h-3.5" />, label: "Calendar" }, { key: "list", icon: <LayoutList className="w-3.5 h-3.5" />, label: "List" }] as const).map((v, i) => (
+              <button
+                key={v.key}
+                onClick={() => setViewMode(v.key)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors
+                  ${viewMode === v.key ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}
+                  ${i > 0 ? "border-l border-gray-200" : ""}`}
+              >
+                {v.icon}{v.label}
+              </button>
+            ))}
+          </div>
+          {/* Trainer filter */}
           <div className="flex rounded-lg border border-gray-200 overflow-hidden">
             {["all", "AB", "CB"].map((t, i) => (
               <button
@@ -739,56 +936,77 @@ export default function CalendarPage() {
               </button>
             ))}
           </div>
-          {loading && <span className="text-xs text-gray-400">Loading...</span>}
+          {(loading || listLoading) && <span className="text-xs text-gray-400">Loading...</span>}
         </div>
 
-        {/* Status legend */}
-        <div className="flex items-center gap-4 flex-wrap">
+        {/* Right: status filter (doubles as legend) */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setStatusFilter("all")}
+            className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors
+              ${statusFilter === "all" ? "bg-brand-600 text-white border-brand-600" : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"}`}
+          >
+            All
+          </button>
           {[
-            { colour: "#9ca3af", label: "Planned" },
-            { colour: "#f59e0b", label: "Partial live" },
-            { colour: "#22c55e", label: "Live" },
-            { colour: "#ef4444", label: "Cancelled" },
-          ].map(({ colour, label }) => (
-            <div key={label} className="flex items-center gap-1.5">
+            { key: "planned", colour: "#9ca3af", label: "Planned" },
+            { key: "partial_live", colour: "#f59e0b", label: "Partial live" },
+            { key: "live", colour: "#22c55e", label: "Live" },
+            { key: "cancelled", colour: "#ef4444", label: "Cancelled" },
+          ].map(({ key, colour, label }) => (
+            <button
+              key={key}
+              onClick={() => setStatusFilter(statusFilter === key ? "all" : key)}
+              className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border font-medium transition-colors
+                ${statusFilter === key ? "bg-white font-semibold" : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"}`}
+              style={statusFilter === key ? { color: colour, borderColor: colour } : {}}
+            >
               <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: colour }} />
-              <span className="text-xs text-gray-500">{label}</span>
-            </div>
+              {label}
+            </button>
           ))}
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 ml-1">
             <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
-            <span className="text-xs text-gray-500">Decision due</span>
+            <span className="text-xs text-gray-400">Decision due</span>
           </div>
         </div>
       </div>
 
-      {/* FullCalendar */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden calendar-container">
-        <FullCalendar
-          ref={calendarRef}
-          plugins={[dayGridPlugin, timeGridPlugin]}
-          initialView="dayGridMonth"
-          headerToolbar={{
-            left: "prev,next today",
-            center: "title",
-            right: "dayGridMonth,timeGridWeek",
-          }}
-          events={fcEvents}
-          datesSet={handleDatesSet}
-          eventClick={(info) => {
-            const ext = info.event.extendedProps as FCEventExtended;
-            setSelectedEvent(ext.calendarEvent);
-          }}
-          eventContent={(arg) => {
-            const ext = arg.event.extendedProps as FCEventExtended;
-            return <CourseBlock event={ext.calendarEvent} />;
-          }}
-          height="auto"
-          fixedWeekCount={false}
-          firstDay={1}
-          dayMaxEvents={4}
+      {/* Calendar or List view */}
+      {viewMode === "calendar" ? (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden calendar-container">
+          <FullCalendar
+            ref={calendarRef}
+            plugins={[dayGridPlugin, timeGridPlugin]}
+            initialView="dayGridMonth"
+            headerToolbar={{
+              left: "prev,next today",
+              center: "title",
+              right: "dayGridMonth,timeGridWeek",
+            }}
+            events={fcEvents}
+            datesSet={handleDatesSet}
+            eventClick={(info) => {
+              const ext = info.event.extendedProps as FCEventExtended;
+              setSelectedEvent(ext.calendarEvent);
+            }}
+            eventContent={(arg) => {
+              const ext = arg.event.extendedProps as FCEventExtended;
+              return <CourseBlock event={ext.calendarEvent} />;
+            }}
+            height="auto"
+            fixedWeekCount={false}
+            firstDay={1}
+            dayMaxEvents={4}
+          />
+        </div>
+      ) : (
+        <CourseListView
+          events={filteredListEvents}
+          loading={listLoading}
+          onSelect={setSelectedEvent}
         />
-      </div>
+      )}
 
       {/* Side panel */}
       <SidePanel

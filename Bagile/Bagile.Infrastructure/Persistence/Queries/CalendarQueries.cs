@@ -161,6 +161,9 @@ public class CalendarQueries : ICalendarQueries
             var applicableGateways = GatewayConfig.GetGatewaysForCourseType(courseType);
             var coursePubs = pubs[c.Id].ToList();
 
+            // Legacy WooCommerce courses pre-date the publication tracking system.
+            // All applicable gateways are treated as published — they were live before
+            // this portal existed. Use any stored URL if present, otherwise null.
             var gateways = applicableGateways.Select(g =>
             {
                 var pub = coursePubs.FirstOrDefault(p =>
@@ -168,28 +171,10 @@ public class CalendarQueries : ICalendarQueries
                 return new GatewayStatusDto
                 {
                     Type = g,
-                    Published = pub?.PublishedAt != null,
+                    Published = true,
                     Url = pub?.ExternalUrl
                 };
             }).ToList();
-
-            // Live courses from WooCommerce are already published to ecommerce
-            // If no publication row exists but it's from WooCommerce, treat ecommerce as published
-            var isFromWoo = true; // course_schedules are WooCommerce-synced by default
-            if (isFromWoo && !coursePubs.Any(p =>
-                    string.Equals(p.Gateway, "ecommerce", StringComparison.OrdinalIgnoreCase)))
-            {
-                var ecomIdx = gateways.FindIndex(g => g.Type == "ecommerce");
-                if (ecomIdx >= 0)
-                {
-                    gateways[ecomIdx] = new GatewayStatusDto
-                    {
-                        Type = "ecommerce",
-                        Published = true,
-                        Url = null // URL not tracked for legacy courses
-                    };
-                }
-            }
 
             var status = c.Status == "cancelled"
                 ? "cancelled"
