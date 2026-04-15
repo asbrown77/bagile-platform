@@ -12,7 +12,7 @@ const sections = [
     label: "OPERATE",
     items: [
       { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-      { label: "Calendar", href: "/calendar", icon: CalendarDays },
+      { label: "Course Schedule", href: "/courseschedule", icon: CalendarDays },
       { label: "Transfers", href: "/transfers", icon: ArrowLeftRight },
     ],
   },
@@ -45,7 +45,7 @@ export function Sidebar({ pendingTransfers = 0, atRiskCourses = 0, onClose }: Si
 
   const badges: Record<string, number> = {};
   if (pendingTransfers > 0) badges["/transfers"] = pendingTransfers;
-  if (atRiskCourses > 0) badges["/calendar"] = atRiskCourses;
+  if (atRiskCourses > 0) badges["/courseschedule"] = atRiskCourses;
 
   return (
     <aside className="flex flex-col w-60 bg-sidebar text-gray-300 h-full">

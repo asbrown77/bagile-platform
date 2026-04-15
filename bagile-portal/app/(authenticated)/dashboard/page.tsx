@@ -185,8 +185,8 @@ function WeekStrip({ apiKey, showCancelled }: WeekStripProps) {
           >
             <ChevronRight className="w-4 h-4 text-gray-500" />
           </button>
-          <Link href="/calendar" className="text-xs text-brand-600 hover:text-brand-700 ml-2">
-            Full calendar
+          <Link href="/courseschedule" className="text-xs text-brand-600 hover:text-brand-700 ml-2">
+            Full schedule
           </Link>
         </div>
       </div>

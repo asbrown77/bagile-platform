@@ -5,7 +5,7 @@ interface Props {
 }
 
 /**
- * /courses is retired. Redirect to /calendar?view=list, preserving query params.
+ * /courses is retired. Redirect to /courseschedule?view=list, preserving query params.
  * /courses/[id] detail pages are untouched.
  */
 export default async function CoursesPage({ searchParams }: Props) {
@@ -17,5 +17,5 @@ export default async function CoursesPage({ searchParams }: Props) {
       params.set(k, Array.isArray(v) ? v[0] : v);
     }
   }
-  redirect(`/calendar?${params.toString()}`);
+  redirect(`/courseschedule?${params.toString()}`);
 }
