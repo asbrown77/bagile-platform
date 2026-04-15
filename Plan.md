@@ -16,7 +16,7 @@ _"I can see revenue, partner value, course demand, and make scheduling decisions
 
 ## Sprint Queue
 
-*All sprints through 29 complete. Sprint 29: Course Schedule rename, Private Courses page, API fixes, badge management, mobile polish.*
+*All sprints through 29 complete. Sprint 30 is Bug Fix, Sprint 31 is UX Polish.*
 
 ---
 
@@ -60,24 +60,30 @@ _After v1 is live and used for a full month._
 
 ---
 
-## Bug: ETL Creates Duplicate Enrolments When Attendee Email Changes
+### Sprint 30 — "Bug Fix Sprint" _(next up)_
 
-**Status:** OPEN — discovered 1 Apr 2026
-**Impact:** Course attendee lists show duplicates (e.g. PSPO-300326-AB shows 11 instead of 8)
+**Goal:** Clear the open bug backlog before the next feature sprint.
 
-**Root cause:** `EnrolmentRepository.UpsertAsync` matches by `student_id + order_id + course_schedule_id`. When an attendee email is corrected in WooCommerce, `StudentRepository.UpsertAsync` creates a NEW student (email is unique key). The enrolment upsert then can't find the old enrolment (wrong student_id) and creates a duplicate.
+| # | Bug | Impact | Status |
+|---|-----|--------|--------|
+| B1 | ETL duplicate enrolments when attendee email changes in WooCommerce | Course lists show wrong attendee count (PSPO-300326-AB: 11 shown, 8 actual) | OPEN |
+| B2 | Orphaned duplicate enrolments 1796, 15, 19 on course 130 | Stale data | OPEN — cleanup needed |
 
-**Affected files:**
-- `Bagile.EtlService/Services/WooOrderService.cs:93-111` — ticket processing loop
-- `Bagile.Infrastructure/Repositories/EnrolmentRepository.cs:16-59` — upsert logic
+**B1 — ETL duplicate enrolments detail:**
 
-**Fix:** Match existing enrolments by `order_id + course_schedule_id` (not student_id). When found, update the student_id on the existing enrolment rather than creating a new one. Need to handle multi-ticket orders (e.g. order 12874 had 2 tickets).
+Root cause: `EnrolmentRepository.UpsertAsync` matches by `student_id + order_id + course_schedule_id`. When an email is corrected in WooCommerce, a new student row is created (email is unique key). The upsert can't find the old enrolment (wrong student_id) and inserts a duplicate.
 
-**Cleanup needed:** Enrolments 1796, 15, 19 on course 130 are orphaned duplicates with old emails. Need removing or marking cancelled.
+Fix: match existing enrolments by `order_id + course_schedule_id` (not student_id). When found, update the `student_id` on the existing enrolment. Handle multi-ticket orders (e.g. order 12874 had 2 tickets).
+
+Affected files:
+- `Bagile.EtlService/Services/WooOrderService.cs:93-111`
+- `Bagile.Infrastructure/Repositories/EnrolmentRepository.cs:16-59`
+
+**B2 — Cleanup:** Delete or cancel enrolments 1796, 15, 19 on course 130.
 
 ---
 
-### Sprint 30 — "UX Polish" _(next up)_
+### Sprint 31 — "UX Polish"
 
 UX audit completed 15 Apr 2026. Full report: `UX_AUDIT.html` in repo root.
 
