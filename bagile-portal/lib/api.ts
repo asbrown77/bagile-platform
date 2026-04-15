@@ -29,7 +29,18 @@ async function apiRequest<T>(path: string, apiKey: string, options?: { method?: 
       ...(options?.body ? { body: JSON.stringify(options.body) } : {}),
       signal: controller.signal,
     });
-    if (!res.ok) throw new Error(`API error: ${res.status}`);
+    if (!res.ok) {
+      if (res.status >= 500) {
+        try {
+          const body = await res.json();
+          const detail = body?.message || body?.error || "";
+          throw new Error(`API error: ${res.status}${detail ? ` — ${detail}` : ""}`);
+        } catch (jsonErr) {
+          if (jsonErr instanceof Error && jsonErr.message.startsWith("API error:")) throw jsonErr;
+        }
+      }
+      throw new Error(`API error: ${res.status}`);
+    }
     return res.json();
   } finally {
     clearTimeout(timer);
