@@ -41,14 +41,7 @@ public class CalendarController : ControllerBase
             TrainerId = trainerId
         };
 
-        try
-        {
-            var result = (await _mediator.Send(query)).ToList();
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, new { error = ex.GetType().Name, message = ex.Message, inner = ex.InnerException?.Message });
-        }
+        var result = (await _mediator.Send(query)).ToList();
+        return Ok(result);
     }
 }

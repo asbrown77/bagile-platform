@@ -102,7 +102,7 @@ public class CalendarQueries : ICalendarQueries
                 IsVirtual = c.IsVirtual,
                 IsPrivate = c.IsPrivate,
                 Status = status,
-                DecisionDeadline = c.DecisionDeadline ?? c.StartDate.AddDays(-10),
+                DecisionDeadline = c.DecisionDeadline ?? SafeAddDays(c.StartDate, -10),
                 EnrolmentCount = 0, // planned courses have no enrolments yet
                 MinimumEnrolments = 3,
                 Venue = c.Venue,
@@ -137,7 +137,8 @@ public class CalendarQueries : ICalendarQueries
             FROM bagile.course_schedules cs
             LEFT JOIN bagile.enrolments e ON e.course_schedule_id = cs.id
                 AND e.status NOT IN ('cancelled', 'transferred')
-            WHERE cs.start_date >= @from
+            WHERE cs.start_date IS NOT NULL
+              AND cs.start_date >= @from
               AND cs.start_date <= @to"
             + (trainerId.HasValue
                 ? @" AND cs.trainer_name = (SELECT name FROM bagile.trainers WHERE id = @trainerId)"
@@ -197,7 +198,7 @@ public class CalendarQueries : ICalendarQueries
                 IsVirtual = string.Equals(c.FormatType, "virtual", StringComparison.OrdinalIgnoreCase),
                 IsPrivate = !c.IsPublic,
                 Status = status,
-                DecisionDeadline = c.StartDate.AddDays(-10), // default for legacy courses
+                DecisionDeadline = SafeAddDays(c.StartDate, -10), // default for legacy courses
                 EnrolmentCount = c.EnrolmentCount,
                 MinimumEnrolments = 3,
                 Venue = c.Venue,
@@ -250,6 +251,19 @@ public class CalendarQueries : ICalendarQueries
         // SKU format: COURSETYPE-DDMMYY-INITIALS or COURSETYPE-PRIV-DDMMYY
         var parts = sku.Split('-');
         return parts[0];
+    }
+
+    /// <summary>
+    /// Returns date.AddDays(days) clamped to DateTime.MinValue/MaxValue to avoid overflow.
+    /// Needed because some legacy course_schedules rows have edge-case dates.
+    /// </summary>
+    private static DateTime SafeAddDays(DateTime date, int days)
+    {
+        if (days < 0 && date < DateTime.MinValue.AddDays(-days))
+            return DateTime.MinValue;
+        if (days > 0 && date > DateTime.MaxValue.AddDays(-days))
+            return DateTime.MaxValue;
+        return date.AddDays(days);
     }
 
     /// <summary>
