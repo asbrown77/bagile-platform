@@ -38,6 +38,7 @@ export interface PrivateCourseFormProps {
 const COURSE_CODES = [
   "PSM", "PSPO", "PSK", "PALE", "PALEBM", "PSFS", "APS", "APSSD", "PSU",
   "PSMAI", "PSPOAI", "PSPOA", "PSMA",
+  "PSMPO",
   "ICP", "ICPATF", "ICPACC",
 ];
 
@@ -45,6 +46,7 @@ const COURSE_CODES = [
 const COURSE_DURATIONS: Record<string, number> = {
   PSM: 2, PSPO: 2, PSK: 2, PALE: 2, PALEBM: 1, PSFS: 1, APS: 2, APSSD: 3, PSU: 2,
   PSMAI: 2, PSPOAI: 2, PSPOA: 2, PSMA: 2,
+  PSMPO: 3,
   ICP: 2, ICPATF: 2, ICPACC: 3,
 };
 

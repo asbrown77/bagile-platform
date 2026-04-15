@@ -46,6 +46,7 @@ const COURSE_NAMES: Record<string, string> = {
   PSFS:   "Professional Scrum Facilitation Skills",
   APSSD:  "Applying Professional Scrum for Software Development",
   APS:    "Applying Professional Scrum",
+  PSMPO:  "Professional Scrum Master & Product Owner",
   ICP:    "ICAgile Certified Professional",
   ICPATF: "ICAgile Agile Team Facilitation",
   ICPACC: "ICAgile Agile Coaching Certification",
@@ -72,6 +73,7 @@ const CODE_DISPLAY: Record<string, string> = {
   PSFS:   "PSFS",
   APSSD:  "APS-SD",
   APS:    "APS",
+  PSMPO:  "PSM+PO",
   ICP:    "ICP",
   ICPATF: "ICP-ATF",
   ICPACC: "ICP-ACC",
@@ -167,7 +169,7 @@ export function getApplicableGateways(courseType: string, isPrivate: boolean): s
 const KNOWN_COURSE_TYPES = new Set([
   "PSM", "PSMO", "PSMAI", "PSMA", "PSPO", "PSPOAI", "PSPOA",
   "PSK", "PALE", "PAL", "PSU", "PSFS", "EBM", "PALEBM", "APS", "APSSD",
-  "ICP", "ICPATF", "ICPACC",
+  "PSMPO", "ICP", "ICPATF", "ICPACC",
 ]);
 
 /**

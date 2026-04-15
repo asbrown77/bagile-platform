@@ -20,6 +20,7 @@ const COURSE_FULL_NAMES: Record<string, string> = {
   EBM:    "Professional Agile Leadership with EBM",  // alias for PAL-EBM
   APS:    "Applying Professional Scrum",
   APSSD:  "Applying Professional Scrum for Software Development",
+  PSMPO:  "Professional Scrum Master & Product Owner",
   ICP:    "ICAgile Certified Professional",
   ICPATF: "ICAgile Agile Team Facilitation",
   ICPACC: "ICAgile Agile Coaching Certification",
