@@ -68,14 +68,24 @@ export async function loginWithGoogle(idToken: string) {
   return res.json() as Promise<{ token: string; email: string; name: string; apiKey?: string }>;
 }
 
+export class PortalAuthError extends Error {
+  constructor() { super("Session expired"); }
+}
+
+async function portalFetch(url: string, options: RequestInit): Promise<Response> {
+  const res = await fetch(url, options);
+  if (res.status === 401) throw new PortalAuthError();
+  return res;
+}
+
 export async function listKeys(token: string): Promise<ApiKey[]> {
-  const res = await fetch(`${API_URL}/portal/keys`, { headers: { Authorization: `Bearer ${token}` } });
+  const res = await portalFetch(`${API_URL}/portal/keys`, { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error("Failed to list keys");
   return res.json();
 }
 
 export async function createKey(token: string, label: string): Promise<CreateKeyResponse> {
-  const res = await fetch(`${API_URL}/portal/keys`, {
+  const res = await portalFetch(`${API_URL}/portal/keys`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     body: JSON.stringify({ label }),
@@ -85,7 +95,7 @@ export async function createKey(token: string, label: string): Promise<CreateKey
 }
 
 export async function revokeKey(token: string, id: string): Promise<void> {
-  const res = await fetch(`${API_URL}/portal/keys/${id}`, {
+  const res = await portalFetch(`${API_URL}/portal/keys/${id}`, {
     method: "DELETE",
     headers: { Authorization: `Bearer ${token}` },
   });

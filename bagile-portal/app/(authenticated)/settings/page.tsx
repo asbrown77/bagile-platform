@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ApiKey, CreateKeyResponse, loginWithGoogle, listKeys, createKey, revokeKey, PostCourseTemplate, listPostCourseTemplates, upsertPostCourseTemplate, PreCourseTemplate, getPreCourseTemplates, updatePreCourseTemplate, Trainer, getTrainers, createTrainer, updateTrainer, deleteTrainer, getServiceConfig, setServiceConfig } from "@/lib/api";
+import { ApiKey, CreateKeyResponse, PortalAuthError, loginWithGoogle, listKeys, createKey, revokeKey, PostCourseTemplate, listPostCourseTemplates, upsertPostCourseTemplate, PreCourseTemplate, getPreCourseTemplates, updatePreCourseTemplate, Trainer, getTrainers, createTrainer, updateTrainer, deleteTrainer, getServiceConfig, setServiceConfig } from "@/lib/api";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { AlertBanner } from "@/components/ui/AlertBanner";
@@ -105,10 +105,19 @@ function SettingsContent() {
     }
   }, [token]);
 
+  function clearSession() {
+    localStorage.removeItem("bagile_portal_token");
+    setToken(null);
+    setUser(null);
+    setKeys([]);
+    setError("Session expired — please sign in again.");
+  }
+
   const refreshKeys = useCallback(async () => {
     if (!token) return;
-    try { setKeys(await listKeys(token)); } catch {}
-  }, [token]);
+    try { setKeys(await listKeys(token)); }
+    catch (err) { if (err instanceof PortalAuthError) clearSession(); }
+  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { if (token) refreshKeys(); }, [token, refreshKeys]);
 
@@ -121,12 +130,19 @@ function SettingsContent() {
       // Auto-save as the dashboard API key
       localStorage.setItem("bagile_api_key", result.key);
       await refreshKeys();
-    } catch { setError("Failed to create key"); }
+    } catch (err) {
+      if (err instanceof PortalAuthError) clearSession();
+      else setError("Failed to create key");
+    }
   }
 
   async function handleRevoke(id: string) {
     if (!token || !confirm("Revoke this key?")) return;
-    try { await revokeKey(token, id); await refreshKeys(); } catch { setError("Failed to revoke key"); }
+    try { await revokeKey(token, id); await refreshKeys(); }
+    catch (err) {
+      if (err instanceof PortalAuthError) clearSession();
+      else setError("Failed to revoke key");
+    }
   }
 
   return (
