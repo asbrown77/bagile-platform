@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { Lock, Plus } from "lucide-react";
 import { useApiKey } from "@/lib/hooks/useApiKey";
 import {
@@ -53,7 +52,10 @@ function CourseRow({ course }: { course: CourseScheduleItem }) {
   const courseName = getCourseDisplayName(courseType);
 
   return (
-    <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+    <tr
+      className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
+      onClick={() => { window.location.href = `/courses/${course.id}`; }}
+    >
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
           {badgeSrc ? (
@@ -85,14 +87,6 @@ function CourseRow({ course }: { course: CourseScheduleItem }) {
       </td>
       <td className="px-4 py-3">
         {scheduleStatusBadge(course.status)}
-      </td>
-      <td className="px-4 py-3 text-right">
-        <Link
-          href={`/courses/${course.id}`}
-          className="text-sm font-medium text-accent hover:underline"
-        >
-          Manage →
-        </Link>
       </td>
     </tr>
   );
@@ -166,20 +160,19 @@ export default function PrivateCoursesPage() {
                 <th className="px-4 py-3">Trainer</th>
                 <th className="px-4 py-3">Attendees</th>
                 <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody>
               {loading && (
                 <>
-                  <SkeletonRow cols={7} />
-                  <SkeletonRow cols={7} />
-                  <SkeletonRow cols={7} />
+                  <SkeletonRow cols={6} />
+                  <SkeletonRow cols={6} />
+                  <SkeletonRow cols={6} />
                 </>
               )}
               {!loading && courses.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center">
+                  <td colSpan={6} className="px-4 py-12 text-center">
                     <div className="flex flex-col items-center gap-2 text-gray-400">
                       <Lock className="w-8 h-8" />
                       <p className="text-sm">No private courses found for this period.</p>
