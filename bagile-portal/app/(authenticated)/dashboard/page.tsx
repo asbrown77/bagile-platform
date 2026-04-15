@@ -215,7 +215,7 @@ function WeekStrip({ apiKey, showCancelled }: WeekStripProps) {
               </div>
 
               {/* Course pills */}
-              <div className="flex-1 p-1 space-y-0.5">
+              <div className="flex-1 p-1 space-y-0.5 group/cell relative">
                 {loading && i === 0 && (
                   <div className="text-[9px] text-gray-400 p-1">Loading…</div>
                 )}
@@ -228,6 +228,15 @@ function WeekStrip({ apiKey, showCancelled }: WeekStripProps) {
                     showCancelled={showCancelled}
                   />
                 ))}
+                {!loading && dayCourses.length === 0 && (
+                  <Link
+                    href={`/courseschedule?view=list`}
+                    className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/cell:opacity-100 transition-opacity"
+                    title="Go to schedule"
+                  >
+                    <span className="w-5 h-5 rounded-full bg-gray-100 text-gray-400 hover:bg-brand-100 hover:text-brand-600 flex items-center justify-center text-sm leading-none transition-colors">+</span>
+                  </Link>
+                )}
               </div>
             </div>
           );
@@ -316,57 +325,16 @@ export default function Dashboard() {
 
       {error && <AlertBanner variant="danger" onDismiss={() => setError("")}>{error}</AlertBanner>}
 
-      {/* KPI Cards */}
-      {loading ? (
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-          {[1, 2, 3, 4, 5].map((i) => <SkeletonCard key={i} />)}
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-          <Card
-            label="Revenue This Month"
-            value={revenue ? formatCurrency(revenue.currentMonthRevenue) : "—"}
-            subtitle={`${revenue?.currentMonthOrders ?? 0} orders`}
-            icon={<TrendingUp className="w-4 h-4" />}
-          />
-          <Card
-            label="Revenue YTD"
-            value={revenue ? formatCurrency(revenue.currentYearRevenue) : "—"}
-            trend={yoyChange !== null ? { value: yoyChange, isPositive: yoyChange >= 0 } : undefined}
-            subtitle="vs previous year"
-            icon={<TrendingUp className="w-4 h-4" />}
-          />
-          <Card
-            label="Students This Month"
-            value={studentsThisMonth}
-            subtitle="trained"
-            icon={<Users className="w-4 h-4" />}
-          />
-          <Card
-            label="Students YTD"
-            value={studentsThisYear}
-            subtitle="trained this year"
-            icon={<Users className="w-4 h-4" />}
-          />
-          <Card
-            label="Upcoming Courses"
-            value={upcomingCourses.length}
-            subtitle="next 60 days"
-            icon={<Calendar className="w-4 h-4" />}
-          />
-        </div>
-      )}
-
       {/* Alerts row */}
-      <div className="flex flex-col gap-3 mb-6">
-        {pendingTransfers.length > 0 && (
+      {pendingTransfers.length > 0 && (
+        <div className="mb-6">
           <Link href="/transfers">
             <AlertBanner variant="warning">
               <strong>{pendingTransfers.length}</strong> attendee{pendingTransfers.length !== 1 ? "s" : ""} pending transfer — click to manage
             </AlertBanner>
           </Link>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Today's Courses */}
       {!loading && todaysCourses.length > 0 && (
@@ -405,7 +373,7 @@ export default function Dashboard() {
               <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">At Risk</h2>
               <span className="bg-red-100 text-red-700 text-xs font-bold px-2 py-0.5 rounded-full">{atRiskCourses.length}</span>
             </div>
-            <Link href="/courses" className="text-xs text-brand-600 hover:text-brand-700 flex items-center gap-1">
+            <Link href="/courseschedule?view=list" className="text-xs text-brand-600 hover:text-brand-700 flex items-center gap-1">
               View all courses <ChevronRight className="w-3 h-3" />
             </Link>
           </div>
@@ -450,6 +418,47 @@ export default function Dashboard() {
         <WeekStrip apiKey={apiKey as string} showCancelled={showCancelled} />
       )}
 
+      {/* KPI Cards */}
+      {loading ? (
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+          {[1, 2, 3, 4, 5].map((i) => <SkeletonCard key={i} />)}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+          <Card
+            label="Revenue This Month"
+            value={revenue ? formatCurrency(revenue.currentMonthRevenue) : "—"}
+            subtitle={`${revenue?.currentMonthOrders ?? 0} orders`}
+            icon={<TrendingUp className="w-4 h-4" />}
+          />
+          <Card
+            label="Revenue YTD"
+            value={revenue ? formatCurrency(revenue.currentYearRevenue) : "—"}
+            trend={yoyChange !== null ? { value: yoyChange, isPositive: yoyChange >= 0 } : undefined}
+            subtitle="vs previous year"
+            icon={<TrendingUp className="w-4 h-4" />}
+          />
+          <Card
+            label="Students This Month"
+            value={studentsThisMonth}
+            subtitle="trained"
+            icon={<Users className="w-4 h-4" />}
+          />
+          <Card
+            label="Students YTD"
+            value={studentsThisYear}
+            subtitle="trained this year"
+            icon={<Users className="w-4 h-4" />}
+          />
+          <Card
+            label="Upcoming Courses"
+            value={upcomingCourses.length}
+            subtitle="next 60 days"
+            icon={<Calendar className="w-4 h-4" />}
+          />
+        </div>
+      )}
+
       {/* Upcoming courses table */}
       {!loading && upcomingCourses.length > 0 && (
         <div>
@@ -467,7 +476,7 @@ export default function Dashboard() {
                 Show cancelled
               </label>
             </div>
-            <Link href="/courses" className="text-xs text-brand-600 hover:text-brand-700 flex items-center gap-1">
+            <Link href="/courseschedule?view=list" className="text-xs text-brand-600 hover:text-brand-700 flex items-center gap-1">
               View all <ChevronRight className="w-3 h-3" />
             </Link>
           </div>

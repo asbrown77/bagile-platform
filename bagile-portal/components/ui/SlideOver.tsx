@@ -10,9 +10,11 @@ interface SlideOverProps {
   subtitle?: string;
   children: React.ReactNode;
   wide?: boolean;
+  /** Optional buttons/actions rendered in the header next to the close button. */
+  actions?: React.ReactNode;
 }
 
-export function SlideOver({ open, onClose, title, subtitle, children, wide }: SlideOverProps) {
+export function SlideOver({ open, onClose, title, subtitle, children, wide, actions }: SlideOverProps) {
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -45,9 +47,12 @@ export function SlideOver({ open, onClose, title, subtitle, children, wide }: Sl
               <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
               {subtitle && <p className="text-sm text-gray-500 mt-0.5">{subtitle}</p>}
             </div>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 rounded-lg p-1 hover:bg-gray-100">
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-2">
+              {actions}
+              <button onClick={onClose} className="text-gray-400 hover:text-gray-600 rounded-lg p-1 hover:bg-gray-100">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           {/* Body — scrollable */}

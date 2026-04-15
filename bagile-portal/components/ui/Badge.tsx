@@ -42,7 +42,6 @@ export function statusBadge(status: string) {
     pending_transfer: { label: "Pending Transfer", variant: "warning" },
     refunded: { label: "Refunded", variant: "danger" },
     confirmed: { label: "Confirmed", variant: "success" },
-    draft: { label: "Draft", variant: "neutral" },
     published: { label: "Published", variant: "info" },
   };
   const entry = map[status] || { label: status, variant: "neutral" as const };

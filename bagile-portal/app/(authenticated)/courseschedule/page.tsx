@@ -468,8 +468,14 @@ function SidePanel({ event, onClose, onPublish, onCancel, onEdit }: SidePanelPro
     }
   };
 
+  const headerActions = event.status === "planned" && event.id.startsWith("planned-") && onEdit ? (
+    <Button variant="secondary" size="sm" onClick={() => onEdit(event.id)}>
+      Edit
+    </Button>
+  ) : undefined;
+
   return (
-    <SlideOver open={!!event} onClose={onClose} title={codeDisplay} subtitle={displayName}>
+    <SlideOver open={!!event} onClose={onClose} title={codeDisplay} subtitle={displayName} actions={headerActions}>
       <div className="space-y-6">
         {/* Badge + dates */}
         <div className="flex items-start gap-4">
@@ -572,17 +578,17 @@ function SidePanel({ event, onClose, onPublish, onCancel, onEdit }: SidePanelPro
                         View <ExternalLink className="w-3 h-3" />
                       </span>
                     ) : !isPublished && !isCancelled ? (
-                      <button
+                      <Button
+                        size="sm"
                         onClick={(e) => { e.preventDefault(); handlePublish(gwType); }}
                         disabled={publishing === gwType}
-                        className="text-xs text-brand-600 hover:text-brand-700 font-medium disabled:opacity-50 flex items-center gap-1"
                       >
                         {publishing === gwType ? (
                           <><Loader2 className="w-3 h-3 animate-spin" /> Publishing...</>
                         ) : (
-                          "Publish \u2192"
+                          "Publish →"
                         )}
-                      </button>
+                      </Button>
                     ) : null}
                   </span>
                 </>
@@ -636,15 +642,6 @@ function SidePanel({ event, onClose, onPublish, onCancel, onEdit }: SidePanelPro
             )}
           </div>
         </div>
-
-        {/* Edit button — only for planned courses */}
-        {event.status === "planned" && event.id.startsWith("planned-") && onEdit && (
-          <div className="pt-2">
-            <Button variant="secondary" size="sm" onClick={() => onEdit(event.id)}>
-              Edit
-            </Button>
-          </div>
-        )}
 
         {/* Cancel button */}
         {!isCancelled && (
