@@ -230,4 +230,29 @@ public class CourseScheduleRepository : ICourseScheduleRepository
         await using var conn = new NpgsqlConnection(_connStr);
         return await conn.QueryFirstOrDefaultAsync<long?>(sql, new { Sku = sku });
     }
+
+    public async Task<bool> DeleteAsync(long id)
+    {
+        const string sql = @"
+            DELETE FROM bagile.course_schedules
+            WHERE id = @id
+            RETURNING id;";
+
+        await using var conn = new NpgsqlConnection(_connStr);
+        var deleted = await conn.ExecuteScalarAsync<long?>(sql, new { id });
+        return deleted.HasValue;
+    }
+
+    public async Task<IEnumerable<CourseSchedule>> GetActiveWooSchedulesAsync()
+    {
+        const string sql = @"
+            SELECT *
+            FROM bagile.course_schedules
+            WHERE source_system = 'woo'
+              AND status <> 'cancelled'
+              AND source_product_id IS NOT NULL;";
+
+        await using var conn = new NpgsqlConnection(_connStr);
+        return await conn.QueryAsync<CourseSchedule>(sql);
+    }
 }

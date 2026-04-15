@@ -303,6 +303,18 @@ namespace Bagile.Infrastructure.Repositories
             );
         }
 
+        public async Task<int> CountActiveByScheduleAsync(long courseScheduleId)
+        {
+            const string sql = @"
+                SELECT COUNT(*)
+                FROM bagile.enrolments
+                WHERE course_schedule_id = @courseScheduleId
+                  AND status NOT IN ('cancelled', 'transferred');";
+
+            await using var conn = new NpgsqlConnection(_conn);
+            return await conn.ExecuteScalarAsync<int>(sql, new { courseScheduleId });
+        }
+
 
     }
 }

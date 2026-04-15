@@ -12,6 +12,7 @@ using Bagile.Application.CourseSchedules.Commands.AddPrivateAttendees;
 using Bagile.Application.CourseSchedules.Commands.UpdatePrivateCourse;
 using Bagile.Application.CourseSchedules.Commands.RemovePrivateAttendee;
 using Bagile.Application.CourseSchedules.Commands.ManageCourseContacts;
+using Bagile.Application.CourseSchedules.Commands.DeleteCourseSchedule;
 using Bagile.Application.Templates.Queries;
 
 namespace Bagile.Api.Controllers;
@@ -126,6 +127,35 @@ public class CourseSchedulesController : ControllerBase
         var query = new GetCourseMonitoringQuery { DaysAhead = daysAhead };
         var result = await _mediator.Send(query);
         return Ok(result);
+    }
+
+    /// <summary>
+    /// Hard-delete a course schedule.
+    /// Succeeds only when the schedule has 0 active enrolments.
+    /// Intended for orphan cleanup (e.g. WooCommerce product deleted at source).
+    /// Returns 409 Conflict if active enrolments are present.
+    /// </summary>
+    [HttpDelete("{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> DeleteCourseSchedule(long id)
+    {
+        var result = await _mediator.Send(new DeleteCourseScheduleCommand(id));
+
+        if (!result.Deleted && result.Error == "not_found")
+            return NotFound(new { error = $"Course schedule {id} not found" });
+
+        if (!result.Deleted && result.Error?.StartsWith("has_enrolments") == true)
+        {
+            var count = result.Error.Split(':').ElementAtOrDefault(1) ?? "?";
+            return Conflict(new
+            {
+                error = $"Cannot delete: course schedule {id} has {count} active enrolment(s). Cancel it instead."
+            });
+        }
+
+        return NoContent();
     }
 
     /// <summary>

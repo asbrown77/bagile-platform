@@ -267,6 +267,40 @@ public class WooApiClient : IWooApiClient
     }
 
     // ------------------------------------------------------------
+    // Product existence check (404-aware)
+    // ------------------------------------------------------------
+    public async Task<bool> ProductExistsAsync(long productId, CancellationToken ct = default)
+    {
+        var url = $"/wp-json/wc/v3/products/{productId}";
+
+        var response = await _http.GetAsync(url, ct);
+
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            return false;
+
+        if (!response.IsSuccessStatusCode)
+        {
+            // Non-404 failure: surface as exception so callers treat it as transient.
+            var body = await response.Content.ReadAsStringAsync(ct);
+            throw new HttpRequestException(
+                $"WooCommerce product check for id={productId} returned {(int)response.StatusCode}: {body}",
+                inner: null,
+                statusCode: response.StatusCode);
+        }
+
+        // Product exists — check it hasn't been moved to trash.
+        // WooCommerce moves deleted products to trash (status "trash") before
+        // they return 404; we treat trash the same as deleted.
+        await using var stream = await response.Content.ReadAsStreamAsync(ct);
+        var doc = await System.Text.Json.JsonSerializer.DeserializeAsync<WooProductDto>(
+            stream,
+            new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true },
+            ct);
+
+        return doc?.Status != "trash";
+    }
+
+    // ------------------------------------------------------------
     // URL builder
     // ------------------------------------------------------------
     private string BuildProductUrl(

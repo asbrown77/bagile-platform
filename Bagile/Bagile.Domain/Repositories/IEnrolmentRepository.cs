@@ -28,4 +28,10 @@ public interface IEnrolmentRepository
     Task<long> InsertWithoutOrderAsync(long studentId, long courseScheduleId, string source);
     Task<bool> ExistsByStudentAndCourseAsync(long studentId, long courseScheduleId);
     Task<bool> CancelPrivateEnrolmentAsync(long enrolmentId, long courseScheduleId);
+
+    /// <summary>
+    /// Returns the number of active (non-cancelled) enrolments for a course schedule.
+    /// Used to decide whether a ghost course can be hard-deleted.
+    /// </summary>
+    Task<int> CountActiveByScheduleAsync(long courseScheduleId);
 }

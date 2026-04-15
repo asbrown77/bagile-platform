@@ -38,6 +38,14 @@ namespace Bagile.Infrastructure.Clients
         /// Get all product tags. Returns tag ID, name, slug.
         /// </summary>
         Task<IReadOnlyList<WooTagDto>> GetAllTagsAsync(CancellationToken ct = default);
+
+        /// <summary>
+        /// Returns true if the product exists in WooCommerce (status publish/draft/etc.),
+        /// false if the product returns 404 or has been trashed.
+        /// Throws <see cref="HttpRequestException"/> on transient / server errors so the
+        /// caller can distinguish a missing product from a network failure.
+        /// </summary>
+        Task<bool> ProductExistsAsync(long productId, CancellationToken ct = default);
     }
 
     public class WooTagDto

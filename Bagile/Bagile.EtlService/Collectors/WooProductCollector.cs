@@ -2,6 +2,7 @@
 using Bagile.Domain.Repositories;
 using Bagile.Infrastructure.Clients;
 using Bagile.Infrastructure.Mappers;
+using Bagile.Infrastructure.Models;
 using Bagile.Infrastructure.Repositories;
 using Microsoft.Extensions.Logging;
 
@@ -15,6 +16,7 @@ public class WooProductCollector : IProductCollector
 {
     private readonly IWooApiClient _wooApiClient;
     private readonly ICourseScheduleRepository _scheduleRepo;
+    private readonly IEnrolmentRepository _enrolmentRepo;
     private readonly ICourseDefinitionRepository _definitionRepo;
     private readonly ISyncMetadataRepository _syncMetadataRepo;
     private readonly ILogger<WooProductCollector> _logger;
@@ -27,12 +29,14 @@ public class WooProductCollector : IProductCollector
     public WooProductCollector(
         IWooApiClient wooApiClient,
         ICourseScheduleRepository scheduleRepo,
+        IEnrolmentRepository enrolmentRepo,
         ICourseDefinitionRepository definitionRepo,
         ISyncMetadataRepository syncMetadataRepo,
         ILogger<WooProductCollector> logger)
     {
         _wooApiClient = wooApiClient;
         _scheduleRepo = scheduleRepo;
+        _enrolmentRepo = enrolmentRepo;
         _definitionRepo = definitionRepo;
         _syncMetadataRepo = syncMetadataRepo;
         _logger = logger;
@@ -123,12 +127,124 @@ public class WooProductCollector : IProductCollector
             _logger.LogInformation(
                 "✅ Product sync complete: {SuccessCount} synced ({MatchedCount} matched to definitions, {UnmatchedCount} unmatched), {ErrorCount} failed",
                 successCount, matchedCount, unmatchedCount, errorCount);
+
+            // Orphan cleanup: find portal schedules whose WooCommerce source no longer exists.
+            await CleanupOrphanSchedulesAsync(products, ct);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Product sync failed");
             await _syncMetadataRepo.RecordSyncFailureAsync(SourceName, EntityType, ex.Message);
             throw;
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Orphan cleanup
+    // ---------------------------------------------------------------
+
+    /// <summary>
+    /// For each portal course schedule sourced from WooCommerce, verify the backing
+    /// product still exists. If it returns 404 or has been trashed, either hard-delete
+    /// (0 enrolments) or mark cancelled (enrolments present).
+    ///
+    /// We skip schedules whose product ID appears in <paramref name="fetchedProducts"/>
+    /// because we just successfully synced them. For everything else we do an individual
+    /// API check to distinguish genuine deletion from a transient error.
+    /// </summary>
+    private async Task CleanupOrphanSchedulesAsync(
+        IReadOnlyList<WooProductDto> fetchedProducts,
+        CancellationToken ct)
+    {
+        var fetchedIds = new HashSet<long>(fetchedProducts.Select(p => p.Id));
+
+        IEnumerable<CourseSchedule> wooSchedules;
+        try
+        {
+            wooSchedules = await _scheduleRepo.GetActiveWooSchedulesAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Orphan cleanup: failed to load active Woo schedules");
+            return;
+        }
+
+        foreach (var schedule in wooSchedules)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            if (schedule.SourceProductId is null)
+                continue;
+
+            var productId = schedule.SourceProductId.Value;
+
+            // Skip: we just synced this product successfully.
+            if (fetchedIds.Contains(productId))
+                continue;
+
+            // Check whether the product still exists in WooCommerce.
+            bool exists;
+            try
+            {
+                exists = await _wooApiClient.ProductExistsAsync(productId, ct);
+            }
+            catch (HttpRequestException ex)
+            {
+                // Non-404 error — treat as transient; skip this schedule for this cycle.
+                _logger.LogWarning(
+                    ex,
+                    "Orphan cleanup: transient error checking product {ProductId} for schedule {ScheduleId} — skipping",
+                    productId, schedule.Id);
+                continue;
+            }
+
+            if (exists)
+                continue;
+
+            // Product is gone: decide hard-delete vs cancel.
+            int activeEnrolments;
+            try
+            {
+                activeEnrolments = await _enrolmentRepo.CountActiveByScheduleAsync(schedule.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Orphan cleanup: could not count enrolments for schedule {ScheduleId} — skipping",
+                    schedule.Id);
+                continue;
+            }
+
+            if (activeEnrolments == 0)
+            {
+                _logger.LogInformation(
+                    "Orphan cleanup: hard-deleting schedule {ScheduleId} (SKU={Sku}, productId={ProductId}) — source product deleted and 0 enrolments",
+                    schedule.Id, schedule.Sku, productId);
+                try
+                {
+                    await _scheduleRepo.DeleteAsync(schedule.Id);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex,
+                        "Orphan cleanup: failed to delete schedule {ScheduleId}", schedule.Id);
+                }
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "Orphan cleanup: marking schedule {ScheduleId} (SKU={Sku}) as cancelled — source product deleted but {Count} enrolment(s) exist",
+                    schedule.Id, schedule.Sku, activeEnrolments);
+                try
+                {
+                    await _scheduleRepo.UpdateStatusAsync(schedule.Id, "cancelled");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex,
+                        "Orphan cleanup: failed to cancel schedule {ScheduleId}", schedule.Id);
+                }
+            }
         }
     }
 

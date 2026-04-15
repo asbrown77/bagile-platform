@@ -14,6 +14,18 @@ namespace Bagile.Domain.Repositories
         Task<long> InsertPrivateCourseAsync(CourseSchedule schedule);
         Task<bool> ExistsBySkuAsync(string sku);
         Task UpdatePrivateCourseAsync(long id, UpdatePrivateCourseFields fields);
+
+        /// <summary>
+        /// Hard-deletes a course schedule row. Only call after confirming 0 active enrolments.
+        /// Returns true if a row was deleted.
+        /// </summary>
+        Task<bool> DeleteAsync(long id);
+
+        /// <summary>
+        /// Returns all course schedules sourced from WooCommerce that are not yet cancelled,
+        /// used by the orphan-cleanup pass during sync.
+        /// </summary>
+        Task<IEnumerable<CourseSchedule>> GetActiveWooSchedulesAsync();
     }
 }
 
