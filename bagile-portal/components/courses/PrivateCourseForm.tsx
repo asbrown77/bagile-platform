@@ -19,7 +19,7 @@ import {
   OrgSummary,
 } from "@/lib/api";
 import { generateCourseName, generateInvoiceRef } from "@/lib/privateCourseHelpers";
-import { extractCourseTypeFromSku } from "@/lib/calendarHelpers";
+import { extractCourseTypeFromSku, getBadgeSrc } from "@/lib/calendarHelpers";
 import { RotateCcw, Trash2, UserPlus } from "lucide-react";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -325,20 +325,31 @@ export function PrivateCourseForm({ mode, course, apiKey, onSuccess, onCancel }:
 
       <div>
         <label className="block text-xs font-medium text-gray-700 mb-1">Course Type</label>
-        <select
-          value={courseCode}
-          onChange={(e) => {
-            setCourseCode(e.target.value);
-            // Changing course type should regenerate name and reference
-            setRefOverridden(false);
-            setNameOverridden(false);
-          }}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
-        >
-          {COURSE_CODES.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
+        <div className="flex items-center gap-3">
+          {getBadgeSrc(courseCode) ? (
+            <img
+              src={getBadgeSrc(courseCode)!}
+              alt={courseCode}
+              className="h-10 w-10 object-contain flex-shrink-0"
+            />
+          ) : (
+            <div className="h-10 w-10 flex-shrink-0" />
+          )}
+          <select
+            value={courseCode}
+            onChange={(e) => {
+              setCourseCode(e.target.value);
+              // Changing course type should regenerate name and reference
+              setRefOverridden(false);
+              setNameOverridden(false);
+            }}
+            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+          >
+            {COURSE_CODES.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* ── SCHEDULE ── */}

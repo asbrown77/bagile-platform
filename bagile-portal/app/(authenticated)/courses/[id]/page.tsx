@@ -90,8 +90,8 @@ export default function CourseDetail() {
       setAttendees(atts);
       setTransfers(xfers);
 
-      // Load follow-up template based on course code prefix
-      const courseType = detail?.courseCode?.split("-")[0]?.toUpperCase();
+      // Load follow-up template based on course type extracted from SKU
+      const courseType = detail?.courseCode ? extractCourseTypeFromSku(detail.courseCode) : undefined;
       if (courseType) {
         getPostCourseTemplate(apiKey, courseType)
           .then((t) => { setFollowUpTemplate(t); setTemplateMissing(false); })
