@@ -157,8 +157,9 @@ public class TransferQueries : ITransferQueries
     {
         var sql = @"
             WITH cancelled_enrolments AS (
-                -- Students enrolled in cancelled courses
+                -- Students with a pending_transfer or cancelled enrolment on a cancelled course
                 SELECT DISTINCT
+                    e.id AS enrolment_id,
                     e.student_id,
                     e.course_schedule_id,
                     cs.sku AS course_code,
@@ -168,18 +169,25 @@ public class TransferQueries : ITransferQueries
                 FROM bagile.enrolments e
                 JOIN bagile.course_schedules cs ON e.course_schedule_id = cs.id
                 WHERE cs.status = 'cancelled'
+                  AND e.status IN ('pending_transfer', 'cancelled')
             ),
-            future_enrolments AS (
-                -- Check if student has any future enrolments for the same course
+            rebooked_students AS (
+                -- Students who already have an active enrolment on the same course type,
+                -- on a run that starts on or after their original (cancelled) course start date.
+                -- This covers manual rebookings regardless of whether that new course is in
+                -- the future relative to today.
                 SELECT DISTINCT
-                    e.student_id,
-                    cs.sku AS course_code
-                FROM bagile.enrolments e
+                    ce.student_id,
+                    ce.course_code
+                FROM cancelled_enrolments ce
+                JOIN bagile.enrolments e ON e.student_id = ce.student_id
                 JOIN bagile.course_schedules cs ON e.course_schedule_id = cs.id
-                WHERE cs.status != 'cancelled'
-                    AND cs.start_date > CURRENT_DATE
+                WHERE e.status = 'active'
+                  AND cs.status != 'cancelled'
+                  AND cs.sku = ce.course_code
+                  AND cs.start_date >= ce.original_start_date
             )
-            SELECT 
+            SELECT
                 s.id AS StudentId,
                 CONCAT(s.first_name, ' ', s.last_name) AS StudentName,
                 s.email AS StudentEmail,
@@ -192,9 +200,9 @@ public class TransferQueries : ITransferQueries
                 EXTRACT(DAY FROM (CURRENT_TIMESTAMP - ce.cancelled_date))::INT AS DaysSinceCancellation
             FROM cancelled_enrolments ce
             JOIN bagile.students s ON ce.student_id = s.id
-            LEFT JOIN future_enrolments fe ON ce.student_id = fe.student_id 
-                AND ce.course_code = fe.course_code
-            WHERE fe.student_id IS NULL  -- No future enrolment for same course
+            LEFT JOIN rebooked_students rs ON ce.student_id = rs.student_id
+                AND ce.course_code = rs.course_code
+            WHERE rs.student_id IS NULL  -- No active rebook found for same course type
             ORDER BY ce.cancelled_date DESC;";
 
         await using var conn = new NpgsqlConnection(_connectionString);

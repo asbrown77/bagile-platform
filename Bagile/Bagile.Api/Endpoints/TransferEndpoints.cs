@@ -65,12 +65,32 @@ public static class TransferEndpoints
 
         if (old == null) return Results.NotFound();
 
-        // Create new enrolment on the target course
-        var newId = await conn.ExecuteScalarAsync<long>(
-            @"INSERT INTO bagile.enrolments (student_id, order_id, course_schedule_id, status, transferred_from_enrolment_id, transfer_reason)
-              VALUES (@studentId, @orderId, @courseId, 'active', @oldId, 'CourseTransfer')
-              RETURNING id",
-            new { studentId = (long)old.student_id, orderId = (long)old.order_id, courseId, oldId = id });
+        long studentId = (long)old.student_id;
+        long? orderId = old.order_id == null ? (long?)null : (long)old.order_id;
+
+        // Check if student already has an active enrolment on the target course
+        // (can happen when the enrolment was created manually before this API call)
+        var existingId = await conn.ExecuteScalarAsync<long?>(
+            @"SELECT id FROM bagile.enrolments
+              WHERE student_id = @studentId AND course_schedule_id = @courseId AND status = 'active'
+              LIMIT 1",
+            new { studentId, courseId });
+
+        long newId;
+        if (existingId.HasValue)
+        {
+            // Already enrolled — treat as already transferred; no duplicate insert
+            newId = existingId.Value;
+        }
+        else
+        {
+            // Create new enrolment on the target course
+            newId = await conn.ExecuteScalarAsync<long>(
+                @"INSERT INTO bagile.enrolments (student_id, order_id, course_schedule_id, status, transferred_from_enrolment_id, transfer_reason)
+                  VALUES (@studentId, @orderId, @courseId, 'active', @oldId, 'CourseTransfer')
+                  RETURNING id",
+                new { studentId, orderId, courseId, oldId = id });
+        }
 
         // Mark old as transferred
         await conn.ExecuteAsync(
