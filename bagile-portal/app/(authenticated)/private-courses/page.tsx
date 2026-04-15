@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Lock } from "lucide-react";
+import { Lock, Plus } from "lucide-react";
 import { useApiKey } from "@/lib/hooks/useApiKey";
 import {
   CourseScheduleItem,
@@ -14,6 +14,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { SkeletonRow } from "@/components/ui/Skeleton";
+import { CreatePrivateCoursePanel } from "@/components/courses/CreatePrivateCoursePanel";
 
 // ── Status badge mapping for course schedule statuses ───────────────────────
 
@@ -99,6 +100,7 @@ export default function PrivateCoursesPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showAll, setShowAll] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
 
   useEffect(() => {
     if (!apiKey) return;
@@ -113,17 +115,31 @@ export default function PrivateCoursesPage() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
+      {apiKey && (
+        <CreatePrivateCoursePanel
+          open={showCreate}
+          onClose={() => setShowCreate(false)}
+          apiKey={apiKey}
+          onCreated={() => setShowCreate(false)}
+        />
+      )}
+
       <PageHeader
         title="Private Courses"
         subtitle="Company-booked courses managed outside the public schedule"
         actions={
-          <Button
-            variant={showAll ? "primary" : "secondary"}
-            size="sm"
-            onClick={() => setShowAll((v) => !v)}
-          >
-            {showAll ? "Showing all" : "Show all dates"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant={showAll ? "primary" : "secondary"}
+              size="sm"
+              onClick={() => setShowAll((v) => !v)}
+            >
+              {showAll ? "Showing all" : "Show all dates"}
+            </Button>
+            <Button size="sm" onClick={() => setShowCreate(true)}>
+              <Plus className="w-4 h-4" /> Create Private Course
+            </Button>
+          </div>
         }
       />
 

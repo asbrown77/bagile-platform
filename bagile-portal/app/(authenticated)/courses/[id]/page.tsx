@@ -253,7 +253,12 @@ export default function CourseDetail() {
       )}
 
       <div className="mb-2">
-        <Link href="/courses" className="text-sm text-brand-600 hover:text-brand-700">&larr; Courses</Link>
+        <Link
+          href={isPrivate ? "/private-courses" : "/courseschedule"}
+          className="text-sm text-brand-600 hover:text-brand-700"
+        >
+          &larr; {isPrivate ? "Private Courses" : "Course Schedule"}
+        </Link>
       </div>
 
       {/* ── Page header — badge + title + pencil edit icon (private only) ── */}
