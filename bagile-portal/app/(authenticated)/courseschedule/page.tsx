@@ -860,7 +860,10 @@ function CalendarContent() {
   const [error, setError] = useState("");
   const [trainerFilter, setTrainerFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [typeFilter, setTypeFilter] = useState<"all" | "public" | "private">("all");
+  const [typeFilter, setTypeFilter] = useState<"all" | "public" | "private">(() => {
+    const t = searchParams.get("type");
+    return t === "private" || t === "public" ? t : "all";
+  });
   const [viewMode, setViewMode] = useState<"calendar" | "list">(
     searchParams.get("view") === "calendar" ? "calendar" : "list"
   );

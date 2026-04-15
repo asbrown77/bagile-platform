@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Lock, Plus } from "lucide-react";
+import { Lock, Plus, CalendarDays } from "lucide-react";
+import Link from "next/link";
 import { useApiKey } from "@/lib/hooks/useApiKey";
 import {
   CourseScheduleItem,
@@ -151,6 +152,12 @@ export default function PrivateCoursesPage() {
         subtitle="Company-booked courses managed outside the public schedule"
         actions={
           <div className="flex items-center gap-2">
+            <Link
+              href="/courseschedule?type=private"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <CalendarDays className="w-4 h-4" /> Calendar view
+            </Link>
             <Button
               variant={showAll ? "primary" : "secondary"}
               size="sm"
