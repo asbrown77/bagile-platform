@@ -3,22 +3,25 @@
  * Sprint 26: Course Calendar v1.
  */
 
-/** Map courseType code to badge image filename in /public/badges/. */
+/** Map courseType code to course logo filename in /public/badges/.
+ *  All images are the official scrum.org course logos (not assessment/cert badges). */
 const BADGE_MAP: Record<string, string> = {
-  PSM:    "PSM-I.png",
-  PSMA:   "PSM-II.png",
-  PSPO:   "PSPO-I.png",
-  PSPOA:  "PSPO-II.png",
-  PSMAI:  "PSM-AI.png",
-  PSPOAI: "PSPO-AI.png",
-  PSK:    "PSK-I.png",
-  PALE:   "PAL-I.png",
-  PALEBM: "PAL-EBM.png",
-  EBM:    "PAL-EBM.png",  // alias — EBM is the same course as PAL-EBM
-  PSU:    "PSU.png",
-  PSFS:   "PSFS.png",
-  APSSD:  "APS-SD.png",
-  // APS (standalone) has no scrum.org badge image — omitted intentionally
+  PSM:    "PSM-course.png",
+  PSMA:   "PSMA-course.png",
+  PSPO:   "PSPO-course.png",
+  PSPOA:  "PSPOA-course.png",
+  PSMAI:  "PSMAI-course.png",
+  PSPOAI: "PSPOAI-course.png",
+  PSK:    "PSK-course.png",
+  PALE:   "PALE-course.png",
+  PALEBM: "PALEBM-course.png",
+  EBM:    "PALEBM-course.png",  // alias for PAL-EBM
+  PSU:    "PSU-course.png",
+  PSFS:   "PSFS-course.png",
+  APSSD:  "APSSD-course.png",
+  APS:    "APS-course.png",
+  SPS:    "SPS-course.png",
+  PSPBM:  "PSPBM-course.png",
 };
 
 export function getBadgeSrc(courseType: string): string | null {
