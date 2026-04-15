@@ -138,20 +138,33 @@ export function getApplicableGateways(courseType: string, isPrivate: boolean): s
   return gateways;
 }
 
+// All recognised course type codes — used to find the type within a SKU
+const KNOWN_COURSE_TYPES = new Set([
+  "PSM", "PSMO", "PSMAI", "PSMA", "PSPO", "PSPOAI", "PSPOA",
+  "PSK", "PALE", "PAL", "PSU", "PSFS", "EBM", "APS", "APSSD",
+]);
+
 /**
- * Extract a clean course type code from a WooCommerce SKU.
+ * Extract a clean course type code from a course SKU.
+ * Handles old format (TYPE-DATE-ORG-PRIV-DATE) and new format (ORG-TYPE-DATE).
  * e.g. "APSSD-050526-DVSA-PRIV-050526" → "APSSD"
  *      "PSM-270426-FNC-PRIV-270426"    → "PSM"
- *      "PSM-PRIV-270426"               → "PSM"
+ *      "FNC-PSM-270426"                → "PSM"  (new format)
+ *      "DVSA-APSSD-050526"             → "APSSD"
  */
 export function extractCourseTypeFromSku(sku: string): string {
   const parts = sku.toUpperCase().split("-");
-  const typeParts: string[] = [];
-  for (const part of parts) {
-    if (/^\d{6}$/.test(part) || part === "PRIV") break;
-    typeParts.push(part);
+  for (let i = 0; i < parts.length; i++) {
+    if (/^\d{6}$/.test(parts[i]) || parts[i] === "PRIV") break;
+    if (KNOWN_COURSE_TYPES.has(parts[i])) return parts[i];
+    // Compound type: APS + SD → APSSD
+    if (i + 1 < parts.length) {
+      const compound = parts[i] + parts[i + 1];
+      if (KNOWN_COURSE_TYPES.has(compound)) return compound;
+    }
   }
-  return typeParts.join("") || sku.toUpperCase();
+  // Fallback: first non-date, non-PRIV segment
+  return parts.find((p) => !/^\d{6}$/.test(p) && p !== "PRIV") || sku.toUpperCase();
 }
 
 /** All course type options for the Add Course form. */

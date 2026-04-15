@@ -42,9 +42,9 @@ export function generateCourseName(
 }
 
 /**
- * Generate an invoice reference from its components.
- * Format: {CourseCode}-{OrgAcronym}-{DDMMYY}
- * e.g. "PSM-FNC-270426"
+ * Generate an invoice reference (also used as the course SKU) from its components.
+ * Format: {OrgAcronym}-{CourseCode}-{DDMMYY}
+ * e.g. "FNC-PSM-270426" — matches Xero invoice naming convention
  */
 export function generateInvoiceRef(
   courseCode: string,
@@ -59,5 +59,5 @@ export function generateInvoiceRef(
   const yy = String(d.getFullYear()).slice(2);
   const datePart = `${dd}${mm}${yy}`;
   if (!orgAcronym) return `${courseCode.toUpperCase()}-${datePart}`;
-  return `${courseCode.toUpperCase()}-${orgAcronym.toUpperCase()}-${datePart}`;
+  return `${orgAcronym.toUpperCase()}-${courseCode.toUpperCase()}-${datePart}`;
 }

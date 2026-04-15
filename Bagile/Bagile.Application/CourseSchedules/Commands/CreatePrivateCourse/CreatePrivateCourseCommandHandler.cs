@@ -24,12 +24,18 @@ public class CreatePrivateCourseCommandHandler
         CreatePrivateCourseCommand request,
         CancellationToken ct)
     {
-        var sku = $"{request.CourseCode}-PRIV-{request.StartDate:ddMMyy}";
+        // Use the invoice reference as the SKU when provided (format: ORG-TYPE-DDMMYY,
+        // e.g. "FNC-PSM-270426") — this matches the Xero naming convention and gives
+        // courses a meaningful identifier. Fall back to TYPE-PRIV-DDMMYY for legacy callers.
+        var baseSku = !string.IsNullOrWhiteSpace(request.InvoiceReference)
+            ? request.InvoiceReference.Trim().ToUpperInvariant()
+            : $"{request.CourseCode.ToUpperInvariant()}-PRIV-{request.StartDate:ddMMyy}";
 
+        var sku = baseSku;
         if (await _courseRepo.ExistsBySkuAsync(sku))
         {
             var suffix = DateTime.UtcNow.ToString("HHmm");
-            sku = $"{request.CourseCode}-PRIV-{request.StartDate:ddMMyy}-{suffix}";
+            sku = $"{baseSku}-{suffix}";
         }
 
         // Accept either "name" or "title" — the response DTO uses "title" so some

@@ -239,33 +239,49 @@ public class CalendarQueries : ICalendarQueries
         return "partial_live";
     }
 
-    // Compound course type prefixes: SKU starts with two hyphen-separated segments
-    // that together form the course type code. E.g. "APS-SD-..." => "APSSD".
-    private static readonly HashSet<string> CompoundTypePrefixes =
-        new(StringComparer.OrdinalIgnoreCase) { "APSSD" };
+    // All recognised course type codes — used to find the type within a SKU
+    private static readonly HashSet<string> KnownCourseTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "PSM", "PSMO", "PSMAI", "PSMA", "PSPO", "PSPOAI", "PSPOA",
+        "PSK", "PALE", "PAL", "PSU", "PSFS", "EBM", "APS", "APSSD",
+    };
 
     /// <summary>
-    /// Extract course type prefix from SKU. E.g. "PSPO-300326-AB" => "PSPO",
-    /// "PSMAI-280526-CB" => "PSMAI", "PSM-PRIV-150426" => "PSM",
-    /// "APS-SD-150526-AB" => "APSSD"
+    /// Extract course type from SKU. Handles both old format (TYPE-DATE-ORG-PRIV-DATE)
+    /// and new format (ORG-TYPE-DATE, e.g. "FNC-PSM-270426" => "PSM").
+    /// Also handles compound types (e.g. "APS-SD-..." or "DVSA-APSSD-..." => "APSSD").
     /// </summary>
     private static string ExtractCourseType(string sku)
     {
         if (string.IsNullOrWhiteSpace(sku))
             return "";
 
-        // SKU format: COURSETYPE-DDMMYY-INITIALS or COURSETYPE-PRIV-DDMMYY
         var parts = sku.Split('-');
 
-        // Check for compound course type prefix (e.g. APS-SD stored as two segments)
-        if (parts.Length >= 2)
+        for (var i = 0; i < parts.Length; i++)
         {
-            var compound = parts[0] + parts[1];
-            if (CompoundTypePrefixes.Contains(compound))
-                return compound.ToUpperInvariant();
+            // Stop at a 6-digit date segment or PRIV marker
+            if (parts[i].Length == 6 && parts[i].All(char.IsDigit)) break;
+            if (string.Equals(parts[i], "PRIV", StringComparison.OrdinalIgnoreCase)) break;
+
+            // Single-segment match
+            if (KnownCourseTypes.Contains(parts[i]))
+                return parts[i].ToUpperInvariant();
+
+            // Compound type: APS + SD → APSSD
+            if (i + 1 < parts.Length)
+            {
+                var compound = parts[i] + parts[i + 1];
+                if (KnownCourseTypes.Contains(compound))
+                    return compound.ToUpperInvariant();
+            }
         }
 
-        return parts[0];
+        // Fallback: first non-date, non-PRIV segment
+        var fallback = parts.FirstOrDefault(p =>
+            p.Length != 6 && !p.All(char.IsDigit) &&
+            !string.Equals(p, "PRIV", StringComparison.OrdinalIgnoreCase));
+        return (fallback ?? parts[0]).ToUpperInvariant();
     }
 
     /// <summary>
