@@ -138,6 +138,22 @@ export function getApplicableGateways(courseType: string, isPrivate: boolean): s
   return gateways;
 }
 
+/**
+ * Extract a clean course type code from a WooCommerce SKU.
+ * e.g. "APSSD-050526-DVSA-PRIV-050526" → "APSSD"
+ *      "PSM-270426-FNC-PRIV-270426"    → "PSM"
+ *      "PSM-PRIV-270426"               → "PSM"
+ */
+export function extractCourseTypeFromSku(sku: string): string {
+  const parts = sku.toUpperCase().split("-");
+  const typeParts: string[] = [];
+  for (const part of parts) {
+    if (/^\d{6}$/.test(part) || part === "PRIV") break;
+    typeParts.push(part);
+  }
+  return typeParts.join("") || sku.toUpperCase();
+}
+
 /** All course type options for the Add Course form. */
 export const COURSE_TYPE_OPTIONS = [
   { value: "PSM", label: "PSM" },

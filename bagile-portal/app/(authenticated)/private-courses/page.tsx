@@ -9,7 +9,7 @@ import {
   getPrivateCourses,
   formatDate,
 } from "@/lib/api";
-import { getBadgeSrc, getCourseCodeDisplay } from "@/lib/calendarHelpers";
+import { getBadgeSrc, getCourseCodeDisplay, extractCourseTypeFromSku, getCourseDisplayName } from "@/lib/calendarHelpers";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -21,10 +21,11 @@ import { CreatePrivateCoursePanel } from "@/components/courses/CreatePrivateCour
 function scheduleStatusBadge(status: string | null) {
   if (!status) return <Badge variant="neutral">Unknown</Badge>;
   const map: Record<string, { label: string; variant: "success" | "info" | "warning" | "danger" | "neutral" }> = {
-    published: { label: "Published", variant: "info" },
-    planned: { label: "Planned", variant: "neutral" },
-    cancelled: { label: "Cancelled", variant: "danger" },
-    completed: { label: "Completed", variant: "success" },
+    confirmed:    { label: "Confirmed",    variant: "info" },
+    planned:      { label: "Planned",      variant: "neutral" },
+    partial_live: { label: "Partial Live", variant: "warning" },
+    live:         { label: "Live",         variant: "success" },
+    cancelled:    { label: "Cancelled",    variant: "danger" },
   };
   const entry = map[status.toLowerCase()] ?? { label: status, variant: "neutral" as const };
   return <Badge variant={entry.variant} dot>{entry.label}</Badge>;
@@ -46,8 +47,10 @@ function defaultRange(): { from: string; to: string } {
 // ── Row component ────────────────────────────────────────────────────────────
 
 function CourseRow({ course }: { course: CourseScheduleItem }) {
-  const badgeSrc = getBadgeSrc(course.courseCode);
-  const codeDisplay = getCourseCodeDisplay(course.courseCode);
+  const courseType = extractCourseTypeFromSku(course.courseCode);
+  const badgeSrc = getBadgeSrc(courseType);
+  const codeDisplay = getCourseCodeDisplay(courseType);
+  const courseName = getCourseDisplayName(courseType);
 
   return (
     <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
@@ -58,7 +61,10 @@ function CourseRow({ course }: { course: CourseScheduleItem }) {
           ) : (
             <div className="h-8 w-8 rounded bg-gray-200 shrink-0" />
           )}
-          <span className="text-sm font-medium text-gray-800">{codeDisplay}</span>
+          <div>
+            <div className="text-sm font-medium text-gray-800">{codeDisplay}</div>
+            <div className="text-xs text-gray-500">{courseName !== courseType ? courseName : ""}</div>
+          </div>
         </div>
       </td>
       <td className="px-4 py-3 text-sm text-gray-700">

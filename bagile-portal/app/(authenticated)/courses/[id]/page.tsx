@@ -299,7 +299,7 @@ export default function CourseDetail() {
 
       {/* ── Two info cards: Details + Commercial/Enrolment ── */}
       {loading ? (
-        <div className="grid grid-cols-2 gap-4 mb-6 mt-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 mt-4">
           {[1, 2].map((i) => <SkeletonCard key={i} />)}
         </div>
       ) : course && (

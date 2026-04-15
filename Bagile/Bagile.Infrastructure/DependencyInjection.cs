@@ -23,7 +23,12 @@ public static class DependencyInjection
         services.AddScoped<ITransferQueries>(_ => new TransferQueries(connectionString));
         services.AddScoped<IRevenueQueries>(_ => new RevenueQueries(connectionString));
         services.AddScoped<IAnalyticsQueries>(_ => new AnalyticsQueries(connectionString));
-        services.AddScoped<ICalendarQueries>(_ => new CalendarQueries(connectionString));
+        services.AddScoped<ICalendarQueries>(sp =>
+        {
+            var cfg = sp.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>();
+            var wooSiteUrl = cfg["WooCommerce:BaseUrl"] ?? "";
+            return new CalendarQueries(connectionString, wooSiteUrl);
+        });
         services.AddScoped<IPlannedCourseQueries>(_ => new PlannedCourseQueries(connectionString));
 
         // Register repositories (write path)
