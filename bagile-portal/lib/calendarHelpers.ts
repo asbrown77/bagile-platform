@@ -22,6 +22,7 @@ const BADGE_MAP: Record<string, string> = {
   APS:    "APS-course.png",
   SPS:    "SPS-course.png",
   PSPBM:  "PSPBM-course.png",
+  PSMPO:  "PSMPO-course.png",  // combined PSM + PSPO
 };
 
 export function getBadgeSrc(courseType: string): string | null {
