@@ -422,6 +422,66 @@ server.tool(
 );
 
 // ============================================================
+// CREATE PLANNED COURSES (Sprint 28)
+// ============================================================
+
+const plannedCourseRowSchema = z.object({
+  courseType: z.string().describe("Course type code (e.g. PSM, PSPO, PSMA)"),
+  startDate: z.string().describe("Start date (YYYY-MM-DD)"),
+  endDate: z.string().describe("End date (YYYY-MM-DD)"),
+  trainerId: z.number().describe("Trainer ID (1=Alex Brown, 2=Chris Bexon)"),
+  isVirtual: z.boolean().optional().describe("Virtual delivery (default true)"),
+  venue: z.string().optional().describe("Venue address (for onsite courses)"),
+  notes: z.string().optional().describe("Optional notes"),
+  decisionDeadline: z.string().optional().describe("Decision deadline date (YYYY-MM-DD)"),
+});
+
+server.tool(
+  "create_planned_course",
+  "Create one or more planned courses in the BAgile calendar. Pass a single course object in `course` or an array in `courses`. Returns the created course ID(s). Use this to schedule upcoming courses before they are published to WooCommerce or Scrum.org.",
+  {
+    course: plannedCourseRowSchema.optional().describe("Single planned course to create"),
+    courses: z.array(plannedCourseRowSchema).optional().describe("Array of planned courses to bulk-create (max 200)"),
+  },
+  async ({ course, courses }) => {
+    if (course && !courses) {
+      const result = await apiPost("/api/planned-courses", {
+        courseType: course.courseType,
+        trainerId: course.trainerId,
+        startDate: course.startDate,
+        endDate: course.endDate,
+        isVirtual: course.isVirtual ?? true,
+        venue: course.venue,
+        notes: course.notes,
+        decisionDeadline: course.decisionDeadline,
+        isPrivate: false,
+      });
+      return { content: [{ type: "text" as const, text: formatResult(result) }] };
+    }
+
+    const rows = courses ?? (course ? [course] : []);
+    if (rows.length === 0) {
+      return { content: [{ type: "text" as const, text: "Error: provide `course` or `courses`" }] };
+    }
+
+    const result = await apiPost("/api/planned-courses/bulk", {
+      courses: rows.map((r) => ({
+        courseType: r.courseType,
+        trainerId: r.trainerId,
+        startDate: r.startDate,
+        endDate: r.endDate,
+        isVirtual: r.isVirtual ?? true,
+        venue: r.venue,
+        notes: r.notes,
+        decisionDeadline: r.decisionDeadline,
+        isPrivate: false,
+      })),
+    });
+    return { content: [{ type: "text" as const, text: formatResult(result) }] };
+  }
+);
+
+// ============================================================
 // HEALTH CHECK
 // ============================================================
 

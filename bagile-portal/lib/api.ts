@@ -1139,6 +1139,43 @@ export async function deletePlannedCourse(
   if (!res.ok) throw new Error(`API error: ${res.status}`);
 }
 
+// ── Bulk Create Planned Courses ──────────────────────────
+
+export interface BulkCourseRow {
+  courseType: string;
+  startDate: string;
+  endDate: string;
+  trainerId: number;
+  isVirtual: boolean;
+  venue?: string;
+  notes?: string;
+  decisionDeadline?: string;
+  isPrivate?: boolean;
+}
+
+export interface BulkRowResult {
+  index: number;
+  success: boolean;
+  id?: number;
+  error?: string;
+}
+
+export interface BulkCreateResult {
+  results: BulkRowResult[];
+  successCount: number;
+  failureCount: number;
+}
+
+export async function bulkCreatePlannedCourses(
+  apiKey: string,
+  courses: BulkCourseRow[],
+): Promise<BulkCreateResult> {
+  return apiRequest("/api/planned-courses/bulk", apiKey, {
+    method: "POST",
+    body: { courses },
+  });
+}
+
 export async function publishGateway(
   apiKey: string,
   courseId: string,

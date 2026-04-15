@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -11,6 +11,7 @@ import {
   getCalendarEvents,
   getTrainers,
   createPlannedCourse,
+  createPrivateCourse,
   publishGateway,
   updatePlannedCourse,
   formatDate,
@@ -20,7 +21,7 @@ import { AlertBanner } from "@/components/ui/AlertBanner";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { SlideOver } from "@/components/ui/SlideOver";
-import { Plus, Calendar as CalendarIcon, Lock, AlertCircle, ExternalLink, Users, X, Loader2, LayoutList } from "lucide-react";
+import { Plus, Calendar as CalendarIcon, Lock, AlertCircle, ExternalLink, Users, X, Loader2, LayoutList, Search, Upload, Download } from "lucide-react";
 import {
   getBadgeSrc,
   getCourseCodeDisplay,
@@ -34,6 +35,10 @@ import {
 } from "@/lib/calendarHelpers";
 import { getTrainerColour, trainerInitials } from "@/lib/courseColours";
 import { addOneDayStr } from "@/lib/dateUtils";
+import { useSearchParams } from "next/navigation";
+import { generateCourseName } from "@/lib/privateCourseHelpers";
+import { CsvImportModal } from "@/components/courses/CsvImportModal";
+import { bulkCreatePlannedCourses } from "@/lib/api";
 
 // ── Types for FullCalendar ──────────────────────────────────
 
@@ -69,9 +74,7 @@ function CourseBlock({ event }: { event: CalendarEvent; compact?: boolean }) {
   const isCancelled = event.status === "cancelled";
 
   // Enrolment display
-  const enrolDisplay = event.status === "planned"
-    ? `0 \u{1F4DD}`
-    : `${event.enrolmentCount}/${event.minimumEnrolments}`;
+  const enrolCount = event.status === "planned" ? 0 : event.enrolmentCount;
 
   return (
     <div
@@ -102,7 +105,9 @@ function CourseBlock({ event }: { event: CalendarEvent; compact?: boolean }) {
             {initials}
           </span>
         </div>
-        <div className="text-[10px] text-gray-500">{enrolDisplay}</div>
+        <div className="text-[10px] text-gray-500 flex items-center gap-0.5">
+          <Users className="w-2.5 h-2.5" />{enrolCount}
+        </div>
       </div>
 
       {/* Private indicator */}
@@ -135,9 +140,21 @@ interface AddCourseModalProps {
     isPrivate: boolean;
   }) => Promise<void>;
   trainers: Trainer[];
+  initialValues?: {
+    courseType: string;
+    trainerId: number;
+    startDate: string;
+    endDate: string;
+    isVirtual: boolean;
+    venue: string;
+    notes: string;
+    decisionDeadline: string;
+    isPrivate: boolean;
+  };
+  editMode?: boolean;
 }
 
-function AddCourseModal({ open, onClose, onSubmit, trainers }: AddCourseModalProps) {
+function AddCourseModal({ open, onClose, onSubmit, trainers, initialValues, editMode }: AddCourseModalProps) {
   const [courseType, setCourseType] = useState("PSM");
   const [trainerId, setTrainerId] = useState(0);
   const [startDate, setStartDate] = useState("");
@@ -156,6 +173,25 @@ function AddCourseModal({ open, onClose, onSubmit, trainers }: AddCourseModalPro
       setTrainerId(trainers[0].id);
     }
   }, [trainers, trainerId]);
+
+  // Initialize from initialValues when opening in edit mode
+  useEffect(() => {
+    if (!open) return;
+    if (initialValues) {
+      setCourseType(initialValues.courseType);
+      setTrainerId(initialValues.trainerId);
+      setStartDate(initialValues.startDate);
+      setEndDate(initialValues.endDate);
+      setIsVirtual(initialValues.isVirtual);
+      setVenue(initialValues.venue);
+      setNotes(initialValues.notes);
+      setDecisionDeadline(initialValues.decisionDeadline);
+      setIsPrivate(initialValues.isPrivate);
+    } else {
+      reset();
+    }
+    setError("");
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function reset() {
     setCourseType("PSM");
@@ -199,12 +235,15 @@ function AddCourseModal({ open, onClose, onSubmit, trainers }: AddCourseModalPro
 
   if (!open) return null;
 
+  const modalTitle = editMode ? "Edit Planned Course" : isPrivate ? "Add Private Course" : "Add Planned Course";
+  const submitLabel = editMode ? "Update Course" : isPrivate ? "Create Private Course" : "Create Course";
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="fixed inset-0 bg-black/40" onClick={onClose} />
       <div className="relative bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Add Planned Course</h2>
+          <h2 className="text-lg font-semibold text-gray-900">{modalTitle}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100">
             <X className="w-5 h-5" />
           </button>
@@ -304,28 +343,43 @@ function AddCourseModal({ open, onClose, onSubmit, trainers }: AddCourseModalPro
             </div>
           )}
 
-          {/* Private toggle */}
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={isPrivate}
-              onChange={(e) => setIsPrivate(e.target.checked)}
-              className="rounded border-gray-300 text-brand-600 focus:ring-brand-500"
-            />
-            <span className="text-sm text-gray-700">Private course</span>
-          </label>
-
-          {/* Decision Deadline */}
+          {/* Visibility */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Decision Deadline</label>
-            <input
-              type="date"
-              value={decisionDeadline}
-              onChange={(e) => setDecisionDeadline(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
-            />
-            <p className="text-xs text-gray-400 mt-1">Defaults to 10 days before start date if left blank</p>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Visibility</label>
+            <div className="flex rounded-lg border border-gray-200 overflow-hidden w-fit">
+              <button
+                type="button"
+                onClick={() => setIsPrivate(false)}
+                className={`px-4 py-2 text-sm font-medium transition-colors
+                  ${!isPrivate ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+              >
+                Public
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsPrivate(true)}
+                className={`px-4 py-2 text-sm font-medium border-l border-gray-200 transition-colors
+                  ${isPrivate ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+              >
+                Private
+              </button>
+            </div>
+            {isPrivate && <p className="text-xs text-gray-400 mt-1">Private courses are created directly as live — no Planned stage.</p>}
           </div>
+
+          {/* Decision Deadline — hidden for private courses */}
+          {!isPrivate && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Decision Deadline</label>
+              <input
+                type="date"
+                value={decisionDeadline}
+                onChange={(e) => setDecisionDeadline(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+              />
+              <p className="text-xs text-gray-400 mt-1">Defaults to 10 days before start date if left blank</p>
+            </div>
+          )}
 
           {/* Notes */}
           <div>
@@ -343,7 +397,7 @@ function AddCourseModal({ open, onClose, onSubmit, trainers }: AddCourseModalPro
           <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
             <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
             <Button type="submit" disabled={submitting}>
-              {submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating...</> : "Create Course"}
+              {submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> {editMode ? "Updating..." : "Creating..."}</> : submitLabel}
             </Button>
           </div>
         </form>
@@ -359,9 +413,10 @@ interface SidePanelProps {
   onClose: () => void;
   onPublish: (eventId: string, gateway: string) => Promise<void>;
   onCancel: (eventId: string) => Promise<void>;
+  onEdit?: (eventId: string) => void;
 }
 
-function SidePanel({ event, onClose, onPublish, onCancel }: SidePanelProps) {
+function SidePanel({ event, onClose, onPublish, onCancel, onEdit }: SidePanelProps) {
   const [publishing, setPublishing] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -567,6 +622,15 @@ function SidePanel({ event, onClose, onPublish, onCancel }: SidePanelProps) {
           </div>
         </div>
 
+        {/* Edit button — only for planned courses */}
+        {event.status === "planned" && event.id.startsWith("planned-") && onEdit && (
+          <div className="pt-2">
+            <Button variant="secondary" size="sm" onClick={() => onEdit(event.id)}>
+              Edit
+            </Button>
+          </div>
+        )}
+
         {/* Cancel button */}
         {!isCancelled && (
           <div className="pt-4 border-t border-gray-100">
@@ -662,7 +726,11 @@ function CourseListRow({ event, onClick }: { event: CalendarEvent; onClick: () =
       </td>
       {/* Enrolments */}
       <td className="px-3 py-3 text-sm text-gray-600 w-16 text-center">
-        {event.status === "planned" ? "–" : `${event.enrolmentCount}/${event.minimumEnrolments}`}
+        {event.status === "planned" ? "–" : (
+          <span className="flex items-center justify-center gap-0.5">
+            <Users className="w-3 h-3 text-gray-400" />{event.enrolmentCount}
+          </span>
+        )}
       </td>
       {/* Gateways */}
       <td className="px-3 py-3">
@@ -758,22 +826,30 @@ function CourseListView({
 
 // ── Main Calendar Page ──────────────────────────────────────
 
-export default function CalendarPage() {
+function CalendarContent() {
   const apiKey = useApiKey();
   const calendarRef = useRef<FullCalendar>(null);
+  const searchParams = useSearchParams();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [trainers, setTrainers] = useState<Trainer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [trainerFilter, setTrainerFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
+  const [viewMode, setViewMode] = useState<"calendar" | "list">(
+    searchParams.get("view") === "list" ? "list" : "calendar"
+  );
   const [listEvents, setListEvents] = useState<CalendarEvent[]>([]);
   const [listLoading, setListLoading] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [currentRange, setCurrentRange] = useState<{ from: string; to: string } | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [editCourseId, setEditCourseId] = useState<number | null>(null);
+  const [editInitialValues, setEditInitialValues] = useState<AddCourseModalProps["initialValues"]>(undefined);
+  const [listSearch, setListSearch] = useState("");
+  const [listDateRange, setListDateRange] = useState<"upcoming" | "year" | "all">("upcoming");
+  const [showImportModal, setShowImportModal] = useState(false);
 
   // Load trainers on mount
   useEffect(() => {
@@ -781,17 +857,29 @@ export default function CalendarPage() {
     getTrainers(apiKey).then(setTrainers).catch(() => {});
   }, [apiKey]);
 
-  // Load all upcoming events when switching to list view
+  // Load list events when switching to list view or date range changes
   useEffect(() => {
     if (viewMode !== "list" || !apiKey) return;
     setListLoading(true);
     const today = new Date().toISOString().split("T")[0];
-    const yearAhead = new Date(Date.now() + 366 * 24 * 3600 * 1000).toISOString().split("T")[0];
-    getCalendarEvents(apiKey, today, yearAhead)
+    let from: string;
+    let to: string;
+    if (listDateRange === "upcoming") {
+      from = today;
+      to = new Date(Date.now() + 366 * 24 * 3600 * 1000).toISOString().split("T")[0];
+    } else if (listDateRange === "year") {
+      const y = new Date().getFullYear();
+      from = `${y}-01-01`;
+      to = `${y}-12-31`;
+    } else {
+      from = "2020-01-01";
+      to = "2030-12-31";
+    }
+    getCalendarEvents(apiKey, from, to)
       .then(setListEvents)
       .catch(() => {})
       .finally(() => setListLoading(false));
-  }, [viewMode, apiKey]);
+  }, [viewMode, apiKey, listDateRange]);
 
   // Load calendar events when range changes
   const loadEvents = useCallback(async () => {
@@ -827,6 +915,17 @@ export default function CalendarPage() {
   const filteredEvents = applyFilters(events);
   const filteredListEvents = applyFilters(listEvents);
 
+  // Search filter on top of trainer/status filters
+  const filteredListEventsSearched = filteredListEvents.filter((e) => {
+    if (!listSearch) return true;
+    const q = listSearch.toLowerCase();
+    return (
+      e.courseType.toLowerCase().includes(q) ||
+      getCourseDisplayName(e.courseType).toLowerCase().includes(q) ||
+      getCourseCodeDisplay(e.courseType).toLowerCase().includes(q)
+    );
+  });
+
   // Convert to FullCalendar events
   const fcEvents = filteredEvents.map((e) => ({
     id: e.id,
@@ -842,9 +941,79 @@ export default function CalendarPage() {
   // Handlers
   async function handleAddCourse(data: Parameters<AddCourseModalProps["onSubmit"]>[0]) {
     if (!apiKey) return;
-    await createPlannedCourse(apiKey, data);
+    if (data.isPrivate) {
+      const trainer = trainers.find((t) => t.id === data.trainerId);
+      const formatType = data.isVirtual ? "virtual" : "f2f";
+      await createPrivateCourse(apiKey, {
+        name: generateCourseName(data.courseType, "", formatType),
+        courseCode: data.courseType,
+        startDate: data.startDate,
+        endDate: data.endDate,
+        formatType,
+        trainerName: trainer?.name,
+        venueAddress: data.venue,
+        notes: data.notes,
+      });
+    } else {
+      await createPlannedCourse(apiKey, data);
+    }
     setToast({ message: "Course created", type: "success" });
     await loadEvents();
+  }
+
+  async function handleEditCourse(data: Parameters<AddCourseModalProps["onSubmit"]>[0]) {
+    if (!apiKey || !editCourseId) return;
+    await updatePlannedCourse(apiKey, editCourseId, data);
+    setToast({ message: "Course updated", type: "success" });
+    await loadEvents();
+  }
+
+  function handleModalClose() {
+    setShowAddModal(false);
+    setEditCourseId(null);
+    setEditInitialValues(undefined);
+  }
+
+  function handleOpenEdit(eventId: string) {
+    const event = events.find((e) => e.id === eventId) ?? listEvents.find((e) => e.id === eventId);
+    if (!event) return;
+    const numericId = Number(eventId.replace(/\D/g, ""));
+    const trainer = trainers.find((t) => t.name === event.trainerName);
+    setEditCourseId(numericId);
+    setEditInitialValues({
+      courseType: event.courseType,
+      trainerId: trainer?.id ?? trainers[0]?.id ?? 0,
+      startDate: event.startDate.split("T")[0],
+      endDate: event.endDate.split("T")[0],
+      isVirtual: event.isVirtual,
+      venue: event.venue ?? "",
+      notes: event.notes ?? "",
+      decisionDeadline: event.decisionDeadline ?? "",
+      isPrivate: event.isPrivate,
+    });
+    setShowAddModal(true);
+  }
+
+  function handleExportCsv() {
+    const source = viewMode === "list" ? filteredListEventsSearched : filteredEvents;
+    const header = "courseType,startDate,endDate,trainer,isVirtual,venue,notes";
+    const rows = source.map((e) => [
+      e.courseType,
+      e.startDate.split("T")[0],
+      e.endDate.split("T")[0],
+      e.trainerName ?? e.trainerInitials ?? "",
+      e.isVirtual ? "true" : "false",
+      e.venue ?? "",
+      (e.notes ?? "").replace(/,/g, ";"),
+    ].join(","));
+    const csv = [header, ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `courses-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   async function handlePublish(eventId: string, gateway: string) {
@@ -896,9 +1065,17 @@ export default function CalendarPage() {
       <PageHeader
         title="Course Calendar"
         actions={
-          <Button size="sm" onClick={() => setShowAddModal(true)}>
-            <Plus className="w-4 h-4" /> Add Course
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" size="sm" onClick={() => setShowImportModal(true)}>
+              <Upload className="w-4 h-4" /> Import CSV
+            </Button>
+            <Button variant="secondary" size="sm" onClick={handleExportCsv}>
+              <Download className="w-4 h-4" /> Export CSV
+            </Button>
+            <Button size="sm" onClick={() => setShowAddModal(true)}>
+              <Plus className="w-4 h-4" /> Add Course
+            </Button>
+          </div>
         }
       />
 
@@ -924,15 +1101,15 @@ export default function CalendarPage() {
           </div>
           {/* Trainer filter */}
           <div className="flex rounded-lg border border-gray-200 overflow-hidden">
-            {["all", "AB", "CB"].map((t, i) => (
+            {[{ key: "all", label: "All" }, ...trainers.map((t) => ({ key: trainerInitials(t.name), label: trainerInitials(t.name) }))].map(({ key, label }, i) => (
               <button
-                key={t}
-                onClick={() => setTrainerFilter(t)}
+                key={key}
+                onClick={() => setTrainerFilter(key)}
                 className={`px-3 py-1.5 text-xs font-medium transition-colors
-                  ${trainerFilter === t ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}
+                  ${trainerFilter === key ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}
                   ${i > 0 ? "border-l border-gray-200" : ""}`}
               >
-                {t === "all" ? "All" : t}
+                {label}
               </button>
             ))}
           </div>
@@ -1001,11 +1178,43 @@ export default function CalendarPage() {
           />
         </div>
       ) : (
-        <CourseListView
-          events={filteredListEvents}
-          loading={listLoading}
-          onSelect={setSelectedEvent}
-        />
+        <>
+          {/* List view filters */}
+          <div className="flex items-center gap-3 mb-4 flex-wrap">
+            <div className="relative flex-1 min-w-[180px] max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search courses..."
+                value={listSearch}
+                onChange={(e) => setListSearch(e.target.value)}
+                className="w-full pl-10 pr-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+              />
+            </div>
+            <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden">
+              {([
+                { key: "upcoming", label: "Upcoming" },
+                { key: "year", label: String(new Date().getFullYear()) },
+                { key: "all", label: "All" },
+              ] as const).map(({ key, label }, i) => (
+                <button
+                  key={key}
+                  onClick={() => setListDateRange(key)}
+                  className={`px-3 py-1.5 text-xs font-medium transition-colors
+                    ${listDateRange === key ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}
+                    ${i > 0 ? "border-l border-gray-200" : ""}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <CourseListView
+            events={filteredListEventsSearched}
+            loading={listLoading}
+            onSelect={setSelectedEvent}
+          />
+        </>
       )}
 
       {/* Side panel */}
@@ -1014,17 +1223,28 @@ export default function CalendarPage() {
         onClose={() => setSelectedEvent(null)}
         onPublish={handlePublish}
         onCancel={handleCancel}
+        onEdit={handleOpenEdit}
       />
 
-      {/* Add course modal */}
+      {/* Add / Edit course modal */}
       <AddCourseModal
         open={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        onSubmit={handleAddCourse}
+        onClose={handleModalClose}
+        onSubmit={editCourseId ? handleEditCourse : handleAddCourse}
         trainers={trainers}
+        initialValues={editInitialValues}
+        editMode={!!editCourseId}
       />
 
       {/* Toast */}
+      <CsvImportModal
+        open={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImported={async () => { await loadEvents(); setToast({ message: "Courses imported", type: "success" }); }}
+        trainers={trainers}
+        apiKey={apiKey ?? ""}
+      />
+
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       {/* Calendar CSS overrides */}
@@ -1109,3 +1329,6 @@ export default function CalendarPage() {
   );
 }
 
+export default function CalendarPage() {
+  return <Suspense><CalendarContent /></Suspense>;
+}

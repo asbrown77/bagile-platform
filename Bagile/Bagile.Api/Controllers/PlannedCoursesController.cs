@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Bagile.Application.PlannedCourses.Commands.CreatePlannedCourse;
+using Bagile.Application.PlannedCourses.Commands.BulkCreatePlannedCourses;
 using Bagile.Application.PlannedCourses.Commands.UpdatePlannedCourse;
 using Bagile.Application.PlannedCourses.Commands.DeletePlannedCourse;
 using Bagile.Application.PlannedCourses.Commands.PublishEcommerce;
@@ -40,6 +41,25 @@ public class PlannedCoursesController : ControllerBase
 
         var result = await _mediator.Send(command);
         return CreatedAtAction(nameof(Create), new { id = result.Id }, result);
+    }
+
+    /// <summary>
+    /// Bulk-create planned courses from an array. Validates each row individually.
+    /// Partial imports are allowed — failed rows return an error, successful rows return an id.
+    /// Returns per-row results: { index, success, id?, error? }.
+    /// </summary>
+    [HttpPost("bulk")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> BulkCreate([FromBody] BulkCreatePlannedCoursesCommand command)
+    {
+        if (command.Courses == null || command.Courses.Count == 0)
+            return BadRequest(new { error = "courses array is required and must not be empty" });
+        if (command.Courses.Count > 200)
+            return BadRequest(new { error = "Maximum 200 courses per bulk request" });
+
+        var result = await _mediator.Send(command);
+        return Ok(result);
     }
 
     /// <summary>

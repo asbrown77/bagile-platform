@@ -16,104 +16,52 @@ _"I can see revenue, partner value, course demand, and make scheduling decisions
 
 ## Sprint Queue
 
-*All sprints through 19 complete.*
+*All sprints through 26 complete. Sprint 21 pre-course email compose flow built and tested (Bristol PSM 27 Apr ✓).*
 
 ---
 
----
+### Sprint 28 — "Unified Course Hub"
+**Goal:** The calendar becomes the single place for all course management. Plan, draft, publish, and import courses — public and private — without navigating to a second page.
 
-### Sprint 26 — "Course Calendar v1"
-**Goal:** Replace the Google Sheet with a live portal calendar. Courses can be planned (portal-only), go partially live (e-commerce only), or fully live (all applicable gateways). Side panel shows gateway checklist and drives the publish workflow.
-
-**We'll know it worked when:** Alex opens the portal calendar, creates a planned course, drags it to the right date, clicks Go Live, and both WooCommerce and Scrum.org are set up — without touching either system directly.
-
-**Mock:** `agent/docs/mocks/portal-calendar-mock.html`
-
----
-
-#### Course Status Model
-
-| Status | Meaning | Calendar colour |
-|---|---|---|
-| **Planned** | Portal only — not in WooCommerce, not on any gateway | Grey |
-| **Partial Live** | Some gateways published, not all | Amber |
-| **Live** | All applicable gateways published | Green / Dark green |
-| **Cancelled** | Cancelled, visible 30 days for audit | Red |
-
-#### Gateway Model
-
-Each course type has a set of applicable gateways. A course is **Live** when all its gateways are checked. Gateways are configurable per course type (settings page, Sprint 27+).
-
-| Course type | E-commerce | Scrum.org | IC Agile | Notes |
-|---|---|---|---|---|
-| Scrum.org courses (PSM, PSPO, PSK, PAL-E, EBM, APS-SD, PSM-A, PSPO-A, PSM-AI, PSPO-AI) | ✓ | ✓ | — | APS-SD is Scrum.org certified |
-| IC Agile courses (ICP-*) | ✓ | — | ✓ | ICP-tagged |
-| Internal BAgile courses | ✓ | — | — | No external gateway |
-| Private / onsite | ✓ | — | — | No external gateway |
-
-Side panel shows only the gateways applicable to that course type. Each gateway row shows published status + link + action button.
-
----
+**We'll know it worked when:** Alex opens `/calendar`, creates a new PSM planned course, edits the date, publishes to WooCommerce in one click, adds a private course from the same screen, and imports a batch of planned courses from a CSV — all without visiting `/courses`.
 
 | # | Item | Size | Status |
 |---|------|------|--------|
-| **Design** | | | |
-| D1 | UX refinement of mock — typography, spacing, colour system, responsive behaviour | M | READY |
-| D2 | Course block design system — badge image, status colour, `!` deadline dot, `🔒` private indicator | S | READY |
-| D3 | Side panel — gateway checklist design (E-commerce row, Scrum.org row, IC Agile row, each with status + action) | M | READY |
-| D4 | Empty state designs — no courses this month, no trainer match | XS | READY |
-| **Data model** | | | |
-| M1 | `planned_courses` table — portal-only courses (id, courseType, trainer, startDate, endDate, isVirtual, notes, decisionDeadline) | S | READY |
-| M2 | `course_publications` table — (courseId, gateway, publishedAt, externalUrl) — tracks what's been published where | S | READY |
-| M3 | Gateway config — hardcoded map of courseType → applicable gateways for Sprint 26; settings UI deferred | XS | READY |
-| **API** | | | |
-| A1 | `POST /api/planned-courses` — create a planned course (portal only) | S | READY |
-| A2 | `PATCH /api/planned-courses/{id}` — update dates, trainer, notes | S | READY |
-| A3 | `GET /api/calendar` — unified feed: planned courses + WooCommerce-synced courses, with gateway publication status | M | READY |
-| A4 | `POST /api/planned-courses/{id}/publish/ecommerce` — create WooCommerce product, mark gateway published | L | READY |
-| A5 | `POST /api/planned-courses/{id}/publish/scrumorg` — create Scrum.org listing via Playwright, mark gateway published | L | READY |
-| A6 | `DELETE /api/planned-courses/{id}` — delete a planned course (only if no gateways published) | XS | READY |
-| A7 | Add `decisionDeadline` to planned courses + course schedules | XS | READY |
-| **Frontend** | | | |
-| F1 | Calendar page route + FullCalendar.js (month view) | M | READY |
-| F2 | Course block component — badge, code, trainer, enrolment/status, Partial Live amber state | M | READY |
-| F3 | Trainer filter (All / Alex / Chris) | S | READY |
-| F4 | Decision deadline `!` indicator — red dot when deadline within 5 days | S | READY |
-| F5 | Private course `🔒` indicator | XS | READY |
-| F6 | Side panel — gateway checklist, enrolment bar, links, Cancel button | L | READY |
-| F7 | "Go Live" flow — tick E-commerce → triggers WooCommerce publish, tick Scrum.org → triggers Scrum.org publish | M | READY |
-| F8 | Week view toggle | S | READY |
-| F9 | Calendar nav link in dashboard header | XS | READY |
-| F10 | "Add planned course" button — form: course type, trainer, dates, virtual/onsite | M | READY |
+| **Create & Edit** | | | |
+| 1 | Add Course modal: Public/Private toggle — Private skips Planned state, creates directly live | S | DONE |
+| 2 | Edit planned course from side panel — reuse modal, pre-fill fields, PATCH on submit | S | DONE |
+| 3 | Trainer filter: load dynamically from DB instead of hardcoded AB/CB strings | XS | DONE |
+| **List view polish** | | | |
+| 4 | List view: add search + date range filters (parity with Courses page) | S | DONE |
+| 5 | Retire `/courses` list — redirect to `/calendar?view=list`, preserve query params | M | DONE |
+| **Import / Export** | | | |
+| 6 | `POST /api/planned-courses/bulk` — accept array, validate per-row, return per-row result | S | DONE |
+| 7 | CSV import UI: upload → preview table → confirm → bulk create | M | DONE |
+| 8 | CSV export: download all planned + live courses as CSV | S | DONE |
+| 9 | MCP tool: `create_planned_course` (single and bulk, callable from Claude) | S | DONE |
 
-**Total:** ~8–10 days dev, 2 days design. Target: 2-week sprint.
+**CSV format:** `courseType, startDate (YYYY-MM-DD), endDate, trainer, isVirtual (true/false), venue, notes` — one header row, one course per row.
 
-### 3 Amigos — Course Calendar
+### 3 Amigos — Unified Course Hub
 
 **Tester:**
-- Planned courses must never be visible publicly — portal login required
-- Partial Live state must show correctly when E-commerce is ticked but Scrum.org is not
-- `!` deadline dot appears/disappears correctly as deadline approaches and passes
-- Deleting a planned course must be blocked once any gateway is published
-- Side panel Cancel requires confirmation — destructive action
-- Trainer filter must not lose the selected month when switching
-- Gateway checklist must only show gateways applicable to that course type (no Scrum.org row for internal courses)
+- Creating a private course from Calendar must behave identically to old Courses page flow
+- Editing a planned course must block courseType change if any gateway is already published
+- CSV import: bad rows rejected with per-row errors, preview shown before committing
+- Redirect from `/courses` must preserve query params (e.g. `/courses?type=PSM` → `/calendar?type=PSM`)
+- Trainer filter must update automatically when a trainer is added in Settings
 
 **Dev:**
-- FullCalendar events: `{id, title, start, end, extendedProps: {status, trainer, enrolmentCount, minimum, isPrivate, decisionDeadline, gateways: [{type, published, url}]}}`
-- Badge images: `/public/badges/` mapped by courseCode prefix (copy from `Images/scrum.org/Cert. Assessment Badges/.../400x400/`)
-- Gateway publish endpoints are long-running — return 202 Accepted, poll for completion or use websocket notification
-- WooCommerce publish (A4): reuse existing product creation script logic, return product URL on completion
-- Scrum.org publish (A5): Playwright automation — copy latest course for trainer, edit dates + registration URL, return listing URL
-- Status transitions: planned→partial live→live, any→cancelled. Cancelled is terminal.
-- `decisionDeadline` default = start date minus 10 days
+- Private course creation: call existing private course endpoint (not planned-courses) — same logic, moved into Add Course modal
+- Edit modal: reuse `AddCourseModal`, pass existing values as props, switch POST → PATCH on submit
+- Bulk endpoint: validate each row individually, partial imports allowed (return array of `{index, success, error}`)
+- Redirect: Next.js `redirect()` in `/courses/page.tsx`, not a link
 
 **PO:**
-- Google Sheet stays until Alex has used the portal calendar for one full scheduling cycle
-- Private courses show as Live/green regardless of enrolment count (pre-confirmed)
-- Cancelled courses stay visible 30 days then hidden
-- IC Agile gateway (A5 equivalent) is deferred — stub the row in the checklist, mark "coming soon"
-- Internal BAgile courses are a future course type — no need to configure now, architecture supports it
+- The word is **Planned** — not "draft". Keep consistent everywhere in UI copy.
+- Private courses skip Planned state — they go straight to live (pre-confirmed bookings)
+- The `/courses/[id]` detail pages stay untouched — only the list is retired
+- MCP bulk create is for importing a trainer's drafted schedule (e.g. Chris sends a spreadsheet)
 
 ---
 
@@ -125,46 +73,8 @@ _After v1 is live and used for a full month._
 - IC Agile gateway publish automation
 - Drag-to-reschedule for planned courses
 - Monthly revenue total in calendar footer
-- List view (table) for dense weeks
+- List view (table) for dense weeks ← already done as part of Sprint 26 follow-up
 - Mobile responsive calendar
-
----
-
-### Sprint 11: Course Management Hub
-**Goal:** The course detail page is a trainer's daily tool — everything needed to run a course in one place.
-**We'll know it worked when:** A trainer can click a course, see attendees, export for Scrum.org with country codes, and manage cancellations/transfers from the dashboard.
-
-| # | Item | Size |
-|---|------|------|
-| 1 | Cancel course button on course detail page | S |
-| 2 | Per-attendee refund/transfer actions on course detail | M |
-| 3 | Pending transfers view (dashboard-wide) | S |
-| 4 | Country code populated from ETL + editable per attendee | M |
-| 5 | Scrum.org export button with correct filename | S |
-
-### Sprint 12: Partner & Organisation Analytics
-**Goal:** Know which companies book most, which partners are at which tier, and flag when a partner should be upgraded.
-**We'll know it worked when:** Dashboard shows top companies by bookings/spend, partner tier status, and alerts for missing PTN coupons.
-
-| # | Item | Size |
-|---|------|------|
-| 1 | Organisation enrichment: partner_type, discount_rate, PTN tier (V31 migration) | M |
-| 2 | Seed known partners from PTN list | S |
-| 3 | Company analytics endpoint: bookings, spend, courses by org | M |
-| 4 | Fuzzy company name matching | M |
-| 5 | Partner dashboard page: tier status, annual bookings, missing coupon alerts | L |
-| 6 | MCP tools for org/partner queries | S |
-
-### Sprint 13: Course Demand & Scheduling Analytics
-**Goal:** See which courses sell and which don't, so scheduling decisions are data-driven.
-**We'll know it worked when:** Dashboard shows bookings per course type over time, fill rates, and booking lead times.
-
-| # | Item | Size |
-|---|------|------|
-| 1 | Bookings per course type endpoint (PSM, PSPO, etc.) | M |
-| 2 | Historical fill rates by course type | M |
-| 3 | Booking lead times (how far ahead do people book?) | M |
-| 4 | Dashboard analytics page with charts | L |
 
 ---
 
@@ -185,77 +95,24 @@ _After v1 is live and used for a full month._
 
 ---
 
-## Next Sprint: 21 — "Pre-Course Emails & Quality"
-
-**Goal:** "Send Joining Details actually sends a proper email with agenda and joining info. The platform is tested and reliable."
-
-**We'll know it worked when:** Before the Bristol PSM on 27 Apr, we can click "Send Joining Details" on the course detail page, it loads a PSM template with the venue/dates pre-filled, we preview and edit, test send to ourselves, then send to all 19 attendees. And we have confidence the code won't break because key paths are tested.
-
-| # | Item | Size | Status |
-|---|------|------|--------|
-| 1 | Pre-course template table (separate from post-course, keyed by course type) | S | READY |
-| 2 | Capture and seed PSM pre-course template from NHS Wales email | S | READY |
-| 3 | "Send Joining Details" compose flow — load template, pre-fill venue/zoom/dates from course record, editable before sending, test send to trainer | L | READY |
-| 4 | Pre-course template editor in settings (separate tab from post-course) | S | READY |
-| 5 | Trainer email lookup from trainers table (replace hardcoded lookup in test send) | S | READY |
-| 6 | Scrum.org course badge on course detail header | S | READY |
-| 7 | Email send audit log — record who sent what to whom, when | M | READY |
-| 8 | Portal E2E test: login → dashboard → course detail → send test email | M | READY |
-| 9 | Unit tests: email template variable substitution | S | READY |
-| 10 | Unit tests: student override + ETL interaction | S | READY |
-
-### 3 Amigos — Pre-Course Compose Flow
-
-**Tester:**
-- What if venue/zoom details are empty on the course? → Show warning, still allow send
-- What if template doesn't exist for this course type? → Show "no template" message, allow composing from scratch
-- What if attendee list is empty? → Disable send button
-- Test send should include [TEST] prefix like post-course
-
-**Dev:**
-- Reuse the same email service (SmtpEmailService) and send pattern
-- Pre-course templates need variables: `{{course_name}}`, `{{dates}}`, `{{times}}`, `{{trainer_name}}`, `{{venue_address}}`, `{{zoom_url}}`, `{{zoom_id}}`, `{{zoom_passcode}}`, `{{self_study}}`, `{{agenda_day1}}`, `{{agenda_day2}}`
-- The compose flow needs an HTML editor (contentEditable or textarea with preview toggle — same pattern as post-course)
-- Store as `pre_course_templates` table (same structure as post_course_templates)
-
-**PO:**
-- Each course type has different agenda and self-study (PSM ≠ PSPO ≠ PSK)
-- Virtual vs F2F templates differ (Zoom details vs venue address)
-- The trainer MUST be able to edit before sending — this isn't just a template, it's a compose flow
-- Bristol PSM on 27 Apr is the first real test — needs to work by then
-
----
-
 ## Pull Backlog
 
 Items below are prioritised but not yet scheduled.
 
 ### P1 — Organisation Data Quality
 
-**Problem:** The platform has widespread organisation data quality issues affecting ~680 orgs. Root cause: `Auto-detect organisation from email domain` (Sprint 20) matched against **student email domains**, not billing company domains. Training resellers (NobleProg, QA Ltd, Knowledge Train etc.) book on behalf of end clients — so their students have client email addresses, not reseller addresses. This created duplicate org entries with wrong primary domains, making organisation pages show no history or wrong defaults.
-
-**Impact observed (13 Apr 2026 audit):**
-- NobleProg split into 2 entries — `NOBLEPROG (UK) LTD` (domain: `gpa.gov.uk`) and `NobleProg (UK) Ltd` (domain: `companieshouse.gov.uk`). History split, neither shows NobleProg's real domain.
-- QA Ltd — **3 separate entries** (`qa.com` nowhere, domains: `astraappivate.co.uk`, `baesystems.com`, `fujitsu.com`)
-- Frazer-Nash Consultancy — **3 entries** (same domain, name casing/punctuation varies)
-- LearnQuest s.r.o — **2 entries** (domains: `capgemini.com`, `ibm.com`)
-- BAgile Limited / Bagile Limited — **2 entries**
-- BHF / bhf.org.uk — **2 entries**
-- JISC / Jisc — **2 entries**
-- 1inch — **3 entries**
-- Blank org name `""` — **323 enrolments** (largest "org") — students not matched to any org
-- Several orgs with `gmail.com` or irrelevant domains
+**Problem:** Widespread org data quality issues from auto-detect matching student email domains instead of billing company domains. Training resellers (NobleProg, QA Ltd etc.) created duplicate entries.
 
 | # | Item | Size | Status |
 |---|------|------|--------|
-| O1 | Add `primary_domain` field to organisations table — manually set, overrides auto-detect | S | **DONE** (V46 migration) |
-| O2 | Seed primary domains for known partners: NobleProg, QA, Knowledge Train, LearnQuest, Indicia, K21, Invensis, etc. + expand aliases | S | **DONE** (V46 migration) |
-| O3 | Organisation merge tool in portal settings — pick primary org, merge duplicates into it (move all enrolment org references) | L | Deferred |
-| O4 | Fix org list query — LEFT JOIN against organisations aliases for canonical names, use primary_domain, filter blanks | M | **DONE** (OrganisationQueries.cs rewrite) |
-| O5 | Organisation detail page — show `primaryDomain`, allow admin to override it | S | |
-| O6 | Data cleanup script — merge known duplicates (NobleProg ×2, QA ×3, Frazer-Nash ×3, etc.) | M | |
+| O1 | `primary_domain` field on organisations table | S | **DONE** (V53) |
+| O2 | Seed primary domains for known partners + expand aliases | S | **DONE** (V53, V54) |
+| O3 | Organisation merge tool in portal settings | L | Deferred |
+| O4 | Fix org list query — alias-based canonical names, filter blanks | M | **DONE** |
+| O5 | Organisation detail — show and edit `primaryDomain` + aliases | S | **DONE** |
+| O6 | Data cleanup — merge known duplicates (QA ×3, Frazer-Nash ×3, etc.) | M | Partially done (V54) — QA and Frazer-Nash still split |
 
-**Definition of done:** NobleProg shows as one entry with domain `nobleprog.com`, full course history visible (PSPO Jan, PSPO Mar, PSMA Apr, PSPO-A Jun 25), and clicking from the portal shows correct defaults.
+**Definition of done:** NobleProg shows as one entry with domain `nobleprog.com`, full course history visible.
 
 ---
 
@@ -276,7 +133,7 @@ Items below are prioritised but not yet scheduled.
 | SC1 | Scrum.org sync (Playwright) — course listings, assessments | Course admin | Deferred |
 | N1 | n8n automation — PTN coupon validation on QA orders | Revenue protection | Ready to refine |
 
-### P4 — Technical Health (from architecture review)
+### P4 — Technical Health
 
 | # | Item | Size | Priority |
 |---|------|------|----------|
@@ -300,13 +157,38 @@ Items below are prioritised but not yet scheduled.
 
 ## Completed
 
+### Sprint 26 — "Course Calendar v1" (14 Apr 2026)
+- [x] V56: `planned_courses` table — portal-only scheduling intent
+- [x] V57: `course_publications` table — gateway publication status per course
+- [x] POST/PATCH/DELETE /api/planned-courses — full CRUD for planned courses
+- [x] GET /api/calendar — unified feed: planned + WooCommerce courses with gateway status
+- [x] POST /api/planned-courses/{id}/publish/ecommerce — creates WooCommerce product (FooEvents meta, Zoom host, PSM-A text fix)
+- [x] POST /api/planned-courses/{id}/publish/scrumorg — Playwright automation creates Scrum.org listing
+- [x] Course status model: Planned → Partial Live → Live (gateway-driven)
+- [x] FullCalendar.js month/week view with course blocks (badge images, status colours, trainer initials)
+- [x] Decision deadline `!` indicator, private course `🔒` indicator
+- [x] Side panel: gateway checklist, enrolment bar, Go Live actions, external links
+- [x] Add planned course modal (12 course types, trainer, dates, virtual/onsite)
+- [x] Trainer filter (All / AB / CB), calendar nav in sidebar
+- [x] Calendar list view + status filter (follow-up)
+- [x] Legacy course live-status fix (follow-up)
+- [x] Public schedule API `/api/public/schedule` — partner-facing, excludes private courses, 5-min cache (follow-up)
+- [x] Courses page: remove inline calendar toggle, link to /calendar (follow-up)
+- [x] V58: `service_config` table — DB-stored credentials for WooCommerce, Scrum.org
+- [x] V59: WordPress admin config entry
+- [x] Integrations settings tab in portal — manage WooCommerce + Scrum.org credentials from UI
+- [x] WooCommerce + Scrum.org secrets wired into CI deploy workflow
+
 ### Sprint 25 — "Organisation Data Quality" (13 Apr 2026)
-- [x] V46 migration: `primary_domain` column on organisations table, seeded for all known partners
-- [x] Expanded aliases for NobleProg, QA Ltd, BAgile, BHF, JISC to consolidate duplicate portal entries
-- [x] Rewrote `GetOrganisationsAsync` — LEFT JOIN against organisations aliases for canonical name resolution, blank org filtering
-- [x] Rewrote `CountOrganisationsAsync` — same normalisation for consistent pagination
-- [x] Rewrote `GetOrganisationByNameAsync` — alias-based lookup consolidates all billing_company variations
-- [x] Rewrote `GetOrganisationCourseHistoryAsync` — alias-based lookup for complete course history
+- [x] V53: `primary_domain` column on organisations table, seeded for all known partners
+- [x] V54: Organisation consolidation — fix duplicates, add missing orgs
+- [x] V55: Backfill 97 historical private course records from Xero
+- [x] Expanded aliases for NobleProg, QA Ltd, BAgile, BHF, JISC
+- [x] Rewrote `GetOrganisationsAsync` — alias-based canonical name resolution, blank org filtering
+- [x] Configure organisation in portal: edit aliases and primary domain
+- [x] Dynamic year filter on org list and org detail pages
+- [x] Surface backfilled private courses in org course history
+- [x] Attendee slide-over on org course history rows
 
 ### Sprint 21 extras (2 Apr 2026)
 - [x] Trainers table + API + settings UI + dropdown on course panels
@@ -315,7 +197,7 @@ Items below are prioritised but not yet scheduled.
 - [x] 5 critical architecture fixes (usage tracking, Xero async, SMTP throw, pageSize cap, webhook null)
 - [x] UX quick wins: split info cards, smart primary button, capacity bar, contextual actions, favicon
 
-### Sprint 20 — "Complete the Toolkit" (Completed 2 Apr 2026)
+### Sprint 20 — "Complete the Toolkit" (2 Apr 2026)
 - [x] Course Contacts section for private courses (admin/organiser)
 - [x] Auto-detect organisation from email domain
 - [x] Company as 4th column in paste attendee format
@@ -324,7 +206,7 @@ Items below are prioritised but not yet scheduled.
 - [x] Template preview pane (Source/Preview toggle)
 - [x] CI versioning fix (dev vs latest Docker tags)
 
-### Sprint 19 — "Private Course Polish" (Completed 2 Apr 2026)
+### Sprint 19 — "Private Course Polish" (2 Apr 2026)
 - [x] Edit private course details (slide-over panel)
 - [x] Remove attendee from private course
 - [x] Hide Transfer/Refund on private courses
@@ -333,53 +215,14 @@ Items below are prioritised but not yet scheduled.
 - [x] Over-capacity visual warning
 - [x] Bug fixes: d-away count, cancelled-as-running (ETL guard), template editor visibility
 
-### Sprint 18 — "Complete the Email Loop" (Completed 2 Apr 2026)
+### Sprint 18 — "Complete the Email Loop" (2 Apr 2026)
 - [x] SMTP config for production
 - [x] Seed 12 post-course templates (all course types)
 - [x] Template editor UI in portal settings
 - [x] MCP tools (update_student, send_post_course_email)
 - [x] Monitoring API: expose course status
 
-### Sprint 17 — "Calendar Enhancement & Visual Identity" (Completed 2 Apr 2026)
-- [x] Fix cancelled courses showing as "Running" on dashboard
-- [x] Course colour system (scrum.org badge colours)
-- [x] Calendar tile redesign (left border, trainer circle, enrolments, multi-day)
-- [x] Trainer filter (AB/CB/Both)
-- [x] Dashboard 5-day week strip with navigation
-- [x] Cancelled courses toggle (hidden by default)
-- [x] Fix "d away" interpolation bug
-- [x] Fix "publish" status badge
-
----
-
-## Completed
-
-### Sprint 20 — "Complete the Toolkit" (Completed 2 Apr 2026)
-- [x] Course Contacts section for private courses (admin/organiser)
-- [x] Auto-detect organisation from email domain
-- [x] Company as 4th column in paste attendee format
-- [x] Inline List/Calendar toggle on courses page
-- [x] Format indicator (V/F2F) on calendar tiles
-- [x] Template preview pane (Source/Preview toggle)
-- [x] CI versioning fix (dev vs latest Docker tags)
-
-### Sprint 19 — "Private Course Polish" (Completed 2 Apr 2026)
-- [x] Edit private course details (slide-over panel)
-- [x] Remove attendee from private course
-- [x] Hide Transfer/Refund on private courses
-- [x] Simplified attendee table for private (no Org/Country)
-- [x] Client organisation parsed from title
-- [x] Over-capacity visual warning
-- [x] Bug fixes: d-away count, cancelled-as-running (ETL guard), template editor visibility
-
-### Sprint 18 — "Complete the Email Loop" (Completed 2 Apr 2026)
-- [x] SMTP config for production
-- [x] Seed 12 post-course templates (all course types)
-- [x] Template editor UI in portal settings
-- [x] MCP tools (update_student, send_post_course_email)
-- [x] Monitoring API: expose course status
-
-### Sprint 17 — "Calendar Enhancement & Visual Identity" (Completed 2 Apr 2026)
+### Sprint 17 — "Calendar Enhancement & Visual Identity" (2 Apr 2026)
 - [x] Fix cancelled courses showing as "Running" on dashboard
 - [x] Course colour system (scrum.org badge colours)
 - [x] Calendar tile redesign (left border, trainer circle, enrolments, multi-day)
