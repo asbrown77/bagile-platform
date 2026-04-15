@@ -49,6 +49,9 @@ async function apiRequest<T>(path: string, apiKey: string, options?: { method?: 
       }
       throw new Error(`API error: ${res.status}`);
     }
+    if (res.status === 204 || res.headers.get("content-length") === "0") {
+      return undefined as unknown as T;
+    }
     return res.json();
   } finally {
     clearTimeout(timer);
