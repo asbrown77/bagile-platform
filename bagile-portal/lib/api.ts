@@ -30,6 +30,14 @@ async function apiRequest<T>(path: string, apiKey: string, options?: { method?: 
       signal: controller.signal,
     });
     if (!res.ok) {
+      if (res.status === 401) {
+        // API key is invalid or revoked — clear auth and redirect to login
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("bagile_api_key");
+          window.location.replace("/login");
+        }
+        throw new Error("API error: 401");
+      }
       if (res.status >= 500) {
         try {
           const body = await res.json();

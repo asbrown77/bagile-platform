@@ -12,7 +12,12 @@ export default function AuthenticatedLayout({ children }: { children: React.Reac
   const [atRiskCourses, setAtRiskCourses] = useState(0);
 
   useEffect(() => {
-    if (!apiKey) return; // null (loading) or "" (missing) — both skip
+    if (apiKey === "") {
+      // No API key stored — send to login
+      window.location.replace("/login");
+      return;
+    }
+    if (!apiKey) return; // null = still loading from localStorage
 
     // Load badge counts for sidebar
     getPendingTransfers(apiKey)
