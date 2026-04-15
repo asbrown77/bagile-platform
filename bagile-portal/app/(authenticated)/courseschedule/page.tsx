@@ -884,7 +884,7 @@ function CalendarContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [trainerFilter, setTrainerFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("active");
   const [typeFilter, setTypeFilter] = useState<"all" | "public" | "private">(() => {
     const t = searchParams.get("type");
     return t === "private" || t === "public" ? t : "all";
@@ -965,7 +965,8 @@ function CalendarContent() {
         const initials = e.trainerInitials || trainerInitials(e.trainerName);
         if (initials !== trainerFilter) return false;
       }
-      if (statusFilter !== "all" && e.status !== statusFilter) return false;
+      if (statusFilter === "active" && e.status === "cancelled") return false;
+      if (statusFilter !== "all" && statusFilter !== "active" && e.status !== statusFilter) return false;
       if (typeFilter === "public" && e.isPrivate) return false;
       if (typeFilter === "private" && !e.isPrivate) return false;
       return true;
@@ -1191,6 +1192,13 @@ function CalendarContent() {
         {/* Right: status filter (doubles as legend) */}
         <div className="flex items-center gap-2 flex-wrap">
           <button
+            onClick={() => setStatusFilter("active")}
+            className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors
+              ${statusFilter === "active" ? "bg-brand-600 text-white border-brand-600" : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"}`}
+          >
+            Active
+          </button>
+          <button
             onClick={() => setStatusFilter("all")}
             className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors
               ${statusFilter === "all" ? "bg-brand-600 text-white border-brand-600" : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"}`}
@@ -1205,7 +1213,7 @@ function CalendarContent() {
           ].map(({ key, colour, label }) => (
             <button
               key={key}
-              onClick={() => setStatusFilter(statusFilter === key ? "all" : key)}
+              onClick={() => setStatusFilter(statusFilter === key ? "active" : key)}
               className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border font-medium transition-colors
                 ${statusFilter === key ? "bg-white font-semibold" : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"}`}
               style={statusFilter === key ? { color: colour, borderColor: colour } : {}}
