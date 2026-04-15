@@ -45,6 +45,9 @@ const COURSE_NAMES: Record<string, string> = {
   PSFS:   "Professional Scrum Facilitation Skills",
   APSSD:  "Applying Professional Scrum for Software Development",
   APS:    "Applying Professional Scrum",
+  ICP:    "ICAgile Certified Professional",
+  ICPATF: "ICAgile Agile Team Facilitation",
+  ICPACC: "ICAgile Agile Coaching Certification",
 };
 
 export function getCourseDisplayName(courseType: string): string {
@@ -68,6 +71,9 @@ const CODE_DISPLAY: Record<string, string> = {
   PSFS:   "PSFS",
   APSSD:  "APS-SD",
   APS:    "APS",
+  ICP:    "ICP",
+  ICPATF: "ICP-ATF",
+  ICPACC: "ICP-ACC",
 };
 
 export function getCourseCodeDisplay(courseType: string): string {
@@ -160,6 +166,7 @@ export function getApplicableGateways(courseType: string, isPrivate: boolean): s
 const KNOWN_COURSE_TYPES = new Set([
   "PSM", "PSMO", "PSMAI", "PSMA", "PSPO", "PSPOAI", "PSPOA",
   "PSK", "PALE", "PAL", "PSU", "PSFS", "EBM", "PALEBM", "APS", "APSSD",
+  "ICP", "ICPATF", "ICPACC",
 ]);
 
 /**
@@ -200,4 +207,7 @@ export const COURSE_TYPE_OPTIONS = [
   { value: "APSSD", label: "APS-SD" },
   { value: "PSFS", label: "PSFS" },
   { value: "PSU", label: "PSU" },
+  { value: "ICP", label: "ICP" },
+  { value: "ICPATF", label: "ICP-ATF" },
+  { value: "ICPACC", label: "ICP-ACC" },
 ];

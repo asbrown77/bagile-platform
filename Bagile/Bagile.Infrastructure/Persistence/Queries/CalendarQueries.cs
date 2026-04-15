@@ -244,6 +244,7 @@ public class CalendarQueries : ICalendarQueries
     {
         "PSM", "PSMO", "PSMAI", "PSMA", "PSPO", "PSPOAI", "PSPOA",
         "PSK", "PALE", "PAL", "PSU", "PSFS", "EBM", "PALEBM", "APS", "APSSD",
+        "ICP", "ICPATF", "ICPACC",
     };
 
     /// <summary>
