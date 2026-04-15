@@ -13,6 +13,7 @@ import {
   addPrivateAttendees,
   getScheduleConflicts,
   getTrainers,
+  getCourseDefinitions,
   AttendeeInput,
   ScheduleConflict,
   Trainer,
@@ -42,12 +43,9 @@ const COURSE_CODES = [
   "ICP", "ICPATF", "ICPACC",
 ];
 
-/** Default duration in days for each course type (determines auto end date on create). */
-const COURSE_DURATIONS: Record<string, number> = {
-  PSM: 2, PSPO: 2, PSK: 2, PALE: 2, PALEBM: 1, PSFS: 1, APS: 2, APSSD: 3, PSU: 2,
-  PSMAI: 2, PSPOAI: 2, PSPOA: 2, PSMA: 2,
-  PSMPO: 3,
-  ICP: 2, ICPATF: 2, ICPACC: 3,
+/** Fallback durations if API hasn't loaded yet. */
+const FALLBACK_DURATIONS: Record<string, number> = {
+  PALEBM: 1, PSFS: 1, APSSD: 3, PSMPO: 3,
 };
 
 function addDays(dateStr: string, days: number): string {
@@ -102,6 +100,7 @@ export function PrivateCourseForm({ mode, course, apiKey, onSuccess, onCancel }:
   const [endDate, setEndDate] = useState(toDateInput(course?.endDate ?? course?.startDate));
   const [trainerName, setTrainerName] = useState<string | undefined>(course?.trainerName ?? undefined);
   const [trainers, setTrainers] = useState<Trainer[]>([]);
+  const [courseDurations, setCourseDurations] = useState<Record<string, number>>(FALLBACK_DURATIONS);
 
   // ── Commercial ────────────────────────────────────────────────────────────
 
@@ -172,6 +171,13 @@ export function PrivateCourseForm({ mode, course, apiKey, onSuccess, onCancel }:
         }
       })
       .catch(() => {});
+    getCourseDefinitions(apiKey)
+      .then((defs) => {
+        const map: Record<string, number> = { ...FALLBACK_DURATIONS };
+        for (const d of defs) map[d.code.toUpperCase().replace(/[-_\s]/g, "")] = d.durationDays;
+        setCourseDurations(map);
+      })
+      .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiKey]);
 
@@ -192,9 +198,9 @@ export function PrivateCourseForm({ mode, course, apiKey, onSuccess, onCancel }:
   // Auto-set end date from course type duration (create mode only)
   useEffect(() => {
     if (isEdit || !startDate) return;
-    const duration = COURSE_DURATIONS[courseCode.toUpperCase()] ?? 2;
+    const duration = courseDurations[courseCode.toUpperCase()] ?? 2;
     setEndDate(addDays(startDate, duration - 1));
-  }, [isEdit, courseCode, startDate]);
+  }, [isEdit, courseCode, startDate, courseDurations]);
 
   // Auto-generate reference
   useEffect(() => {
