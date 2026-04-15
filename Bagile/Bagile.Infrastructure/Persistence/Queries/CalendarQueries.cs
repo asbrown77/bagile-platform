@@ -74,7 +74,7 @@ public class CalendarQueries : ICalendarQueries
 
         return courses.Select(c =>
         {
-            var applicableGateways = GatewayConfig.GetGatewaysForCourseType(c.CourseType);
+            var applicableGateways = GatewayConfig.GetGatewaysForCourseType(c.CourseType, c.IsPrivate);
             var coursePubs = pubs[c.Id].ToList();
 
             var gateways = applicableGateways.Select(g =>
@@ -163,7 +163,7 @@ public class CalendarQueries : ICalendarQueries
         return courses.Select(c =>
         {
             var courseType = ExtractCourseType(c.Sku);
-            var applicableGateways = GatewayConfig.GetGatewaysForCourseType(courseType);
+            var applicableGateways = GatewayConfig.GetGatewaysForCourseType(courseType, isPrivate: !c.IsPublic);
             var coursePubs = pubs[c.Id].ToList();
 
             // Legacy WooCommerce courses pre-date the publication tracking system.
@@ -239,9 +239,15 @@ public class CalendarQueries : ICalendarQueries
         return "partial_live";
     }
 
+    // Compound course type prefixes: SKU starts with two hyphen-separated segments
+    // that together form the course type code. E.g. "APS-SD-..." => "APSSD".
+    private static readonly HashSet<string> CompoundTypePrefixes =
+        new(StringComparer.OrdinalIgnoreCase) { "APSSD" };
+
     /// <summary>
     /// Extract course type prefix from SKU. E.g. "PSPO-300326-AB" => "PSPO",
-    /// "PSMAI-280526-CB" => "PSMAI", "PSM-PRIV-150426" => "PSM"
+    /// "PSMAI-280526-CB" => "PSMAI", "PSM-PRIV-150426" => "PSM",
+    /// "APS-SD-150526-AB" => "APSSD"
     /// </summary>
     private static string ExtractCourseType(string sku)
     {
@@ -250,6 +256,15 @@ public class CalendarQueries : ICalendarQueries
 
         // SKU format: COURSETYPE-DDMMYY-INITIALS or COURSETYPE-PRIV-DDMMYY
         var parts = sku.Split('-');
+
+        // Check for compound course type prefix (e.g. APS-SD stored as two segments)
+        if (parts.Length >= 2)
+        {
+            var compound = parts[0] + parts[1];
+            if (CompoundTypePrefixes.Contains(compound))
+                return compound.ToUpperInvariant();
+        }
+
         return parts[0];
     }
 

@@ -8,15 +8,19 @@ public static class GatewayConfig
 {
     private static readonly HashSet<string> ScrumOrgTypes = new(StringComparer.OrdinalIgnoreCase)
     {
-        "PSM", "PSPO", "PSK", "PALE", "EBM", "APSSD",
+        "PSM", "PSPO", "PSK", "PALE", "EBM", "APSSD", "APS",
         "PSMA", "PSPOA", "PSMAI", "PSPOAI"
     };
 
     /// <summary>
     /// Returns the list of gateway names applicable to a given course type.
+    /// Private courses have no public gateways — they are pre-confirmed B2B bookings.
     /// </summary>
-    public static IReadOnlyList<string> GetGatewaysForCourseType(string courseType)
+    public static IReadOnlyList<string> GetGatewaysForCourseType(string courseType, bool isPrivate = false)
     {
+        if (isPrivate)
+            return Array.Empty<string>();
+
         if (string.IsNullOrWhiteSpace(courseType))
             return new[] { "ecommerce" };
 
