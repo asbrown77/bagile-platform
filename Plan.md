@@ -16,52 +16,35 @@ _"I can see revenue, partner value, course demand, and make scheduling decisions
 
 ## Sprint Queue
 
-*All sprints through 26 complete. Sprint 21 pre-course email compose flow built and tested (Bristol PSM 27 Apr ✓).*
+*All sprints through 29 complete. Sprint 29: Course Schedule rename, Private Courses page, API fixes, badge management, mobile polish.*
 
 ---
 
-### Sprint 28 — "Unified Course Hub"
-**Goal:** The calendar becomes the single place for all course management. Plan, draft, publish, and import courses — public and private — without navigating to a second page.
+### Sprint 30 — "UX Polish" _(next up)_
 
-**We'll know it worked when:** Alex opens `/calendar`, creates a new PSM planned course, edits the date, publishes to WooCommerce in one click, adds a private course from the same screen, and imports a batch of planned courses from a CSV — all without visiting `/courses`.
+UX audit completed 15 Apr 2026. Full report: `UX_AUDIT.html` in repo root.
+
+**Quick wins (1 session):**
 
 | # | Item | Size | Status |
 |---|------|------|--------|
-| **Create & Edit** | | | |
-| 1 | Add Course modal: Public/Private toggle — Private skips Planned state, creates directly live | S | DONE |
-| 2 | Edit planned course from side panel — reuse modal, pre-fill fields, PATCH on submit | S | DONE |
-| 3 | Trainer filter: load dynamically from DB instead of hardcoded AB/CB strings | XS | DONE |
-| **List view polish** | | | |
-| 4 | List view: add search + date range filters (parity with Courses page) | S | DONE |
-| 5 | Retire `/courses` list — redirect to `/calendar?view=list`, preserve query params | M | DONE |
-| **Import / Export** | | | |
-| 6 | `POST /api/planned-courses/bulk` — accept array, validate per-row, return per-row result | S | DONE |
-| 7 | CSV import UI: upload → preview table → confirm → bulk create | M | DONE |
-| 8 | CSV export: download all planned + live courses as CSV | S | DONE |
-| 9 | MCP tool: `create_planned_course` (single and bulk, callable from Claude) | S | DONE |
+| U1 | Gateway checklist tick → clickable link to published page | XS | **DONE** |
+| U2 | Dashboard: reorder — week strip + at-risk before KPI cards | S | READY |
+| U3 | Sidebar: move at-risk badge from /courses to /courseschedule | XS | READY |
+| U4 | Dashboard: fix "View all" links → /courseschedule?view=list | XS | READY |
+| U5 | Remove "draft" from Badge.tsx statusBadge map | XS | READY |
+| U6 | Separate "Decision due" legend from filter pills | XS | READY |
+| U7 | Side panel: move Edit button to SlideOver header (add actions prop) | S | READY |
+| U8 | Promote "Publish →" to a proper Button for unpublished gateways | S | READY |
+| U9 | Empty week-strip cells → link to /courseschedule (add + affordance on hover) | S | READY |
+| U10 | PageHeader title: text-xl → text-2xl | XS | READY |
 
-**CSV format:** `courseType, startDate (YYYY-MM-DD), endDate, trainer, isVirtual (true/false), venue, notes` — one header row, one course per row.
-
-### 3 Amigos — Unified Course Hub
-
-**Tester:**
-- Creating a private course from Calendar must behave identically to old Courses page flow
-- Editing a planned course must block courseType change if any gateway is already published
-- CSV import: bad rows rejected with per-row errors, preview shown before committing
-- Redirect from `/courses` must preserve query params (e.g. `/courses?type=PSM` → `/calendar?type=PSM`)
-- Trainer filter must update automatically when a trainer is added in Settings
-
-**Dev:**
-- Private course creation: call existing private course endpoint (not planned-courses) — same logic, moved into Add Course modal
-- Edit modal: reuse `AddCourseModal`, pass existing values as props, switch POST → PATCH on submit
-- Bulk endpoint: validate each row individually, partial imports allowed (return array of `{index, success, error}`)
-- Redirect: Next.js `redirect()` in `/courses/page.tsx`, not a link
-
-**PO:**
-- The word is **Planned** — not "draft". Keep consistent everywhere in UI copy.
-- Private courses skip Planned state — they go straight to live (pre-confirmed bookings)
-- The `/courses/[id]` detail pages stay untouched — only the list is retired
-- MCP bulk create is for importing a trainer's drafted schedule (e.g. Chris sends a spreadsheet)
+**Structural (sprint-sized, plan separately):**
+- Dashboard: operator-first layout — KPI cards to Revenue page, dashboard = cockpit
+- Sidebar: merge Course Schedule + Private Courses into cleaner nav structure
+- Side panel: state-driven layout (Planned → big Publish CTA; Live → enrolment hero)
+- Calendar: "Next up" context strip above calendar
+- Payment visibility: when Xero re-integrates, payment status in attendee table + side panel
 
 ---
 
@@ -73,7 +56,6 @@ _After v1 is live and used for a full month._
 - IC Agile gateway publish automation
 - Drag-to-reschedule for planned courses
 - Monthly revenue total in calendar footer
-- List view (table) for dense weeks ← already done as part of Sprint 26 follow-up
 - Mobile responsive calendar
 
 ---
@@ -95,7 +77,7 @@ _After v1 is live and used for a full month._
 
 ---
 
-### Sprint 29 — "UX Polish" _(next up)_
+### Sprint 30 — "UX Polish" _(next up)_
 
 UX audit completed 15 Apr 2026. Full report: `UX_AUDIT.html` in repo root.
 
@@ -103,20 +85,20 @@ UX audit completed 15 Apr 2026. Full report: `UX_AUDIT.html` in repo root.
 
 | # | Item | Size | Status |
 |---|------|------|--------|
-| U1 | Gateway checklist tick → clickable link to published page | XS | **DONE** (Sprint 28 follow-up) |
+| U1 | Gateway checklist tick → clickable link to published page | XS | **DONE** |
 | U2 | Dashboard: reorder — week strip + at-risk before KPI cards | S | READY |
-| U3 | Sidebar: move at-risk badge from /courses to /calendar; remove duplicate nav item | XS | READY |
-| U4 | Dashboard: fix "View all" links → /calendar?view=list | XS | READY |
+| U3 | Sidebar: move at-risk badge to /courseschedule | XS | READY |
+| U4 | Dashboard: fix "View all" links → /courseschedule?view=list | XS | READY |
 | U5 | Remove "draft" from Badge.tsx statusBadge map | XS | READY |
-| U6 | Separate "Decision due" legend from filter pills (not interactive, shouldn't look it) | XS | READY |
+| U6 | Separate "Decision due" legend from filter pills | XS | READY |
 | U7 | Side panel: move Edit button to SlideOver header (add actions prop) | S | READY |
 | U8 | Promote "Publish →" to a proper Button for unpublished gateways | S | READY |
-| U9 | Empty week-strip cells → link to /calendar (add + affordance on hover) | S | READY |
+| U9 | Empty week-strip cells → link to /courseschedule (add + affordance on hover) | S | READY |
 | U10 | PageHeader title: text-xl → text-2xl | XS | READY |
 
 **Structural (sprint-sized, plan separately):**
 - Dashboard: operator-first layout — KPI cards to Revenue page, dashboard = cockpit
-- Sidebar: merge Calendar + Courses into single nav entry
+- Sidebar: tighten Course Schedule + Private Courses nav grouping
 - Side panel: state-driven layout (Planned → big Publish CTA; Live → enrolment hero)
 - Calendar: "Next up" context strip above calendar
 - Payment visibility: when Xero re-integrates, payment status in attendee table + side panel
@@ -126,6 +108,18 @@ UX audit completed 15 Apr 2026. Full report: `UX_AUDIT.html` in repo root.
 ## Pull Backlog
 
 Items below are prioritised but not yet scheduled.
+
+### P0 — Private Course Quoting Workflow _(future)_
+
+When an org requests a private course, generate a quote automatically based on:
+- Course type (affects trainer rate, certification fees)
+- Number of attendees
+- Format: virtual vs in-person
+- Location: UK vs international (additional travel/logistics cost)
+
+Build as an extension of the existing "Create Private Course" flow — add a "Generate Quote" step before confirming the booking. Output: PDF or email quote with pricing breakdown.
+
+Data model is already ready (`format_type`, `venue_address`, `capacity`, `price` on `course_schedules`). Missing: pricing rules table and quote template.
 
 ### P1 — Organisation Data Quality
 
@@ -184,6 +178,33 @@ Items below are prioritised but not yet scheduled.
 ---
 
 ## Completed
+
+### Sprint 29 — "Course Schedule + Private Courses Polish" (15 Apr 2026)
+- [x] Renamed Calendar → Course Schedule throughout; URL `/calendar` → `/courseschedule` (redirect in place)
+- [x] `/private-courses` — dedicated Private Courses list page with Create button, badge images, status badges
+- [x] API 500 fix: `ArgumentOutOfRangeException` from NULL `start_date` rows — SQL `IS NOT NULL` guard + `SafeAddDays` helper
+- [x] APS-SD badge fix: `ExtractCourseType` now handles compound SKU prefixes (e.g. `APS-SD-...` → `APSSD`)
+- [x] Gateway fix: private courses correctly show no gateways in both frontend (`calendarHelpers.ts`) and backend (`GatewayConfig.cs`)
+- [x] `extractCourseTypeFromSku()` helper — extracts clean type from WooCommerce SKU for badge/display on Private Courses page
+- [x] Status field on private course edit — status dropdown in Edit panel; fixes incorrectly-cancelled courses without a migration
+- [x] V60: `badge_url` column on `course_definitions` table; seeded for 12 known course types
+- [x] `GET /api/course-definitions` + `PATCH /api/course-definitions/{code}/badge` — manage badge URLs via API
+- [x] Settings → Courses tab: `CourseDefsEditor` — view all course types, edit badge URLs inline
+- [x] `ClientOrganisationName` surfaced on `CourseScheduleItem` (LEFT JOIN org, GROUP BY fix)
+- [x] Mobile responsive: table column hiding (`hidden sm/md:table-cell`), header button text wrapping, skeleton grid fix
+- [x] `confirmed` status added to private course status badge map
+- [x] ETL architecture confirmed safe: WooCommerce upsert conflicts on `(source_system, source_product_id)` — portal courses (`source_system='portal'`) can never be overwritten by WooCommerce ETL
+
+### Sprint 28 — "Unified Course Hub" (14 Apr 2026)
+- [x] Add Course modal: Public/Private toggle — Private skips Planned state, creates directly confirmed
+- [x] Edit planned course from side panel — reuse modal, pre-fill fields, PATCH on submit
+- [x] Trainer filter: load dynamically from DB (`GET /api/trainers`) — no more hardcoded AB/CB
+- [x] List view: search + date range filters (Upcoming / year / All)
+- [x] Retire `/courses` list — redirect to `/calendar?view=list`; `/courses/[id]` detail pages untouched
+- [x] `POST /api/planned-courses/bulk` — per-row validation, partial imports, `{index, success, id?, error?}` response
+- [x] CSV import UI: upload → preview table → confirm → bulk create
+- [x] CSV export: download all visible courses as CSV
+- [x] MCP tool: `create_planned_course` (single + bulk)
 
 ### Sprint 26 — "Course Calendar v1" (14 Apr 2026)
 - [x] V56: `planned_courses` table — portal-only scheduling intent
