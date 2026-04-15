@@ -16,6 +16,7 @@ const BADGE_MAP: Record<string, string> = {
   EBM: "PAL-EBM.png",
   PSU: "PSU.png",
   PSFS: "PSFS.png",
+  APSSD: "APS-SD.png",
 };
 
 export function getBadgeSrc(courseType: string): string | null {

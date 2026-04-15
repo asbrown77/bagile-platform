@@ -112,7 +112,7 @@ function CourseBlock({ event }: { event: CalendarEvent; compact?: boolean }) {
 
       {/* Private indicator */}
       {event.isPrivate && (
-        <Lock className="w-3 h-3 text-gray-400 absolute top-0.5 right-0.5" />
+        <Lock className="w-3 h-3 text-amber-500 absolute top-0.5 right-0.5" />
       )}
 
       {/* Deadline urgent dot */}
@@ -720,7 +720,7 @@ function CourseListRow({ event, onClick }: { event: CalendarEvent; onClick: () =
       <td className="px-3 py-3 min-w-[80px]">
         <div className="flex items-center gap-1.5">
           <span className="text-sm font-semibold text-gray-800">{codeDisplay}</span>
-          {event.isPrivate && <Lock className="w-3 h-3 text-gray-400" />}
+          {event.isPrivate && <Lock className="w-3 h-3 text-amber-500" />}
         </div>
       </td>
       {/* Trainer avatar */}
