@@ -177,7 +177,7 @@ public class CourseScheduleRepository : ICourseScheduleRepository
 
     public async Task UpdatePrivateCourseAsync(long id, UpdatePrivateCourseFields f)
     {
-        // Status is optional — only update it when explicitly provided
+        // Status and Sku are optional — only update them when explicitly provided
         var sql = @"
             UPDATE bagile.course_schedules
             SET name                   = @Name,
@@ -193,6 +193,7 @@ public class CourseScheduleRepository : ICourseScheduleRepository
                 meeting_id             = @MeetingId,
                 meeting_passcode       = @MeetingPasscode,
                 notes                  = @Notes,"
+            + (f.Sku != null ? " sku = @Sku," : "")
             + (f.Status != null ? " status = @Status," : "") + @"
                 last_synced            = now()
             WHERE id = @Id
@@ -216,6 +217,7 @@ public class CourseScheduleRepository : ICourseScheduleRepository
             f.MeetingPasscode,
             f.Notes,
             f.Status,
+            f.Sku,
         });
     }
 

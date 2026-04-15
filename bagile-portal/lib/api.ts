@@ -897,6 +897,7 @@ export async function updateStudent(
 
 export interface UpdatePrivateCourseRequest {
   name: string;
+  courseCode?: string;
   trainerName?: string;
   startDate: string;
   endDate: string;

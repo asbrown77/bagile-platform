@@ -19,6 +19,7 @@ import {
   OrgSummary,
 } from "@/lib/api";
 import { generateCourseName, generateInvoiceRef } from "@/lib/privateCourseHelpers";
+import { extractCourseTypeFromSku } from "@/lib/calendarHelpers";
 import { RotateCcw, Trash2, UserPlus } from "lucide-react";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -68,7 +69,10 @@ export function PrivateCourseForm({ mode, course, apiKey, onSuccess, onCancel }:
 
   // ── Course identity ───────────────────────────────────────────────────────
 
-  const [courseCode, setCourseCode] = useState(course?.courseCode ?? "PSM");
+  // In edit mode, extract the clean type code from the full SKU (e.g. "PSM-PRIV-270426" → "PSM")
+  const [courseCode, setCourseCode] = useState(
+    course?.courseCode ? extractCourseTypeFromSku(course.courseCode) : "PSM"
+  );
 
   // In edit mode the format is immutable (not in UpdatePrivateCourseRequest).
   // We keep it in state for the venue/meeting toggle, but don't send it on save.
@@ -214,6 +218,7 @@ export function PrivateCourseForm({ mode, course, apiKey, onSuccess, onCancel }:
       if (isEdit && course) {
         const payload: UpdatePrivateCourseRequest = {
           name: courseName,
+          courseCode,
           trainerName: trainerName || undefined,
           startDate,
           endDate,
@@ -297,21 +302,20 @@ export function PrivateCourseForm({ mode, course, apiKey, onSuccess, onCancel }:
 
       <div>
         <label className="block text-xs font-medium text-gray-700 mb-1">Course Type</label>
-        {isEdit ? (
-          <p className="text-sm text-gray-700 py-2 px-3 bg-gray-50 border border-gray-200 rounded-lg font-mono">
-            {course?.courseCode ?? courseCode}
-          </p>
-        ) : (
-          <select
-            value={courseCode}
-            onChange={(e) => setCourseCode(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
-          >
-            {COURSE_CODES.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-        )}
+        <select
+          value={courseCode}
+          onChange={(e) => {
+            setCourseCode(e.target.value);
+            // Changing course type should regenerate name and reference
+            setRefOverridden(false);
+            setNameOverridden(false);
+          }}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+        >
+          {COURSE_CODES.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
       </div>
 
       {/* ── SCHEDULE ── */}

@@ -23,6 +23,13 @@ public class UpdatePrivateCourseCommandHandler
         UpdatePrivateCourseCommand request,
         CancellationToken ct)
     {
+        // Use InvoiceReference as the new SKU when course type has changed.
+        // InvoiceReference follows the ORG-TYPE-DATE convention and is the canonical
+        // identifier for portal-created courses.
+        var newSku = !string.IsNullOrWhiteSpace(request.InvoiceReference)
+            ? request.InvoiceReference.Trim().ToUpperInvariant()
+            : null;
+
         var fields = new UpdatePrivateCourseFields(
             Name: request.Name,
             TrainerName: request.TrainerName,
@@ -37,7 +44,8 @@ public class UpdatePrivateCourseCommandHandler
             MeetingId: request.MeetingId,
             MeetingPasscode: request.MeetingPasscode,
             Notes: request.Notes,
-            Status: request.Status
+            Status: request.Status,
+            Sku: newSku
         );
 
         await _courseRepo.UpdatePrivateCourseAsync(request.Id, fields);

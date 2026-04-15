@@ -7,6 +7,7 @@ public record UpdatePrivateCourseCommand : IRequest<CourseScheduleDetailDto?>
 {
     public long Id { get; init; }
     public string Name { get; init; } = "";
+    public string? CourseCode { get; init; }
     public string? TrainerName { get; init; }
     public DateTime StartDate { get; init; }
     public DateTime EndDate { get; init; }
