@@ -131,6 +131,7 @@ app.MapXeroOAuthEndpoints();
 app.MapPortalEndpoints();
 app.MapTransferEndpoints();
 app.MapSettingsEndpoints();
+app.MapPublicEndpoints();
 // Revenue + Organisation analytics moved to AnalyticsController (CQRS)
 
 app.Run();
