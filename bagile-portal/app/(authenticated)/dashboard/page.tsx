@@ -3,9 +3,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { useApiKey } from "@/lib/hooks/useApiKey";
 import {
-  MonitoringCourse, RevenueSummary, PendingTransfer, CourseScheduleItem,
+  MonitoringCourse, RevenueSummary, PendingTransfer, CalendarEvent,
   getMonitoring, getRevenueSummary, getPendingTransfers, getDashboardOverview,
-  getCourseSchedules, formatCurrency, formatDate,
+  getCalendarEvents, formatCurrency, formatDate,
 } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -21,7 +21,6 @@ import { getCourseDisplayStatus } from "@/lib/courseStatus";
 import {
   getCourseColour, getTrainerColour, trainerInitials,
 } from "@/lib/courseColours";
-import { loadConfig } from "@/lib/config";
 import { toDateStr, addDays, getWeekStart } from "@/lib/dateUtils";
 
 // ── Calendar helpers ─────────────────────────────────────────────────────────
@@ -33,27 +32,23 @@ const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
 // ── Week strip compact pill component ───────────────────────────────────────
 
 interface WeekPillProps {
-  course: CourseScheduleItem;
-  minEnrolments: number;
+  event: CalendarEvent;
   cellDate: string;
   showCancelled: boolean;
 }
 
-function WeekPill({ course, minEnrolments, cellDate, showCancelled }: WeekPillProps) {
-  const status = getCourseDisplayStatus(course);
-  if (status === "cancelled" && !showCancelled) return null;
+function WeekPill({ event, cellDate, showCancelled }: WeekPillProps) {
+  if (event.status === "cancelled" && !showCancelled) return null;
 
-  const isCancelled = status === "cancelled";
-  const isAtRisk = status === "at risk" || status === "cancel";
-  const isPrivate = course.type === "private";
-  const firstSegment = course.courseCode?.split("-")[0] || "";
-  const borderColour = getCourseColour(course.courseCode || "");
-  const initials = trainerInitials(course.trainerName);
-  const avatarColour = getTrainerColour(initials);
+  const isCancelled = event.status === "cancelled";
+  const courseType = event.courseType;
+  const borderColour = getCourseColour(courseType);
+  const initials = event.trainerInitials || trainerInitials(event.trainerName);
+  const avatarColour = getTrainerColour(initials || "");
 
-  // Multi-day
-  const startStr = (course.startDate || "").split("T")[0];
-  const endStr = (course.endDate || course.startDate || "").split("T")[0];
+  // Multi-day span
+  const startStr = (event.startDate || "").split("T")[0];
+  const endStr = (event.endDate || event.startDate || "").split("T")[0];
   const spanDays = startStr && endStr
     ? Math.round((new Date(endStr).getTime() - new Date(startStr).getTime()) / 86400000) + 1
     : 1;
@@ -61,35 +56,36 @@ function WeekPill({ course, minEnrolments, cellDate, showCancelled }: WeekPillPr
   const dayIndex = cellDate && startStr
     ? Math.round((new Date(cellDate).getTime() - new Date(startStr).getTime()) / 86400000) + 1
     : 1;
-  const isDay1 = dayIndex === 1;
 
-  const enrolDisplay = `${course.currentEnrolmentCount}/${minEnrolments}`;
+  const href = event.id.startsWith("schedule-")
+    ? `/courses/${event.id.replace("schedule-", "")}`
+    : `/courseschedule`;
 
   return (
     <Link
-      href={`/courses/${course.id}`}
-      title={`${course.title} — ${course.currentEnrolmentCount} enrolled${isPrivate ? " (private)" : ""}${isCancelled ? " — CANCELLED" : ""}`}
+      href={href}
+      title={`${courseType} — ${event.enrolmentCount} enrolled${event.isPrivate ? " (private)" : ""}${isCancelled ? " — CANCELLED" : ""}`}
       className={`block rounded border text-[10px] font-medium transition-opacity hover:opacity-80
         bg-white
         ${isCancelled ? "opacity-50" : ""}
-        ${isMultiDay && !isDay1 ? "border-dashed border-gray-200" : "border-gray-200"}`}
+        ${isMultiDay && dayIndex > 1 ? "border-dashed border-gray-200" : "border-gray-200"}`}
       style={{
         borderLeftWidth: 3,
         borderLeftColor: borderColour,
-        borderLeftStyle: isMultiDay && !isDay1 ? "dashed" : "solid",
+        borderLeftStyle: isMultiDay && dayIndex > 1 ? "dashed" : "solid",
       }}
     >
       <div className="px-1 py-0.5 min-w-0">
         <div className="flex items-center gap-0.5 min-w-0">
           <span className={`font-semibold truncate text-gray-800 ${isCancelled ? "line-through" : ""}`}>
-            {isMultiDay ? `${firstSegment} (${dayIndex}/${spanDays})` : firstSegment}
+            {isMultiDay ? `${courseType} (${dayIndex}/${spanDays})` : courseType}
           </span>
-          {isPrivate && (
+          {event.isPrivate && (
             <span className="shrink-0 text-[8px] bg-amber-100 text-amber-700 rounded px-0.5 leading-tight font-bold">P</span>
           )}
         </div>
         <div className="flex items-center gap-0.5 mt-0.5">
-          {course.trainerName && (
+          {event.trainerName && (
             <span
               className="inline-flex items-center justify-center rounded-full text-white font-bold leading-none shrink-0"
               style={{ backgroundColor: avatarColour, width: 12, height: 12, fontSize: 7 }}
@@ -97,8 +93,7 @@ function WeekPill({ course, minEnrolments, cellDate, showCancelled }: WeekPillPr
               {initials}
             </span>
           )}
-          {isAtRisk && <span className="text-amber-500 shrink-0" style={{ fontSize: 8 }}>▲</span>}
-          <span className="text-gray-400 shrink-0">{enrolDisplay}</span>
+          <span className="text-gray-400 shrink-0">{event.enrolmentCount}</span>
         </div>
       </div>
     </Link>
@@ -115,9 +110,8 @@ interface WeekStripProps {
 function WeekStrip({ apiKey, showCancelled }: WeekStripProps) {
   const now = new Date();
   const [weekStart, setWeekStart] = useState(() => getWeekStart(now));
-  const [courses, setCourses] = useState<CourseScheduleItem[]>([]);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const { minEnrolments } = loadConfig();
 
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const todayStr = toDateStr(today);
@@ -134,11 +128,11 @@ function WeekStrip({ apiKey, showCancelled }: WeekStripProps) {
     if (!apiKey) return;
     setLoading(true);
     try {
-      // Fetch Mon–Fri + 1 day buffer each side to catch multi-day courses
-      const from = toDateStr(addDays(weekStart, -1));
-      const to = toDateStr(addDays(weekStart, 6));
-      const result = await getCourseSchedules(apiKey, { from, to, pageSize: 50 });
-      setCourses((result.items || []).filter((c) => c.title && c.startDate));
+      // Extend buffer 6 days back to catch multi-day courses that start the prior week
+      const from = toDateStr(addDays(weekStart, -6));
+      const to = toDateStr(addDays(weekStart, 5)); // Sat (inclusive)
+      const result = await getCalendarEvents(apiKey, from, to);
+      setEvents(result.filter((e) => e.startDate));
     } catch {
       // Non-critical — week strip failing shouldn't break the page
     } finally {
@@ -148,10 +142,10 @@ function WeekStrip({ apiKey, showCancelled }: WeekStripProps) {
 
   useEffect(() => { loadWeekCourses(); }, [loadWeekCourses]);
 
-  function coursesOnDay(dateStr: string): CourseScheduleItem[] {
-    return courses.filter((c) => {
-      const start = (c.startDate || "").split("T")[0];
-      const end = (c.endDate || c.startDate || "").split("T")[0];
+  function eventsOnDay(dateStr: string): CalendarEvent[] {
+    return events.filter((e) => {
+      const start = (e.startDate || "").split("T")[0];
+      const end = (e.endDate || e.startDate || "").split("T")[0];
       return dateStr >= start && dateStr <= end;
     });
   }
@@ -196,7 +190,6 @@ function WeekStrip({ apiKey, showCancelled }: WeekStripProps) {
         {weekDays.map((d, i) => {
           const ds = toDateStr(d);
           const isToday = ds === todayStr;
-          const dayCourses = coursesOnDay(ds);
 
           return (
             <div
@@ -219,16 +212,15 @@ function WeekStrip({ apiKey, showCancelled }: WeekStripProps) {
                 {loading && i === 0 && (
                   <div className="text-[9px] text-gray-400 p-1">Loading…</div>
                 )}
-                {dayCourses.map((c) => (
+                {eventsOnDay(ds).map((e) => (
                   <WeekPill
-                    key={`${c.id}-${ds}`}
-                    course={c}
-                    minEnrolments={minEnrolments}
+                    key={`${e.id}-${ds}`}
+                    event={e}
                     cellDate={ds}
                     showCancelled={showCancelled}
                   />
                 ))}
-                {!loading && dayCourses.length === 0 && (
+                {!loading && eventsOnDay(ds).length === 0 && (
                   <Link
                     href={`/courseschedule?view=list`}
                     className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/cell:opacity-100 transition-opacity"

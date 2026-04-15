@@ -506,8 +506,8 @@ function SidePanel({ event, onClose, onPublish, onCancel, onEdit }: SidePanelPro
           <Badge variant={getStatusBadgeVariant(event.status)} dot>{getStatusLabel(event.status)}</Badge>
         </div>
 
-        {/* Decision deadline */}
-        {event.decisionDeadline && (
+        {/* Decision deadline — not shown for private courses (they're pre-confirmed) */}
+        {event.decisionDeadline && !event.isPrivate && (
           <div>
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Decision Deadline</p>
             <p className={`text-sm ${isDeadlineUrgent(event.decisionDeadline) ? "text-red-600 font-semibold" : "text-gray-700"}`}>
@@ -698,7 +698,7 @@ function CourseListRow({ event, onClick }: { event: CalendarEvent; onClick: () =
       {/* Date */}
       <td className="px-4 py-3 w-52">
         <div className="flex items-center gap-2">
-          {deadlineUrgent && (
+          {deadlineUrgent && !event.isPrivate && (
             <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" title="Decision deadline approaching" />
           )}
           <span className={`text-sm text-gray-700 whitespace-nowrap ${isCancelled ? "line-through" : ""}`}>
@@ -828,7 +828,17 @@ function CourseListView({
               </td>
             </tr>
             {monthEvents.map((e) => (
-              <CourseListRow key={e.id} event={e} onClick={() => onSelect(e)} />
+              <CourseListRow
+                key={e.id}
+                event={e}
+                onClick={() => {
+                  if (e.isPrivate && e.id.startsWith("schedule-")) {
+                    window.location.href = `/courses/${e.id.replace("schedule-", "")}`;
+                  } else {
+                    onSelect(e);
+                  }
+                }}
+              />
             ))}
           </tbody>
         ))}
@@ -1196,7 +1206,12 @@ function CalendarContent() {
             datesSet={handleDatesSet}
             eventClick={(info) => {
               const ext = info.event.extendedProps as FCEventExtended;
-              setSelectedEvent(ext.calendarEvent);
+              const ev = ext.calendarEvent;
+              if (ev.isPrivate && ev.id.startsWith("schedule-")) {
+                window.location.href = `/courses/${ev.id.replace("schedule-", "")}`;
+              } else {
+                setSelectedEvent(ev);
+              }
             }}
             eventContent={(arg) => {
               const ext = arg.event.extendedProps as FCEventExtended;

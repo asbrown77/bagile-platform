@@ -432,40 +432,8 @@ export function PrivateCourseForm({ mode, course, apiKey, onSuccess, onCancel }:
         </div>
       </div>
 
-      {/* ── REFERENCE ── */}
-      <SectionHeader label="Reference" />
-
-      <div>
-        <div className="flex items-center justify-between mb-1">
-          <label className="block text-xs font-medium text-gray-700">Reference</label>
-          {refOverridden && (
-            <button
-              type="button"
-              onClick={() => setRefOverridden(false)}
-              className="flex items-center gap-1 text-xs text-gray-400 hover:text-brand-600"
-            >
-              <RotateCcw className="w-3 h-3" />
-              {isEdit ? "Regenerate from org + date" : "Reset to auto"}
-            </button>
-          )}
-        </div>
-        <input
-          type="text"
-          value={courseRef}
-          onChange={(e) => {
-            setCourseRef(e.target.value);
-            setRefOverridden(true);
-          }}
-          onBlur={(e) => { if (!e.target.value.trim()) setRefOverridden(false); }}
-          placeholder="e.g. PSM-FNC-270426"
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono"
-        />
-        {!isEdit && (
-          <p className="mt-1 text-xs text-gray-400">
-            Generated from course type, org acronym, and start date. This is the primary identifier used everywhere.
-          </p>
-        )}
-      </div>
+      {/* ── DETAILS ── */}
+      <SectionHeader label="Details" />
 
       <div>
         <div className="flex items-center justify-between mb-1">
