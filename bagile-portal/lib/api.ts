@@ -1237,3 +1237,25 @@ export async function setServiceConfig(
     body: { value },
   });
 }
+
+// ── Course Definitions ────────────────────────────────────
+
+export interface CourseDef {
+  id: number;
+  code: string;
+  name: string;
+  durationDays: number;
+  active: boolean;
+  badgeUrl: string | null;
+}
+
+export async function getCourseDefinitions(apiKey: string): Promise<CourseDef[]> {
+  return apiRequest<CourseDef[]>("/api/course-definitions", apiKey);
+}
+
+export async function updateCourseBadgeUrl(apiKey: string, code: string, badgeUrl: string | null): Promise<void> {
+  await apiRequest<void>(`/api/course-definitions/${encodeURIComponent(code)}/badge`, apiKey, {
+    method: "PATCH",
+    body: { badgeUrl },
+  });
+}

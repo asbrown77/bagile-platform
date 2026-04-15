@@ -15,6 +15,7 @@ namespace Bagile.Domain.Entities
         public int DurationDays { get; set; } = 2;
         public decimal? BasePrice { get; set; }
         public bool Active { get; set; } = true;
+        public string? BadgeUrl { get; set; }
     }
 
 }

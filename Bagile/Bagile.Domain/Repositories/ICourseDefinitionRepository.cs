@@ -11,6 +11,7 @@ namespace Bagile.Domain.Repositories
     {
         Task<IEnumerable<CourseDefinition>> GetAllAsync();
         Task<CourseDefinition?> GetByCodeAsync(string code);
+        Task UpdateBadgeUrlAsync(string code, string? badgeUrl);
     }
 
 }

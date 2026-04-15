@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ApiKey, CreateKeyResponse, PortalAuthError, loginWithGoogle, listKeys, createKey, revokeKey, PostCourseTemplate, listPostCourseTemplates, upsertPostCourseTemplate, PreCourseTemplate, getPreCourseTemplates, updatePreCourseTemplate, Trainer, getTrainers, createTrainer, updateTrainer, deleteTrainer, getServiceConfig, setServiceConfig } from "@/lib/api";
+import { ApiKey, CreateKeyResponse, PortalAuthError, loginWithGoogle, listKeys, createKey, revokeKey, PostCourseTemplate, listPostCourseTemplates, upsertPostCourseTemplate, PreCourseTemplate, getPreCourseTemplates, updatePreCourseTemplate, Trainer, getTrainers, createTrainer, updateTrainer, deleteTrainer, getServiceConfig, setServiceConfig, CourseDef, getCourseDefinitions, updateCourseBadgeUrl } from "@/lib/api";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { AlertBanner } from "@/components/ui/AlertBanner";
@@ -12,7 +12,7 @@ import { loadConfig, saveConfig, type PortalConfig } from "@/lib/config";
 
 // ── Tab definitions ───────────────────────────────────────
 
-type Tab = "general" | "post-course" | "pre-course" | "trainers" | "integrations";
+type Tab = "general" | "post-course" | "pre-course" | "trainers" | "integrations" | "courses";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "general",      label: "General" },
@@ -20,6 +20,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "pre-course",   label: "Pre-Course" },
   { id: "trainers",     label: "Trainers" },
   { id: "integrations", label: "Integrations" },
+  { id: "courses",      label: "Courses" },
 ];
 
 // ── Root export (wraps in Suspense for useSearchParams) ───
@@ -358,6 +359,9 @@ function SettingsContent() {
 
       {/* Integrations tab */}
       {activeTab === "integrations" && <IntegrationsEditor />}
+
+      {/* Courses tab */}
+      {activeTab === "courses" && <CourseDefsEditor />}
     </>
   );
 }
@@ -1462,5 +1466,134 @@ function TrainersEditor() {
         </table>
       )}
     </div>
+  );
+}
+
+// ── Course Definitions Editor ─────────────────────────────
+
+function CourseDefsEditor() {
+  const [apiKey, setApiKey] = useState<string>("");
+  const [defs, setDefs] = useState<CourseDef[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const key = localStorage.getItem("bagile_api_key") ?? "";
+    setApiKey(key);
+  }, []);
+
+  const loadDefs = useCallback(async () => {
+    if (!apiKey) return;
+    setLoading(true);
+    try {
+      setDefs(await getCourseDefinitions(apiKey));
+    } catch {
+      // silently skip — api key may not be set yet
+    } finally {
+      setLoading(false);
+    }
+  }, [apiKey]);
+
+  useEffect(() => { loadDefs(); }, [loadDefs]);
+
+  if (!apiKey) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8 text-center max-w-md">
+        <p className="text-sm text-gray-500">Set your API key on the General tab to manage course badges.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="px-5 py-4 border-b border-gray-200">
+        <h2 className="text-sm font-semibold text-gray-900">Course Badge URLs</h2>
+        <p className="text-xs text-gray-500 mt-1">Badge images served from <code>/badges/</code> in the portal. Update the path or enter a full URL.</p>
+      </div>
+      {loading ? (
+        <p className="px-5 py-8 text-sm text-gray-400">Loading...</p>
+      ) : (
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase w-12">Badge</th>
+              <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase w-24">Code</th>
+              <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Name</th>
+              <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase w-20">Duration</th>
+              <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase w-20">Status</th>
+              <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Badge URL</th>
+              <th className="px-4 py-2 w-20"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {defs.map((def) => (
+              <CourseDefRow key={def.code} def={def} apiKey={apiKey} />
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
+function CourseDefRow({ def, apiKey }: { def: CourseDef; apiKey: string }) {
+  const [url, setUrl] = useState(def.badgeUrl ?? "");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+
+  const isDirty = url !== (def.badgeUrl ?? "");
+
+  async function handleSave() {
+    setSaving(true);
+    setError("");
+    try {
+      await updateCourseBadgeUrl(apiKey, def.code, url.trim() || null);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (err: any) {
+      setError(err?.message ?? "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <tr className="border-t border-gray-100 align-middle">
+      <td className="px-4 py-2">
+        {url ? (
+          <img src={url} alt={def.code} className="h-8 w-8 object-contain" />
+        ) : (
+          <div className="h-8 w-8 bg-gray-100 rounded border border-gray-200" />
+        )}
+      </td>
+      <td className="px-4 py-2 font-semibold text-gray-900">{def.code}</td>
+      <td className="px-4 py-2 text-gray-700">{def.name}</td>
+      <td className="px-4 py-2 text-gray-500">{def.durationDays}d</td>
+      <td className="px-4 py-2">
+        {def.active
+          ? <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Active</span>
+          : <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">Inactive</span>
+        }
+      </td>
+      <td className="px-4 py-2">
+        <input
+          type="text"
+          value={url}
+          onChange={(e) => { setUrl(e.target.value); setSaved(false); }}
+          placeholder="/badges/PSM-I.png"
+          className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs font-mono focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+        />
+        {error && <p className="text-xs text-red-500 mt-0.5">{error}</p>}
+      </td>
+      <td className="px-4 py-2">
+        {saved ? (
+          <span className="text-xs text-green-600 font-medium">Saved!</span>
+        ) : (
+          <Button size="sm" onClick={handleSave} disabled={saving || !isDirty}>
+            {saving ? "..." : "Save"}
+          </Button>
+        )}
+      </td>
+    </tr>
   );
 }

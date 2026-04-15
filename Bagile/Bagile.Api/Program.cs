@@ -27,6 +27,7 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 
 // Repositories
 builder.Services.AddSingleton<IRawOrderRepository>(_ => new RawOrderRepository(connectionString));
+builder.Services.AddSingleton<ICourseDefinitionRepository>(_ => new CourseDefinitionRepository(connectionString));
 
 // Register external API clients
 builder.Services.AddHttpClient<XeroAuthSetupService>();
