@@ -16,7 +16,7 @@ _"I can see revenue, partner value, course demand, and make scheduling decisions
 
 ## Sprint Queue
 
-*All sprints through 30 complete. Sprint 31 is UX Polish.*
+*All sprints through 31 complete. Next: structural dashboard and sidebar work.*
 
 ---
 
@@ -60,31 +60,17 @@ _After v1 is live and used for a full month._
 
 ---
 
-### Sprint 31 — "UX Polish" _(next up)_
+### Sprint 32 — "Dashboard & Sidebar Structure" _(next up)_
 
-UX audit completed 15 Apr 2026. Full report: `UX_AUDIT.html` in repo root.
-
-**Quick wins (1 session):**
+Structural work deferred from Sprint 31 UX audit.
 
 | # | Item | Size | Status |
 |---|------|------|--------|
-| U1 | Gateway checklist tick → clickable link to published page | XS | **DONE** |
-| U2 | Dashboard: reorder — week strip + at-risk before KPI cards | S | READY |
-| U3 | Sidebar: move at-risk badge to /courseschedule | XS | READY |
-| U4 | Dashboard: fix "View all" links → /courseschedule?view=list | XS | READY |
-| U5 | Remove "draft" from Badge.tsx statusBadge map | XS | READY |
-| U6 | Separate "Decision due" legend from filter pills | XS | READY |
-| U7 | Side panel: move Edit button to SlideOver header (add actions prop) | S | READY |
-| U8 | Promote "Publish →" to a proper Button for unpublished gateways | S | READY |
-| U9 | Empty week-strip cells → link to /courseschedule (add + affordance on hover) | S | READY |
-| U10 | PageHeader title: text-xl → text-2xl | XS | READY |
-
-**Structural (sprint-sized, plan separately):**
-- Dashboard: operator-first layout — KPI cards to Revenue page, dashboard = cockpit
-- Sidebar: tighten Course Schedule + Private Courses nav grouping
-- Side panel: state-driven layout (Planned → big Publish CTA; Live → enrolment hero)
-- Calendar: "Next up" context strip above calendar
-- Payment visibility: when Xero re-integrates, payment status in attendee table + side panel
+| S1 | Dashboard: operator-first layout — move KPI cards to Revenue page, dashboard = cockpit | M | READY |
+| S2 | Sidebar: tighten Course Schedule + Private Courses nav grouping | XS | READY |
+| S3 | Side panel: state-driven layout (Planned → big Publish CTA; Live → enrolment hero) | M | READY |
+| S4 | Calendar: "Next up" context strip above week view | S | READY |
+| S5 | Payment visibility: payment status in attendee table when Xero re-integrates | M | Blocked by Xero |
 
 ---
 
@@ -165,6 +151,18 @@ Data model is already ready (`format_type`, `venue_address`, `capacity`, `price`
 ### Sprint 30 — "Bug Fix Sprint" (15 Apr 2026)
 - [x] B1: ETL duplicate enrolments — `EnrolmentRepository.UpsertAsync` now matches by `order_id + course_schedule_id`, updates `student_id` in place when email changes (was already fixed in commit `fc2754f`, confirmed working)
 - [x] B2: V61 migration — cancels orphaned duplicate enrolments 1796, 15, 19 on course_schedule_id 130 with audit trail preserved
+
+### Sprint 31 — "UX Polish" (15 Apr 2026)
+- [x] U1: Gateway checklist published tick → clickable link (done earlier)
+- [x] U2: Dashboard reorder — week strip + running/at-risk now appear before KPI cards
+- [x] U3: Sidebar at-risk badge already correctly points to /courseschedule (no change needed)
+- [x] U4: Dashboard "View all" links → /courseschedule?view=list (was /courses)
+- [x] U5: Removed stale "draft" from statusBadge map in Badge.tsx
+- [x] U6: "Decision due" legend already visually separated from filter pills (no change needed)
+- [x] U7: SlideOver gains optional `actions` prop — Edit button moved to panel header
+- [x] U8: Publish gateway button promoted to proper `Button` component
+- [x] U9: Empty week strip cells show + affordance on hover, link to /courseschedule
+- [x] U10: PageHeader title text-xl → text-2xl
 
 ### Sprint 29 — "Course Schedule + Private Courses Polish" (15 Apr 2026)
 - [x] Renamed Calendar → Course Schedule throughout; URL `/calendar` → `/courseschedule` (redirect in place)
