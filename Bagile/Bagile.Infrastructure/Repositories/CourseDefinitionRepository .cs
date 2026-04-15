@@ -36,4 +36,12 @@ public class CourseDefinitionRepository : ICourseDefinitionRepository
             "UPDATE bagile.course_definitions SET badge_url = @badgeUrl WHERE code = @code;",
             new { code, badgeUrl });
     }
+
+    public async Task UpdateDurationAsync(string code, int durationDays)
+    {
+        await using var conn = new NpgsqlConnection(_connStr);
+        await conn.ExecuteAsync(
+            "UPDATE bagile.course_definitions SET duration_days = @durationDays WHERE code = @code;",
+            new { code, durationDays });
+    }
 }

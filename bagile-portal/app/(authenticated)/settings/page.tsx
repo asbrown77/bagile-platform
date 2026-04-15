@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ApiKey, CreateKeyResponse, PortalAuthError, loginWithGoogle, listKeys, createKey, revokeKey, PostCourseTemplate, listPostCourseTemplates, upsertPostCourseTemplate, PreCourseTemplate, getPreCourseTemplates, updatePreCourseTemplate, Trainer, getTrainers, createTrainer, updateTrainer, deleteTrainer, getServiceConfig, setServiceConfig, CourseDef, getCourseDefinitions, updateCourseBadgeUrl } from "@/lib/api";
+import { ApiKey, CreateKeyResponse, PortalAuthError, loginWithGoogle, listKeys, createKey, revokeKey, PostCourseTemplate, listPostCourseTemplates, upsertPostCourseTemplate, PreCourseTemplate, getPreCourseTemplates, updatePreCourseTemplate, Trainer, getTrainers, createTrainer, updateTrainer, deleteTrainer, getServiceConfig, setServiceConfig, CourseDef, getCourseDefinitions, updateCourseBadgeUrl, updateCourseDuration } from "@/lib/api";
 import { getBadgeSrc, extractCourseTypeFromSku } from "@/lib/calendarHelpers";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
@@ -1516,13 +1516,11 @@ function CourseDefsEditor() {
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
             <tr>
-              <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase w-12">Badge</th>
+              <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase w-14">Badge</th>
               <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase w-24">Code</th>
               <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Name</th>
-              <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase w-20">Duration</th>
+              <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase w-24">Days</th>
               <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase w-20">Status</th>
-              <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Badge URL</th>
-              <th className="px-4 py-2 w-20"></th>
             </tr>
           </thead>
           <tbody>
@@ -1537,66 +1535,103 @@ function CourseDefsEditor() {
 }
 
 function CourseDefRow({ def, apiKey }: { def: CourseDef; apiKey: string }) {
-  const [url, setUrl] = useState(def.badgeUrl ?? "");
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState("");
+  const computedBadge = getBadgeSrc(extractCourseTypeFromSku(def.code));
+  const [badgeSrc, setBadgeSrc] = useState(def.badgeUrl || computedBadge || "");
+  const [badgeSaving, setBadgeSaving] = useState(false);
+  const [badgeError, setBadgeError] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
 
-  const isDirty = url !== (def.badgeUrl ?? "");
+  const [duration, setDuration] = useState(def.durationDays);
+  const [editingDuration, setEditingDuration] = useState(false);
+  const [durationSaving, setDurationSaving] = useState(false);
+  const [durationSaved, setDurationSaved] = useState(false);
 
-  async function handleSave() {
-    setSaving(true);
-    setError("");
+  function handleFileRead(file: File) {
+    if (!file.type.startsWith("image/")) { setBadgeError("Please drop an image file"); return; }
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const dataUrl = e.target?.result as string;
+      setBadgeSaving(true);
+      setBadgeError("");
+      try {
+        await updateCourseBadgeUrl(apiKey, def.code, dataUrl);
+        setBadgeSrc(dataUrl);
+      } catch (err: any) {
+        setBadgeError(err?.message ?? "Failed to save badge");
+      } finally {
+        setBadgeSaving(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function handleDurationSave(val: number) {
+    if (val === def.durationDays || val < 1 || val > 10) { setEditingDuration(false); setDuration(def.durationDays); return; }
+    setDurationSaving(true);
     try {
-      await updateCourseBadgeUrl(apiKey, def.code, url.trim() || null);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
-    } catch (err: any) {
-      setError(err?.message ?? "Failed to save");
+      await updateCourseDuration(apiKey, def.code, val);
+      def = { ...def, durationDays: val };
+      setDurationSaved(true);
+      setTimeout(() => setDurationSaved(false), 2000);
     } finally {
-      setSaving(false);
+      setDurationSaving(false);
+      setEditingDuration(false);
     }
   }
 
-  const computedBadge = getBadgeSrc(extractCourseTypeFromSku(def.code));
-  const displaySrc = url || computedBadge;
-
   return (
     <tr className="border-t border-gray-100 align-middle">
+      {/* Badge — drop zone */}
       <td className="px-4 py-2">
-        {displaySrc ? (
-          <img src={displaySrc} alt={def.code} className="h-8 w-8 object-contain" />
-        ) : (
-          <div className="h-8 w-8 bg-gray-100 rounded border border-gray-200" />
-        )}
+        <label
+          className={`relative flex items-center justify-center h-12 w-12 rounded-lg border-2 cursor-pointer transition-colors
+            ${isDragging ? "border-brand-400 bg-brand-50" : "border-dashed border-gray-300 hover:border-brand-400 hover:bg-gray-50"}`}
+          title="Drop or click to upload a badge image"
+          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={(e) => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f) handleFileRead(f); }}
+        >
+          {badgeSaving ? (
+            <span className="text-xs text-gray-400">...</span>
+          ) : badgeSrc ? (
+            <img src={badgeSrc} alt={def.code} className="h-9 w-9 object-contain" />
+          ) : (
+            <span className="text-xs text-gray-400">+</span>
+          )}
+          <input type="file" accept="image/*" className="sr-only"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileRead(f); }} />
+        </label>
+        {badgeError && <p className="text-xs text-red-500 mt-0.5 w-12">{badgeError}</p>}
       </td>
       <td className="px-4 py-2 font-semibold text-gray-900">{def.code}</td>
       <td className="px-4 py-2 text-gray-700">{def.name}</td>
-      <td className="px-4 py-2 text-gray-500">{def.durationDays}d</td>
+      {/* Duration — click to edit */}
+      <td className="px-4 py-2">
+        {editingDuration ? (
+          <input
+            type="number" min={1} max={10} autoFocus
+            value={duration}
+            onChange={(e) => setDuration(Number(e.target.value))}
+            onBlur={() => handleDurationSave(duration)}
+            onKeyDown={(e) => { if (e.key === "Enter") handleDurationSave(duration); if (e.key === "Escape") { setEditingDuration(false); setDuration(def.durationDays); } }}
+            className="w-14 border border-brand-400 rounded px-2 py-1 text-sm text-center focus:outline-none"
+            disabled={durationSaving}
+          />
+        ) : (
+          <button
+            onClick={() => setEditingDuration(true)}
+            className="text-sm text-gray-700 hover:text-brand-600 hover:underline tabular-nums"
+            title="Click to edit duration"
+          >
+            {durationSaved ? <span className="text-green-600">✓ {duration}d</span> : `${duration}d`}
+          </button>
+        )}
+      </td>
       <td className="px-4 py-2">
         {def.active
           ? <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Active</span>
           : <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">Inactive</span>
         }
-      </td>
-      <td className="px-4 py-2">
-        <input
-          type="text"
-          value={url}
-          onChange={(e) => { setUrl(e.target.value); setSaved(false); }}
-          placeholder={computedBadge ?? "/badges/PSM-I.png"}
-          className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs font-mono focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
-        />
-        {error && <p className="text-xs text-red-500 mt-0.5">{error}</p>}
-      </td>
-      <td className="px-4 py-2">
-        {saved ? (
-          <span className="text-xs text-green-600 font-medium">Saved!</span>
-        ) : (
-          <Button size="sm" onClick={handleSave} disabled={saving || !isDirty}>
-            {saving ? "..." : "Save"}
-          </Button>
-        )}
       </td>
     </tr>
   );

@@ -1280,3 +1280,10 @@ export async function updateCourseBadgeUrl(apiKey: string, code: string, badgeUr
     body: { badgeUrl },
   });
 }
+
+export async function updateCourseDuration(apiKey: string, code: string, durationDays: number): Promise<void> {
+  await apiRequest<void>(`/api/course-definitions/${encodeURIComponent(code)}/duration`, apiKey, {
+    method: "PATCH",
+    body: { durationDays },
+  });
+}
