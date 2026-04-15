@@ -33,7 +33,7 @@ public static class PublicEndpoints
         var events = await calendarQueries.GetCalendarEventsAsync(from, to, trainerId: null, ct);
 
         var schedule = events
-            .Where(e => e.Status == "live")
+            .Where(e => e.Status == "live" && !e.IsPrivate)
             .OrderBy(e => e.StartDate)
             .Select(e => new PublicCourseDto
             {
