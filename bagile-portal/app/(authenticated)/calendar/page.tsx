@@ -853,6 +853,7 @@ function CalendarContent() {
   );
   const [listEvents, setListEvents] = useState<CalendarEvent[]>([]);
   const [listLoading, setListLoading] = useState(false);
+  const [listError, setListError] = useState("");
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [currentRange, setCurrentRange] = useState<{ from: string; to: string } | null>(null);
@@ -887,9 +888,10 @@ function CalendarContent() {
       from = "2020-01-01";
       to = "2030-12-31";
     }
+    setListError("");
     getCalendarEvents(apiKey, from, to)
       .then(setListEvents)
-      .catch(() => {})
+      .catch((err) => setListError(err instanceof Error ? err.message : "Failed to load courses"))
       .finally(() => setListLoading(false));
   }, [viewMode, apiKey, listDateRange]);
 
@@ -1221,6 +1223,11 @@ function CalendarContent() {
               ))}
             </div>
           </div>
+          {listError && (
+            <div className="mb-4">
+              <AlertBanner variant="danger">{listError}</AlertBanner>
+            </div>
+          )}
           <CourseListView
             events={filteredListEventsSearched}
             loading={listLoading}

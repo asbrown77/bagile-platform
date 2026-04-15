@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:prod": "PLAYWRIGHT_BASE_URL=https://portal.bagile.co.uk playwright test"
   },
   "dependencies": {
     "@fullcalendar/core": "^6.1.20",
