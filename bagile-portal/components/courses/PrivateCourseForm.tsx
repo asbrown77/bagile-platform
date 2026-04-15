@@ -40,6 +40,18 @@ const COURSE_CODES = [
   "PSMAI", "PSPOAI", "PSPOA", "PSMA",
 ];
 
+/** Default duration in days for each course type (determines auto end date on create). */
+const COURSE_DURATIONS: Record<string, number> = {
+  PSM: 2, PSPO: 2, PSK: 2, PALE: 2, EBM: 1, PSFS: 1, APS: 2, APSSD: 3, PSU: 2,
+  PSMAI: 2, PSPOAI: 2, PSPOA: 2, PSMA: 2,
+};
+
+function addDays(dateStr: string, days: number): string {
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function toDateInput(iso: string | null | undefined): string {
@@ -172,6 +184,13 @@ export function PrivateCourseForm({ mode, course, apiKey, onSuccess, onCancel }:
     }, 500);
     return () => clearTimeout(timer);
   }, [isEdit, apiKey, startDate, endDate, trainerName]);
+
+  // Auto-set end date from course type duration (create mode only)
+  useEffect(() => {
+    if (isEdit || !startDate) return;
+    const duration = COURSE_DURATIONS[courseCode.toUpperCase()] ?? 2;
+    setEndDate(addDays(startDate, duration - 1));
+  }, [isEdit, courseCode, startDate]);
 
   // Auto-generate reference
   useEffect(() => {

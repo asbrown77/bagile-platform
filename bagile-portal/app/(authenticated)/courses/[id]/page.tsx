@@ -23,6 +23,7 @@ import { SendFollowUpPanel } from "@/components/courses/SendFollowUpPanel";
 import { SendJoiningDetailsPanel } from "@/components/courses/SendJoiningDetailsPanel";
 import { EmailSection } from "@/components/courses/EmailSection";
 import { CourseBadge } from "@/components/courses/CourseBadge";
+import { getBadgeSrc, extractCourseTypeFromSku } from "@/lib/calendarHelpers";
 import { EditAttendeeModal } from "@/components/courses/EditAttendeeModal";
 import { EditPrivateCoursePanel } from "@/components/courses/EditPrivateCoursePanel";
 import { CourseContactsSection } from "@/components/courses/CourseContactsSection";
@@ -263,11 +264,16 @@ export default function CourseDetail() {
 
       {/* ── Page header — badge + title + pencil edit icon (private only) ── */}
       <div className="flex items-start gap-2 mb-1">
-        {course?.courseCode && (
-          <div className="mt-0.5 flex-shrink-0">
-            <CourseBadge courseCode={course.courseCode} size={48} />
-          </div>
-        )}
+        {course?.courseCode && (() => {
+          const badgeSrc = getBadgeSrc(extractCourseTypeFromSku(course.courseCode));
+          return badgeSrc ? (
+            <img src={badgeSrc} alt={course.courseCode} className="h-12 w-12 object-contain flex-shrink-0 mt-0.5" />
+          ) : (
+            <div className="mt-0.5 flex-shrink-0">
+              <CourseBadge courseCode={course.courseCode} size={48} />
+            </div>
+          );
+        })()}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-semibold text-gray-900 truncate">

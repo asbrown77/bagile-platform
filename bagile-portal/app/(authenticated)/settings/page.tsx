@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ApiKey, CreateKeyResponse, PortalAuthError, loginWithGoogle, listKeys, createKey, revokeKey, PostCourseTemplate, listPostCourseTemplates, upsertPostCourseTemplate, PreCourseTemplate, getPreCourseTemplates, updatePreCourseTemplate, Trainer, getTrainers, createTrainer, updateTrainer, deleteTrainer, getServiceConfig, setServiceConfig, CourseDef, getCourseDefinitions, updateCourseBadgeUrl } from "@/lib/api";
+import { getBadgeSrc, extractCourseTypeFromSku } from "@/lib/calendarHelpers";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { AlertBanner } from "@/components/ui/AlertBanner";
@@ -1557,11 +1558,14 @@ function CourseDefRow({ def, apiKey }: { def: CourseDef; apiKey: string }) {
     }
   }
 
+  const computedBadge = getBadgeSrc(extractCourseTypeFromSku(def.code));
+  const displaySrc = url || computedBadge;
+
   return (
     <tr className="border-t border-gray-100 align-middle">
       <td className="px-4 py-2">
-        {url ? (
-          <img src={url} alt={def.code} className="h-8 w-8 object-contain" />
+        {displaySrc ? (
+          <img src={displaySrc} alt={def.code} className="h-8 w-8 object-contain" />
         ) : (
           <div className="h-8 w-8 bg-gray-100 rounded border border-gray-200" />
         )}
@@ -1580,7 +1584,7 @@ function CourseDefRow({ def, apiKey }: { def: CourseDef; apiKey: string }) {
           type="text"
           value={url}
           onChange={(e) => { setUrl(e.target.value); setSaved(false); }}
-          placeholder="/badges/PSM-I.png"
+          placeholder={computedBadge ?? "/badges/PSM-I.png"}
           className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs font-mono focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
         />
         {error && <p className="text-xs text-red-500 mt-0.5">{error}</p>}
