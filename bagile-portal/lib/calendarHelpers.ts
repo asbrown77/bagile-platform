@@ -17,6 +17,7 @@ const BADGE_MAP: Record<string, string> = {
   PSU: "PSU.png",
   PSFS: "PSFS.png",
   APSSD: "APS-SD.png",
+  APS: "APS.png",
 };
 
 export function getBadgeSrc(courseType: string): string | null {
@@ -38,6 +39,7 @@ const COURSE_NAMES: Record<string, string> = {
   PSU: "Professional Scrum with UX",
   PSFS: "Professional Scrum Facilitation Skills",
   APSSD: "Applying Professional Scrum for Software Development",
+  APS: "Applying Professional Scrum",
 };
 
 export function getCourseDisplayName(courseType: string): string {
@@ -59,6 +61,7 @@ const CODE_DISPLAY: Record<string, string> = {
   PSU: "PSU",
   PSFS: "PSFS",
   APSSD: "APS-SD",
+  APS: "APS",
 };
 
 export function getCourseCodeDisplay(courseType: string): string {
@@ -112,7 +115,7 @@ export function isDeadlineUrgent(deadline: string | null): boolean {
 
 /** Scrum.org course types that need the scrum.org gateway. */
 const SCRUMORG_TYPES = new Set([
-  "PSM", "PSPO", "PSK", "PALE", "EBM", "APSSD",
+  "PSM", "PSPO", "PSK", "PALE", "EBM", "APSSD", "APS",
   "PSMA", "PSPOA", "PSMAI", "PSPOAI",
 ]);
 
@@ -123,10 +126,11 @@ function isIcpCourseType(courseType: string): boolean {
 
 /**
  * Returns the applicable gateway types for a course.
- * Always includes ecommerce. Scrum.org for scrum.org courses, icagile for ICP.
+ * Private courses have no public gateways (they are pre-confirmed B2B bookings).
+ * Public courses: ecommerce always; scrum.org for Scrum.org course types; icagile for ICP.
  */
 export function getApplicableGateways(courseType: string, isPrivate: boolean): string[] {
-  if (isPrivate) return ["ecommerce"];
+  if (isPrivate) return [];
   const key = courseType.toUpperCase().replace(/[-_\s]/g, "");
   const gateways = ["ecommerce"];
   if (SCRUMORG_TYPES.has(key)) gateways.push("scrumorg");
@@ -145,6 +149,7 @@ export const COURSE_TYPE_OPTIONS = [
   { value: "PSK", label: "PSK" },
   { value: "PALE", label: "PAL-E" },
   { value: "EBM", label: "EBM" },
+  { value: "APS", label: "APS" },
   { value: "APSSD", label: "APS-SD" },
   { value: "PSFS", label: "PSFS" },
   { value: "PSU", label: "PSU" },

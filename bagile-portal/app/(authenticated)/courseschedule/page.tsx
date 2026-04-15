@@ -539,7 +539,8 @@ function SidePanel({ event, onClose, onPublish, onCancel, onEdit }: SidePanelPro
           </div>
         )}
 
-        {/* Gateway checklist */}
+        {/* Gateway checklist — hidden for private courses (no public gateways) */}
+        {applicableGateways.length > 0 && (
         <div>
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Gateway Checklist</p>
           <div className="space-y-2">
@@ -605,6 +606,7 @@ function SidePanel({ event, onClose, onPublish, onCancel, onEdit }: SidePanelPro
             })}
           </div>
         </div>
+        )}
 
         {/* External links */}
         <div>
@@ -622,13 +624,14 @@ function SidePanel({ event, onClose, onPublish, onCancel, onEdit }: SidePanelPro
                 {gatewayLabel(g.type)} listing
               </a>
             ))}
-            {/* Attendees link — only for schedule-based courses */}
+            {/* Course management link — schedule-based courses (both public and private) */}
             {event.id.startsWith("schedule-") && (
               <a
                 href={`/courses/${event.id.replace("schedule-", "")}`}
                 className="flex items-center gap-2 text-sm text-brand-600 hover:text-brand-700"
               >
-                <Users className="w-3.5 h-3.5" /> View attendees
+                <Users className="w-3.5 h-3.5" />
+                {event.isPrivate ? "Manage course →" : "View attendees"}
               </a>
             )}
           </div>
@@ -848,8 +851,9 @@ function CalendarContent() {
   const [error, setError] = useState("");
   const [trainerFilter, setTrainerFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<"all" | "public" | "private">("all");
   const [viewMode, setViewMode] = useState<"calendar" | "list">(
-    searchParams.get("view") === "list" ? "list" : "calendar"
+    searchParams.get("view") === "calendar" ? "calendar" : "list"
   );
   const [listEvents, setListEvents] = useState<CalendarEvent[]>([]);
   const [listLoading, setListLoading] = useState(false);
@@ -915,7 +919,7 @@ function CalendarContent() {
 
   useEffect(() => { loadEvents(); }, [loadEvents]);
 
-  // Filter events by trainer + status (client-side)
+  // Filter events by trainer + status + type (client-side)
   const applyFilters = (source: CalendarEvent[]) =>
     source.filter((e) => {
       if (trainerFilter !== "all") {
@@ -923,6 +927,8 @@ function CalendarContent() {
         if (initials !== trainerFilter) return false;
       }
       if (statusFilter !== "all" && e.status !== statusFilter) return false;
+      if (typeFilter === "public" && e.isPrivate) return false;
+      if (typeFilter === "private" && !e.isPrivate) return false;
       return true;
     });
 
@@ -1101,7 +1107,7 @@ function CalendarContent() {
         <div className="flex items-center gap-3 flex-wrap">
           {/* View toggle */}
           <div className="flex rounded-lg border border-gray-200 overflow-hidden">
-            {([{ key: "calendar", icon: <CalendarIcon className="w-3.5 h-3.5" />, label: "Calendar" }, { key: "list", icon: <LayoutList className="w-3.5 h-3.5" />, label: "List" }] as const).map((v, i) => (
+            {([{ key: "list", icon: <LayoutList className="w-3.5 h-3.5" />, label: "List" }, { key: "calendar", icon: <CalendarIcon className="w-3.5 h-3.5" />, label: "Calendar" }] as const).map((v, i) => (
               <button
                 key={v.key}
                 onClick={() => setViewMode(v.key)}
@@ -1113,17 +1119,29 @@ function CalendarContent() {
               </button>
             ))}
           </div>
-          {/* Trainer filter */}
+          {/* Trainer filter — dropdown scales to any number of trainers */}
+          <select
+            value={trainerFilter}
+            onChange={(e) => setTrainerFilter(e.target.value)}
+            className="px-3 py-1.5 text-xs font-medium border border-gray-200 rounded-lg bg-white text-gray-600 focus:outline-none focus:ring-1 focus:ring-brand-500"
+          >
+            <option value="all">All trainers</option>
+            {trainers.map((t) => (
+              <option key={t.id} value={trainerInitials(t.name)}>{t.name}</option>
+            ))}
+          </select>
+
+          {/* Type filter — public / private */}
           <div className="flex rounded-lg border border-gray-200 overflow-hidden">
-            {[{ key: "all", label: "All" }, ...trainers.map((t) => ({ key: trainerInitials(t.name), label: trainerInitials(t.name) }))].map(({ key, label }, i) => (
+            {(["all", "public", "private"] as const).map((key, i) => (
               <button
                 key={key}
-                onClick={() => setTrainerFilter(key)}
-                className={`px-3 py-1.5 text-xs font-medium transition-colors
-                  ${trainerFilter === key ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}
+                onClick={() => setTypeFilter(key)}
+                className={`px-3 py-1.5 text-xs font-medium capitalize transition-colors
+                  ${typeFilter === key ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}
                   ${i > 0 ? "border-l border-gray-200" : ""}`}
               >
-                {label}
+                {key === "all" ? "All types" : key}
               </button>
             ))}
           </div>
