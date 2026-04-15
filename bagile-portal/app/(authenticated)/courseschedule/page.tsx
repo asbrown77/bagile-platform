@@ -8,8 +8,10 @@ import { useApiKey } from "@/lib/hooks/useApiKey";
 import {
   CalendarEvent,
   Trainer,
+  CourseDef,
   getCalendarEvents,
   getTrainers,
+  getCourseDefinitions,
   createPlannedCourse,
   createPrivateCourse,
   publishGateway,
@@ -64,8 +66,10 @@ function Toast({ message, type, onClose }: { message: string; type: "success" | 
 
 // ── Course block (FullCalendar event content) ───────────────
 
-function CourseBlock({ event }: { event: CalendarEvent; compact?: boolean }) {
-  const badgeSrc = getBadgeSrc(event.courseType);
+function CourseBlock({ event, badgeMap }: { event: CalendarEvent; compact?: boolean; badgeMap?: Record<string, string> }) {
+  // DB badge URLs take priority over the hardcoded BADGE_MAP fallback
+  const key = event.courseType.toUpperCase().replace(/[-_\s]/g, "");
+  const badgeSrc = badgeMap?.[key] ?? getBadgeSrc(event.courseType);
   const codeDisplay = getCourseCodeDisplay(event.courseType);
   const initials = event.trainerInitials || trainerInitials(event.trainerName);
   const avatarColour = getTrainerColour(initials);
@@ -140,6 +144,7 @@ interface AddCourseModalProps {
     isPrivate: boolean;
   }) => Promise<void>;
   trainers: Trainer[];
+  courseDefs?: CourseDef[];
   initialValues?: {
     courseType: string;
     trainerId: number;
@@ -154,11 +159,27 @@ interface AddCourseModalProps {
   editMode?: boolean;
 }
 
-function AddCourseModal({ open, onClose, onSubmit, trainers, initialValues, editMode }: AddCourseModalProps) {
+function AddCourseModal({ open, onClose, onSubmit, trainers, courseDefs, initialValues, editMode }: AddCourseModalProps) {
   const [courseType, setCourseType] = useState("PSM");
   const [trainerId, setTrainerId] = useState(0);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+
+  // Look up duration from courseDefs (API) or fall back to known defaults
+  function getDuration(type: string): number {
+    const key = type.toUpperCase().replace(/[-_\s]/g, "");
+    const def = courseDefs?.find((d) => d.code.toUpperCase().replace(/[-_\s]/g, "") === key);
+    if (def) return def.durationDays;
+    const fallback: Record<string, number> = { PALEBM: 1, PSFS: 1, APSSD: 3, PSMPO: 3 };
+    return fallback[key] ?? 2;
+  }
+
+  function calcEndDate(start: string, type: string): string {
+    if (!start) return start;
+    const d = new Date(start);
+    d.setDate(d.getDate() + getDuration(type) - 1);
+    return d.toISOString().slice(0, 10);
+  }
   const [isVirtual, setIsVirtual] = useState(true);
   const [venue, setVenue] = useState("");
   const [notes, setNotes] = useState("");
@@ -257,7 +278,10 @@ function AddCourseModal({ open, onClose, onSubmit, trainers, initialValues, edit
             <label className="block text-sm font-medium text-gray-700 mb-1">Course Type</label>
             <select
               value={courseType}
-              onChange={(e) => setCourseType(e.target.value)}
+              onChange={(e) => {
+                setCourseType(e.target.value);
+                if (!editMode && startDate) setEndDate(calcEndDate(startDate, e.target.value));
+              }}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
             >
               {COURSE_TYPE_OPTIONS.map((o) => (
@@ -289,7 +313,8 @@ function AddCourseModal({ open, onClose, onSubmit, trainers, initialValues, edit
                 value={startDate}
                 onChange={(e) => {
                   setStartDate(e.target.value);
-                  if (!endDate || endDate < e.target.value) setEndDate(e.target.value);
+                  if (!editMode) setEndDate(calcEndDate(e.target.value, courseType));
+                  else if (!endDate || endDate < e.target.value) setEndDate(e.target.value);
                 }}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
               />
@@ -879,11 +904,13 @@ function CalendarContent() {
   const [listSearch, setListSearch] = useState("");
   const [listDateRange, setListDateRange] = useState<"upcoming" | "year" | "all">("upcoming");
   const [showImportModal, setShowImportModal] = useState(false);
+  const [courseDefs, setCourseDefs] = useState<CourseDef[]>([]);
 
-  // Load trainers on mount
+  // Load trainers + course definitions on mount
   useEffect(() => {
     if (!apiKey) return;
     getTrainers(apiKey).then(setTrainers).catch(() => {});
+    getCourseDefinitions(apiKey).then(setCourseDefs).catch(() => {});
   }, [apiKey]);
 
   // Load list events when switching to list view or date range changes
@@ -964,6 +991,7 @@ function CalendarContent() {
     start: e.startDate.split("T")[0],
     // FullCalendar dayGrid end is exclusive, so add 1 day
     end: addOneDayStr(e.endDate.split("T")[0]),
+    allDay: true,
     extendedProps: { calendarEvent: e } as FCEventExtended,
     display: "block" as const,
     backgroundColor: "transparent",
@@ -1286,6 +1314,7 @@ function CalendarContent() {
         onClose={handleModalClose}
         onSubmit={editCourseId ? handleEditCourse : handleAddCourse}
         trainers={trainers}
+        courseDefs={courseDefs}
         initialValues={editInitialValues}
         editMode={!!editCourseId}
       />

@@ -152,6 +152,10 @@ public class CalendarQueries : ICalendarQueries
         if (courses.Count == 0)
             return Enumerable.Empty<CalendarEventDto>();
 
+        // Load course duration map (code → duration_days) for end_date derivation.
+        // Also resolve aliases so e.g. "APS-SD" maps to its canonical duration.
+        var durations = await GetCourseDurationsAsync(conn);
+
         // Fetch publications for these course schedules
         var ids = courses.Select(c => c.Id).ToArray();
         var pubs = (await conn.QueryAsync<PublicationRow>(
@@ -187,6 +191,9 @@ public class CalendarQueries : ICalendarQueries
                 ? "cancelled"
                 : DeriveStatus("planned", gateways);
 
+            // When end_date is missing from WooCommerce, derive from course_definitions duration.
+            var endDate = c.EndDate ?? DeriveFallbackEndDate(c.StartDate, courseType, durations);
+
             return new CalendarEventDto
             {
                 Id = $"schedule-{c.Id}",
@@ -194,7 +201,7 @@ public class CalendarQueries : ICalendarQueries
                 TrainerInitials = GetInitials(c.TrainerName),
                 TrainerName = c.TrainerName,
                 StartDate = c.StartDate,
-                EndDate = c.EndDate ?? c.StartDate,
+                EndDate = endDate,
                 IsVirtual = string.Equals(c.FormatType, "virtual", StringComparison.OrdinalIgnoreCase),
                 IsPrivate = !c.IsPublic,
                 Status = status,
@@ -206,6 +213,34 @@ public class CalendarQueries : ICalendarQueries
                 Gateways = gateways
             };
         });
+    }
+
+    /// <summary>
+    /// Load a course-type → duration_days lookup from course_definitions,
+    /// normalising codes to uppercase-no-hyphens to match SKU-extracted types.
+    /// Aliases are resolved so e.g. "APS-SD" is stored as "APSSD" → 3.
+    /// </summary>
+    private static async Task<Dictionary<string, int>> GetCourseDurationsAsync(NpgsqlConnection conn)
+    {
+        var rows = await conn.QueryAsync<(string Code, int Days)>(
+            "SELECT code, duration_days AS Days FROM bagile.course_definitions WHERE active = true;");
+
+        return rows.ToDictionary(
+            r => r.Code.ToUpperInvariant().Replace("-", "").Replace("_", ""),
+            r => r.Days,
+            StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Compute end date from duration when the stored end_date is null.
+    /// duration_days = 1 → same day; 2 → start + 1 day; 3 → start + 2 days, etc.
+    /// </summary>
+    private static DateTime DeriveFallbackEndDate(DateTime start, string courseType, Dictionary<string, int> durations)
+    {
+        var key = courseType.ToUpperInvariant().Replace("-", "").Replace("_", "");
+        if (durations.TryGetValue(key, out var days) && days > 1)
+            return SafeAddDays(start, days - 1);
+        return start;
     }
 
     /// <summary>
@@ -265,17 +300,17 @@ public class CalendarQueries : ICalendarQueries
             if (parts[i].Length == 6 && parts[i].All(char.IsDigit)) break;
             if (string.Equals(parts[i], "PRIV", StringComparison.OrdinalIgnoreCase)) break;
 
-            // Single-segment match
-            if (KnownCourseTypes.Contains(parts[i]))
-                return parts[i].ToUpperInvariant();
-
-            // Compound type: APS + SD → APSSD
+            // Check compound FIRST so "APS-SD-..." → APSSD, not APS
             if (i + 1 < parts.Length)
             {
                 var compound = parts[i] + parts[i + 1];
                 if (KnownCourseTypes.Contains(compound))
                     return compound.ToUpperInvariant();
             }
+
+            // Single-segment match
+            if (KnownCourseTypes.Contains(parts[i]))
+                return parts[i].ToUpperInvariant();
         }
 
         // Fallback: first non-date, non-PRIV segment

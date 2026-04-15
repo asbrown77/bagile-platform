@@ -7,6 +7,7 @@
  *  All images are the official scrum.org course logos (not assessment/cert badges). */
 const BADGE_MAP: Record<string, string> = {
   PSM:    "PSM-course.png",
+  PSMO:   "PSM-course.png",    // WooCommerce alias for PSM
   PSMA:   "PSMA-course.png",
   PSPO:   "PSPO-course.png",
   PSPOA:  "PSPOA-course.png",
@@ -14,8 +15,9 @@ const BADGE_MAP: Record<string, string> = {
   PSPOAI: "PSPOAI-course.png",
   PSK:    "PSK-course.png",
   PALE:   "PALE-course.png",
+  PAL:    "PALE-course.png",   // WooCommerce alias for PAL-E
   PALEBM: "PALEBM-course.png",
-  EBM:    "PALEBM-course.png",  // alias for PAL-EBM
+  EBM:    "PALEBM-course.png", // alias for PAL-EBM
   PSU:    "PSU-course.png",
   PSFS:   "PSFS-course.png",
   APSSD:  "APSSD-course.png",
@@ -184,12 +186,12 @@ export function extractCourseTypeFromSku(sku: string): string {
   const parts = sku.toUpperCase().split("-");
   for (let i = 0; i < parts.length; i++) {
     if (/^\d{6}$/.test(parts[i]) || parts[i] === "PRIV") break;
-    if (KNOWN_COURSE_TYPES.has(parts[i])) return parts[i];
-    // Compound type: APS + SD → APSSD
+    // Check compound FIRST so "APS-SD-..." → APSSD, not APS
     if (i + 1 < parts.length) {
       const compound = parts[i] + parts[i + 1];
       if (KNOWN_COURSE_TYPES.has(compound)) return compound;
     }
+    if (KNOWN_COURSE_TYPES.has(parts[i])) return parts[i];
   }
   // Fallback: first non-date, non-PRIV segment
   return parts.find((p) => !/^\d{6}$/.test(p) && p !== "PRIV") || sku.toUpperCase();
