@@ -16,7 +16,7 @@ _"I can see revenue, partner value, course demand, and make scheduling decisions
 
 ## Sprint Queue
 
-*All sprints through 29 complete. Sprint 30 is Bug Fix, Sprint 31 is UX Polish.*
+*All sprints through 30 complete. Sprint 31 is UX Polish.*
 
 ---
 
@@ -60,30 +60,7 @@ _After v1 is live and used for a full month._
 
 ---
 
-### Sprint 30 — "Bug Fix Sprint" _(next up)_
-
-**Goal:** Clear the open bug backlog before the next feature sprint.
-
-| # | Bug | Impact | Status |
-|---|-----|--------|--------|
-| B1 | ETL duplicate enrolments when attendee email changes in WooCommerce | Course lists show wrong attendee count (PSPO-300326-AB: 11 shown, 8 actual) | OPEN |
-| B2 | Orphaned duplicate enrolments 1796, 15, 19 on course 130 | Stale data | OPEN — cleanup needed |
-
-**B1 — ETL duplicate enrolments detail:**
-
-Root cause: `EnrolmentRepository.UpsertAsync` matches by `student_id + order_id + course_schedule_id`. When an email is corrected in WooCommerce, a new student row is created (email is unique key). The upsert can't find the old enrolment (wrong student_id) and inserts a duplicate.
-
-Fix: match existing enrolments by `order_id + course_schedule_id` (not student_id). When found, update the `student_id` on the existing enrolment. Handle multi-ticket orders (e.g. order 12874 had 2 tickets).
-
-Affected files:
-- `Bagile.EtlService/Services/WooOrderService.cs:93-111`
-- `Bagile.Infrastructure/Repositories/EnrolmentRepository.cs:16-59`
-
-**B2 — Cleanup:** Delete or cancel enrolments 1796, 15, 19 on course 130.
-
----
-
-### Sprint 31 — "UX Polish"
+### Sprint 31 — "UX Polish" _(next up)_
 
 UX audit completed 15 Apr 2026. Full report: `UX_AUDIT.html` in repo root.
 
@@ -184,6 +161,10 @@ Data model is already ready (`format_type`, `venue_address`, `capacity`, `price`
 ---
 
 ## Completed
+
+### Sprint 30 — "Bug Fix Sprint" (15 Apr 2026)
+- [x] B1: ETL duplicate enrolments — `EnrolmentRepository.UpsertAsync` now matches by `order_id + course_schedule_id`, updates `student_id` in place when email changes (was already fixed in commit `fc2754f`, confirmed working)
+- [x] B2: V61 migration — cancels orphaned duplicate enrolments 1796, 15, 19 on course_schedule_id 130 with audit trail preserved
 
 ### Sprint 29 — "Course Schedule + Private Courses Polish" (15 Apr 2026)
 - [x] Renamed Calendar → Course Schedule throughout; URL `/calendar` → `/courseschedule` (redirect in place)
