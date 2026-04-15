@@ -43,5 +43,6 @@ public record UpdatePrivateCourseFields(
     string? MeetingUrl,
     string? MeetingId,
     string? MeetingPasscode,
-    string? Notes
+    string? Notes,
+    string? Status = null
 );

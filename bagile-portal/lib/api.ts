@@ -901,6 +901,7 @@ export interface UpdatePrivateCourseRequest {
   meetingId?: string;
   meetingPasscode?: string;
   notes?: string;
+  status?: string;
 }
 
 export async function updatePrivateCourse(

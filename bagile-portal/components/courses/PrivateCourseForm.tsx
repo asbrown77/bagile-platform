@@ -105,6 +105,9 @@ export function PrivateCourseForm({ mode, course, apiKey, onSuccess, onCancel }:
   const [meetingId, setMeetingId] = useState(course?.meetingId ?? "");
   const [meetingPasscode, setMeetingPasscode] = useState(course?.meetingPasscode ?? "");
 
+  // ── Status (edit mode only) ───────────────────────────────────────────────
+  const [status, setStatus] = useState(course?.status ?? "confirmed");
+
   // ── Additional ────────────────────────────────────────────────────────────
 
   const [notes, setNotes] = useState(course?.notes ?? "");
@@ -223,6 +226,7 @@ export function PrivateCourseForm({ mode, course, apiKey, onSuccess, onCancel }:
           meetingId: meetingId || undefined,
           meetingPasscode: meetingPasscode || undefined,
           notes: notes || undefined,
+          status,
         };
         await updatePrivateCourse(apiKey, course.id, payload);
         onSuccess();
@@ -548,6 +552,23 @@ export function PrivateCourseForm({ mode, course, apiKey, onSuccess, onCancel }:
 
       {/* ── ADDITIONAL ── */}
       <SectionHeader label="Additional" />
+
+      {isEdit && (
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+          >
+            <option value="confirmed">Confirmed</option>
+            <option value="planned">Planned</option>
+            <option value="partial_live">Partial Live</option>
+            <option value="live">Live</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+      )}
 
       <div>
         <label className="block text-xs font-medium text-gray-700 mb-1">Notes</label>

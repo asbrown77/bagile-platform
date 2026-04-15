@@ -36,7 +36,8 @@ public class UpdatePrivateCourseCommandHandler
             MeetingUrl: request.MeetingUrl,
             MeetingId: request.MeetingId,
             MeetingPasscode: request.MeetingPasscode,
-            Notes: request.Notes
+            Notes: request.Notes,
+            Status: request.Status
         );
 
         await _courseRepo.UpdatePrivateCourseAsync(request.Id, fields);

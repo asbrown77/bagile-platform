@@ -19,4 +19,6 @@ public record UpdatePrivateCourseCommand : IRequest<CourseScheduleDetailDto?>
     public string? MeetingId { get; init; }
     public string? MeetingPasscode { get; init; }
     public string? Notes { get; init; }
+    /// <summary>Optional status override — confirmed, planned, cancelled etc.</summary>
+    public string? Status { get; init; }
 }
