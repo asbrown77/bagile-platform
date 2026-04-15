@@ -533,10 +533,10 @@ export function PrivateCourseForm({ mode, course, apiKey, onSuccess, onCancel }:
             onChange={(e) => setStatus(e.target.value)}
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
           >
+            <option value="enquiry">Enquiry</option>
+            <option value="quoted">Quoted</option>
             <option value="confirmed">Confirmed</option>
-            <option value="planned">Planned</option>
-            <option value="partial_live">Partial Live</option>
-            <option value="live">Live</option>
+            <option value="completed">Completed</option>
             <option value="cancelled">Cancelled</option>
           </select>
         </div>

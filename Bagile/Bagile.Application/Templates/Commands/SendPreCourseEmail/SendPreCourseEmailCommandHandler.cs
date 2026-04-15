@@ -182,7 +182,7 @@ public class SendPreCourseEmailCommandHandler
 
         return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            ["course_name"]      = course.Title,
+            ["course_name"]      = CourseFullName(courseType),
             ["course_full_name"] = CourseFullName(courseType),
             ["dates"]            = dates,
             ["times"]            = DefaultTimes,

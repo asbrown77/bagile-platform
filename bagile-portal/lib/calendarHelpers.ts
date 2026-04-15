@@ -72,6 +72,10 @@ export function getCourseCodeDisplay(courseType: string): string {
 /** Calendar status left-border colours. */
 export const STATUS_COLOURS: Record<string, string> = {
   planned: "#9ca3af",
+  enquiry: "#a78bfa",    // purple — early stage, no commitment
+  quoted: "#60a5fa",     // blue — quote sent
+  confirmed: "#22c55e",  // green — booked
+  completed: "#6b7280",  // grey — done
   partial_live: "#f59e0b",
   live: "#22c55e",
   cancelled: "#ef4444",
@@ -84,21 +88,29 @@ export function getStatusColour(status: string): string {
 /** Status badge variant mapping for the Badge component. */
 export function getStatusBadgeVariant(status: string): "neutral" | "warning" | "success" | "danger" {
   switch (status) {
-    case "planned": return "neutral";
+    case "planned":      return "neutral";
+    case "enquiry":      return "neutral";
+    case "quoted":       return "neutral";
+    case "confirmed":    return "success";
+    case "completed":    return "neutral";
     case "partial_live": return "warning";
-    case "live": return "success";
-    case "cancelled": return "danger";
-    default: return "neutral";
+    case "live":         return "success";
+    case "cancelled":    return "danger";
+    default:             return "neutral";
   }
 }
 
 export function getStatusLabel(status: string): string {
   switch (status) {
-    case "planned": return "Planned";
+    case "planned":      return "Planned";
+    case "enquiry":      return "Enquiry";
+    case "quoted":       return "Quoted";
+    case "confirmed":    return "Confirmed";
+    case "completed":    return "Completed";
     case "partial_live": return "Partial Live";
-    case "live": return "Live";
-    case "cancelled": return "Cancelled";
-    default: return status;
+    case "live":         return "Live";
+    case "cancelled":    return "Cancelled";
+    default:             return status;
   }
 }
 
