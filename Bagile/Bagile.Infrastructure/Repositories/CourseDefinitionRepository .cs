@@ -44,4 +44,55 @@ public class CourseDefinitionRepository : ICourseDefinitionRepository
             "UPDATE bagile.course_definitions SET duration_days = @durationDays WHERE code = @code;",
             new { code, durationDays });
     }
+
+    public async Task UpdateNameAsync(string code, string name)
+    {
+        await using var conn = new NpgsqlConnection(_connStr);
+        await conn.ExecuteAsync(
+            "UPDATE bagile.course_definitions SET name = @name WHERE code = @code;",
+            new { code, name });
+    }
+
+    public async Task<CourseDefinition> CreateAsync(string code, string name, int durationDays)
+    {
+        await using var conn = new NpgsqlConnection(_connStr);
+        return await conn.QuerySingleAsync<CourseDefinition>(
+            @"INSERT INTO bagile.course_definitions (code, name, duration_days, active)
+              VALUES (@code, @name, @durationDays, true)
+              RETURNING id, code, name, description, duration_days, active, badge_url;",
+            new { code, name, durationDays });
+    }
+
+    public async Task<IEnumerable<string>> GetAliasesAsync(string code)
+    {
+        await using var conn = new NpgsqlConnection(_connStr);
+        return await conn.QueryAsync<string>(
+            "SELECT alias FROM bagile.course_code_aliases WHERE canonical_code = @code ORDER BY alias;",
+            new { code });
+    }
+
+    public async Task AddAliasAsync(string code, string alias)
+    {
+        await using var conn = new NpgsqlConnection(_connStr);
+        await conn.ExecuteAsync(
+            "INSERT INTO bagile.course_code_aliases (alias, canonical_code) VALUES (@alias, @code);",
+            new { code, alias });
+    }
+
+    public async Task<bool> RemoveAliasAsync(string code, string alias)
+    {
+        await using var conn = new NpgsqlConnection(_connStr);
+        var rows = await conn.ExecuteAsync(
+            "DELETE FROM bagile.course_code_aliases WHERE alias = @alias AND canonical_code = @code;",
+            new { code, alias });
+        return rows > 0;
+    }
+
+    public async Task<bool> AliasExistsAsync(string alias)
+    {
+        await using var conn = new NpgsqlConnection(_connStr);
+        return await conn.ExecuteScalarAsync<bool>(
+            "SELECT EXISTS(SELECT 1 FROM bagile.course_code_aliases WHERE alias = @alias);",
+            new { alias });
+    }
 }

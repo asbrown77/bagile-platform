@@ -1271,6 +1271,7 @@ export interface CourseDef {
   durationDays: number;
   active: boolean;
   badgeUrl: string | null;
+  aliases?: string[];
 }
 
 export async function getCourseDefinitions(apiKey: string): Promise<CourseDef[]> {
@@ -1288,5 +1289,36 @@ export async function updateCourseDuration(apiKey: string, code: string, duratio
   await apiRequest<void>(`/api/course-definitions/${encodeURIComponent(code)}/duration`, apiKey, {
     method: "PATCH",
     body: { durationDays },
+  });
+}
+
+export async function updateCourseName(apiKey: string, code: string, name: string): Promise<void> {
+  await apiRequest<void>(`/api/course-definitions/${encodeURIComponent(code)}/name`, apiKey, {
+    method: "PATCH",
+    body: { name },
+  });
+}
+
+export async function getCourseAliases(apiKey: string, code: string): Promise<string[]> {
+  return apiRequest<string[]>(`/api/course-definitions/${encodeURIComponent(code)}/aliases`, apiKey);
+}
+
+export async function addCourseAlias(apiKey: string, code: string, alias: string): Promise<void> {
+  await apiRequest<void>(`/api/course-definitions/${encodeURIComponent(code)}/aliases`, apiKey, {
+    method: "POST",
+    body: { alias },
+  });
+}
+
+export async function deleteCourseAlias(apiKey: string, code: string, alias: string): Promise<void> {
+  await apiRequest<void>(`/api/course-definitions/${encodeURIComponent(code)}/aliases/${encodeURIComponent(alias)}`, apiKey, {
+    method: "DELETE",
+  });
+}
+
+export async function createCourseDefinition(apiKey: string, code: string, name: string, durationDays: number): Promise<CourseDef> {
+  return apiRequest<CourseDef>("/api/course-definitions", apiKey, {
+    method: "POST",
+    body: { code, name, durationDays },
   });
 }
