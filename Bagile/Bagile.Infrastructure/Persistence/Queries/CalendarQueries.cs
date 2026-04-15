@@ -9,10 +9,12 @@ namespace Bagile.Infrastructure.Persistence.Queries;
 public class CalendarQueries : ICalendarQueries
 {
     private readonly string _connectionString;
+    private readonly string _wooSiteUrl;
 
-    public CalendarQueries(string connectionString)
+    public CalendarQueries(string connectionString, string wooSiteUrl = "")
     {
         _connectionString = connectionString;
+        _wooSiteUrl = wooSiteUrl.TrimEnd('/');
     }
 
     public async Task<IEnumerable<CalendarEventDto>> GetCalendarEventsAsync(
@@ -24,7 +26,7 @@ public class CalendarQueries : ICalendarQueries
         await using var conn = new NpgsqlConnection(_connectionString);
 
         var planned = await GetPlannedCoursesAsync(conn, from, to, trainerId);
-        var live = await GetLiveCoursesAsync(conn, from, to, trainerId);
+        var live = await GetLiveCoursesAsync(conn, from, to, trainerId, _wooSiteUrl);
 
         return planned.Concat(live).OrderBy(e => e.StartDate).ThenBy(e => e.CourseType);
     }
@@ -114,7 +116,8 @@ public class CalendarQueries : ICalendarQueries
         NpgsqlConnection conn,
         DateTime from,
         DateTime to,
-        int? trainerId)
+        int? trainerId,
+        string wooSiteUrl)
     {
         // For live courses, trainer is stored as free text (trainer_name).
         // We need to join to trainers table if trainerId filter is specified.
@@ -129,6 +132,7 @@ public class CalendarQueries : ICalendarQueries
                    cs.trainer_name                AS TrainerName,
                    cs.venue_address               AS Venue,
                    cs.notes                       AS Notes,
+                   cs.source_product_id           AS SourceProductId,
                    COUNT(e.id)::int               AS EnrolmentCount
             FROM bagile.course_schedules cs
             LEFT JOIN bagile.enrolments e ON e.course_schedule_id = cs.id
@@ -163,16 +167,18 @@ public class CalendarQueries : ICalendarQueries
 
             // Legacy WooCommerce courses pre-date the publication tracking system.
             // All applicable gateways are treated as published — they were live before
-            // this portal existed. Use any stored URL if present, otherwise null.
+            // this portal existed. Use any stored URL if present; for e-commerce fall
+            // back to the WooCommerce shortlink (?p=ID) derived from source_product_id.
             var gateways = applicableGateways.Select(g =>
             {
                 var pub = coursePubs.FirstOrDefault(p =>
                     string.Equals(p.Gateway, g, StringComparison.OrdinalIgnoreCase));
+                var url = pub?.ExternalUrl ?? DeriveUrl(g, c.SourceProductId, wooSiteUrl);
                 return new GatewayStatusDto
                 {
                     Type = g,
                     Published = true,
-                    Url = pub?.ExternalUrl
+                    Url = url
                 };
             }).ToList();
 
@@ -199,6 +205,20 @@ public class CalendarQueries : ICalendarQueries
                 Gateways = gateways
             };
         });
+    }
+
+    /// <summary>
+    /// Derive a gateway URL when no explicit publication record exists.
+    /// For e-commerce: construct WooCommerce shortlink from the product ID.
+    /// </summary>
+    private static string? DeriveUrl(string gateway, long? sourceProductId, string wooSiteUrl)
+    {
+        if (gateway == "ecommerce" && sourceProductId.HasValue && sourceProductId > 0
+            && !string.IsNullOrEmpty(wooSiteUrl))
+        {
+            return $"{wooSiteUrl}/?p={sourceProductId}";
+        }
+        return null;
     }
 
     /// <summary>
@@ -274,6 +294,7 @@ public class CalendarQueries : ICalendarQueries
         public string? TrainerName { get; set; }
         public string? Venue { get; set; }
         public string? Notes { get; set; }
+        public long? SourceProductId { get; set; }
         public int EnrolmentCount { get; set; }
     }
 
