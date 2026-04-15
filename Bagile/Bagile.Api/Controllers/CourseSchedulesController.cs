@@ -13,6 +13,7 @@ using Bagile.Application.CourseSchedules.Commands.UpdatePrivateCourse;
 using Bagile.Application.CourseSchedules.Commands.RemovePrivateAttendee;
 using Bagile.Application.CourseSchedules.Commands.ManageCourseContacts;
 using Bagile.Application.CourseSchedules.Commands.DeleteCourseSchedule;
+using Bagile.Application.CourseSchedules.Commands.PatchCourseStatus;
 using Bagile.Application.Templates.Queries;
 
 namespace Bagile.Api.Controllers;
@@ -222,6 +223,29 @@ public class CourseSchedulesController : ControllerBase
     }
 
     /// <summary>
+    /// Quickly update the status of any course schedule.
+    /// Accepts: enquiry, quoted, confirmed, completed, cancelled, planned, publish, draft, sold_out.
+    /// </summary>
+    [HttpPatch("{id}/status")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> PatchCourseStatus(long id, [FromBody] PatchCourseStatusRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Status))
+            return BadRequest(new { error = "status is required" });
+
+        try
+        {
+            await _mediator.Send(new PatchCourseStatusCommand(id, request.Status.Trim().ToLowerInvariant()));
+            return NoContent();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Remove (cancel) an attendee from a private course.
     /// Returns 404 if the enrolment doesn't exist, is already cancelled,
     /// or doesn't belong to this private course.
@@ -368,6 +392,11 @@ public record CancelCourseRequest
 public record AddPrivateAttendeesRequest
 {
     public List<AttendeeInput> Attendees { get; init; } = new();
+}
+
+public record PatchCourseStatusRequest
+{
+    public string Status { get; init; } = "";
 }
 
 public record ParseAttendeesRequest

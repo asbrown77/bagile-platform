@@ -6,29 +6,17 @@ import { useApiKey } from "@/lib/hooks/useApiKey";
 import {
   CourseScheduleItem,
   getPrivateCourses,
+  patchCourseStatus,
   formatDate,
 } from "@/lib/api";
-import { getBadgeSrc, getCourseCodeDisplay, extractCourseTypeFromSku, getCourseDisplayName } from "@/lib/calendarHelpers";
+import { getBadgeSrc, getCourseCodeDisplay, extractCourseTypeFromSku, getCourseDisplayName, getStatusLabel, getStatusBadgeVariant } from "@/lib/calendarHelpers";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { SkeletonRow } from "@/components/ui/Skeleton";
 import { CreatePrivateCoursePanel } from "@/components/courses/CreatePrivateCoursePanel";
 
-// ── Status badge mapping for course schedule statuses ───────────────────────
-
-function scheduleStatusBadge(status: string | null) {
-  if (!status) return <Badge variant="neutral">Unknown</Badge>;
-  const map: Record<string, { label: string; variant: "success" | "info" | "warning" | "danger" | "neutral" }> = {
-    confirmed:    { label: "Confirmed",    variant: "info" },
-    planned:      { label: "Planned",      variant: "neutral" },
-    partial_live: { label: "Partial Live", variant: "warning" },
-    live:         { label: "Live",         variant: "success" },
-    cancelled:    { label: "Cancelled",    variant: "danger" },
-  };
-  const entry = map[status.toLowerCase()] ?? { label: status, variant: "neutral" as const };
-  return <Badge variant={entry.variant} dot>{entry.label}</Badge>;
-}
+const PRIVATE_STATUSES = ["enquiry", "quoted", "confirmed", "completed", "cancelled"] as const;
 
 // ── Date range helpers ───────────────────────────────────────────────────────
 
@@ -45,11 +33,26 @@ function defaultRange(): { from: string; to: string } {
 
 // ── Row component ────────────────────────────────────────────────────────────
 
-function CourseRow({ course }: { course: CourseScheduleItem }) {
+function CourseRow({ course, apiKey }: { course: CourseScheduleItem; apiKey: string }) {
   const courseType = extractCourseTypeFromSku(course.courseCode);
   const badgeSrc = getBadgeSrc(courseType);
   const codeDisplay = getCourseCodeDisplay(courseType);
   const courseName = getCourseDisplayName(courseType);
+  const [status, setStatus] = useState(course.status ?? "confirmed");
+  const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState(false);
+
+  async function handleStatusChange(newStatus: string) {
+    if (newStatus === status) { setEditing(false); return; }
+    setSaving(true);
+    try {
+      await patchCourseStatus(apiKey, course.id, newStatus);
+      setStatus(newStatus);
+    } finally {
+      setSaving(false);
+      setEditing(false);
+    }
+  }
 
   return (
     <tr
@@ -85,8 +88,27 @@ function CourseRow({ course }: { course: CourseScheduleItem }) {
         {course.currentEnrolmentCount}
         {course.capacity != null ? ` / ${course.capacity}` : ""}
       </td>
-      <td className="px-4 py-3">
-        {scheduleStatusBadge(course.status)}
+      <td className="px-4 py-3" onClick={(e) => { e.stopPropagation(); setEditing(true); }}>
+        {editing ? (
+          <select
+            autoFocus
+            value={status}
+            disabled={saving}
+            onChange={(e) => handleStatusChange(e.target.value)}
+            onBlur={() => setEditing(false)}
+            className="text-xs border border-gray-300 rounded px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-brand-500"
+          >
+            {PRIVATE_STATUSES.map((s) => (
+              <option key={s} value={s}>{getStatusLabel(s)}</option>
+            ))}
+          </select>
+        ) : (
+          <span title="Click to change status">
+            <Badge variant={getStatusBadgeVariant(status)} dot>
+              {saving ? "…" : getStatusLabel(status)}
+            </Badge>
+          </span>
+        )}
       </td>
     </tr>
   );
@@ -189,7 +211,7 @@ export default function PrivateCoursesPage() {
                 </tr>
               )}
               {!loading &&
-                courses.map((c) => <CourseRow key={c.id} course={c} />)}
+                courses.map((c) => <CourseRow key={c.id} course={c} apiKey={apiKey} />)}
             </tbody>
           </table>
         </div>

@@ -36,7 +36,7 @@ export interface PrivateCourseFormProps {
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const COURSE_CODES = [
-  "PSM", "PSPO", "PSK", "PALE", "EBM", "PSFS", "APS", "PSU",
+  "PSM", "PSPO", "PSK", "PALE", "EBM", "PSFS", "APS", "APSSD", "PSU",
   "PSMAI", "PSPOAI", "PSPOA", "PSMA",
 ];
 

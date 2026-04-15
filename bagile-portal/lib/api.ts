@@ -924,6 +924,17 @@ export async function updatePrivateCourse(
   });
 }
 
+export async function patchCourseStatus(
+  apiKey: string,
+  courseId: number,
+  status: string,
+): Promise<void> {
+  return apiRequest(`/api/course-schedules/${courseId}/status`, apiKey, {
+    method: "PATCH",
+    body: { status },
+  });
+}
+
 export async function removePrivateAttendee(
   apiKey: string,
   courseId: number,
