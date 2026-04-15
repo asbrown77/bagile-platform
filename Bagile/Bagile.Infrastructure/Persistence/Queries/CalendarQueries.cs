@@ -193,7 +193,7 @@ public class CalendarQueries : ICalendarQueries
                 TrainerInitials = GetInitials(c.TrainerName),
                 TrainerName = c.TrainerName,
                 StartDate = c.StartDate,
-                EndDate = c.EndDate,
+                EndDate = c.EndDate ?? c.StartDate,
                 IsVirtual = string.Equals(c.FormatType, "virtual", StringComparison.OrdinalIgnoreCase),
                 IsPrivate = !c.IsPublic,
                 Status = status,
@@ -287,7 +287,7 @@ public class CalendarQueries : ICalendarQueries
         public long Id { get; set; }
         public string Sku { get; set; } = "";
         public DateTime StartDate { get; set; }
-        public DateTime EndDate { get; set; }
+        public DateTime? EndDate { get; set; }
         public string? FormatType { get; set; }
         public bool IsPublic { get; set; }
         public string? Status { get; set; }
