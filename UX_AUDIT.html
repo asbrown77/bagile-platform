@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BAgile Portal — UX Audit Report</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 15px;
+      line-height: 1.7;
+      color: #1a1a2e;
+      background: #f8f9fc;
+    }
+
+    .page {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 48px 32px 96px;
+    }
+
+    /* Header */
+    .report-header {
+      border-bottom: 3px solid #003366;
+      padding-bottom: 32px;
+      margin-bottom: 48px;
+    }
+    .report-header .label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: #003366;
+      margin-bottom: 8px;
+    }
+    .report-header h1 {
+      font-size: 32px;
+      font-weight: 800;
+      color: #003366;
+      margin-bottom: 6px;
+    }
+    .report-header .subtitle {
+      font-size: 16px;
+      color: #6b7280;
+    }
+    .report-header .meta {
+      margin-top: 16px;
+      font-size: 13px;
+      color: #9ca3af;
+    }
+
+    /* Sections */
+    section {
+      margin-bottom: 56px;
+    }
+    h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #003366;
+      margin-bottom: 20px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 8px;
+      margin-top: 24px;
+    }
+    p { margin-bottom: 12px; color: #374151; }
+    p:last-child { margin-bottom: 0; }
+
+    /* Executive summary callout */
+    .executive-summary {
+      background: #eff6ff;
+      border-left: 4px solid #003366;
+      border-radius: 0 12px 12px 0;
+      padding: 24px 28px;
+      margin-bottom: 8px;
+    }
+    .executive-summary p {
+      color: #1e3a5f;
+      font-size: 15px;
+    }
+
+    /* Cards for working / not working */
+    .card-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 4px;
+    }
+    @media (max-width: 640px) { .card-grid { grid-template-columns: 1fr; } }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      padding: 20px 22px;
+    }
+    .card h4 {
+      font-size: 13px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 6px;
+    }
+    .card p { font-size: 13px; color: #6b7280; margin-bottom: 0; }
+    .card .tag {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 999px;
+      margin-bottom: 8px;
+    }
+    .tag-good { background: #dcfce7; color: #166534; }
+    .tag-bad  { background: #fee2e2; color: #991b1b; }
+
+    /* Issue list */
+    .issue-list { list-style: none; }
+    .issue-list li {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 18px 22px;
+      margin-bottom: 12px;
+    }
+    .issue-list li .issue-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      margin-bottom: 10px;
+    }
+    .issue-num {
+      flex-shrink: 0;
+      width: 28px;
+      height: 28px;
+      background: #fee2e2;
+      color: #991b1b;
+      font-size: 12px;
+      font-weight: 800;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .issue-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #111827;
+    }
+    .issue-body { font-size: 13px; color: #6b7280; }
+    .code-ref {
+      display: inline-block;
+      margin-top: 8px;
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 11px;
+      background: #f3f4f6;
+      color: #374151;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    /* Quick wins table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid #e5e7eb;
+    }
+    th {
+      background: #f9fafb;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: #6b7280;
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    td {
+      font-size: 13px;
+      color: #374151;
+      padding: 13px 16px;
+      border-bottom: 1px solid #f3f4f6;
+      vertical-align: top;
+    }
+    tr:last-child td { border-bottom: none; }
+    .time-pill {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .time-quick { background: #dcfce7; color: #166534; }
+    .time-medium { background: #fef9c3; color: #854d0e; }
+
+    /* Priority list */
+    .priority-list { list-style: none; }
+    .priority-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 16px 0;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .priority-list li:last-child { border-bottom: none; }
+    .priority-badge {
+      flex-shrink: 0;
+      width: 32px;
+      height: 32px;
+      background: #003366;
+      color: white;
+      font-size: 13px;
+      font-weight: 800;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .priority-content h4 { font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 4px; }
+    .priority-content p  { font-size: 13px; color: #6b7280; margin-bottom: 0; }
+
+    /* Structural improvements */
+    .improvement {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 22px 24px;
+      margin-bottom: 16px;
+    }
+    .improvement h3 { margin-top: 0; font-size: 15px; color: #003366; }
+    .improvement p  { font-size: 13px; color: #6b7280; margin-bottom: 0; }
+
+    /* Footer */
+    .report-footer {
+      margin-top: 64px;
+      padding-top: 24px;
+      border-top: 1px solid #e5e7eb;
+      font-size: 12px;
+      color: #9ca3af;
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="report-header">
+    <div class="label">UX Design Audit</div>
+    <h1>BAgile Portal</h1>
+    <div class="subtitle">Dashboard &amp; Course Management Hub — Design Review</div>
+    <div class="meta">Reviewed 15 April 2026 &nbsp;·&nbsp; Based on portal v6.3.0 (Sprint 28)</div>
+  </div>
+
+  <!-- Executive Summary -->
+  <section>
+    <h2>Executive Summary</h2>
+    <div class="executive-summary">
+      <p>The portal has a solid foundation — clean design system, cohesive visual language, and the Calendar-as-hub approach is architecturally right. But it <strong>answers the wrong question first</strong>: the dashboard leads with five financial KPI cards before showing a single course, inverting the priority for someone whose first daily question is "what's happening with my courses today?" The Calendar page is the biggest recent improvement and delivers real workflow value, but three specific friction points hit every session — the Edit button is buried at the bottom of the side panel, the gateway "Publish →" action has the same visual weight as a plain hyperlink, and the published-gateway tick is not clickable (fixed in this sprint). Several nav inconsistencies and terminology issues have accumulated into noise. Most fixes are under an hour each.</p>
+    </div>
+  </section>
+
+  <!-- What's Working -->
+  <section>
+    <h2>What's Working Well</h2>
+    <div class="card-grid">
+      <div class="card">
+        <div class="tag tag-good">Nav</div>
+        <h4>Sidebar badges are excellent</h4>
+        <p>Showing pending transfer counts and at-risk course counts in the nav without being on any page is exactly the right pattern for an operator tool. At-a-glance triage before you've clicked anything.</p>
+      </div>
+      <div class="card">
+        <div class="tag tag-good">Dashboard</div>
+        <h4>Running Today &amp; At Risk sections</h4>
+        <p>Right idea, right design. Colour-coded backgrounds, pulsing status dots, direct links to course detail. The "All clear" green state is a satisfying confirmation that nothing is broken.</p>
+      </div>
+      <div class="card">
+        <div class="tag tag-good">Calendar</div>
+        <h4>Gateway checklist in side panel</h4>
+        <p>Representing Planned → Partial Live → Live as a checklist with per-gateway publish buttons is immediately understandable. Publishing from a side panel without leaving the calendar is a real productivity win.</p>
+      </div>
+      <div class="card">
+        <div class="tag tag-good">Calendar</div>
+        <h4>Calendar tile design</h4>
+        <p>Badge image + course code + trainer avatar + enrolment count in a tiny tile is information-dense without being cluttered. Left-border as status colour is an elegant use of a compact visual channel.</p>
+      </div>
+      <div class="card">
+        <div class="tag tag-good">Design System</div>
+        <h4>Cohesive component language</h4>
+        <p>Button, Badge, Card, SlideOver, PageHeader all follow the same shape/size/colour conventions. Rounded-lg everywhere, consistent uppercase tracking for labels, brand-600 blue throughout. This feels designed, not assembled.</p>
+      </div>
+      <div class="card">
+        <div class="tag tag-good">Modals</div>
+        <h4>Add Course modal dual-purpose</h4>
+        <p>Reusing AddCourseModal for both create and edit with initialValues is the right call. The Virtual/Onsite and Public/Private segmented controls are more scannable than dropdowns for binary choices.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- What Isn't Working -->
+  <section>
+    <h2>What Isn't Working</h2>
+    <ul class="issue-list">
+
+      <li>
+        <div class="issue-header">
+          <div class="issue-num">1</div>
+          <div class="issue-title">Dashboard answers the wrong question first</div>
+        </div>
+        <div class="issue-body">
+          <p>Five KPI cards appear before a single course. Four of the five are financial metrics. At 8am, Alex wants to know: is today's PSM running? Who's at risk? The week strip is buried below financial summaries that belong on the Revenue page. The order should be: today → week strip → at risk → KPIs. Revenue is important but it is not the reason the portal is opened each morning.</p>
+          <span class="code-ref">dashboard/page.tsx lines 319–368 (KPI cards render before alerts, week strip, and running today)</span>
+        </div>
+      </li>
+
+      <li>
+        <div class="issue-header">
+          <div class="issue-num">2</div>
+          <div class="issue-title">"Calendar" and "Courses" are two nav entries for one thing</div>
+        </div>
+        <div class="issue-body">
+          <p>Sprint 28 retired /courses as a list, redirecting it to /calendar?view=list. But the sidebar still lists both as separate nav items in the same group. Worse: the at-risk badge is attached to /courses, not /calendar — so the badge lights up on the wrong nav item every single day.</p>
+          <span class="code-ref">Sidebar.tsx line 49: badges["/courses"] = atRiskCourses — badge is on the wrong item</span>
+        </div>
+      </li>
+
+      <li>
+        <div class="issue-header">
+          <div class="issue-num">3</div>
+          <div class="issue-title">Calendar toolbar is overloaded and confusing</div>
+        </div>
+        <div class="issue-body">
+          <p>Three distinct filter zones, a status legend that doubles as a filter, and a "Decision due" indicator that looks interactive but isn't. The Decision due red dot floats inline with the filter pills, strongly implying it can be toggled. It can't. The view toggle (Calendar/List) and status filters are the same tier of control but sit on opposite ends of the toolbar.</p>
+          <span class="code-ref">calendar/page.tsx lines 1084–1150</span>
+        </div>
+      </li>
+
+      <li>
+        <div class="issue-header">
+          <div class="issue-num">4</div>
+          <div class="issue-title">Edit button is buried at the bottom of the side panel</div>
+        </div>
+        <div class="issue-body">
+          <p>For a planned course, Edit is the highest-frequency action. It currently appears after scrolling past: badge + dates, status badge, decision deadline, enrolment bar, notes, gateway checklist, and external links — right next to the Cancel button. Edit and Cancel are not equally risky. Edit should be in the panel header, not at the bottom alongside a destructive action.</p>
+          <span class="code-ref">calendar/page.tsx — SidePanel component, edit button rendered after all other content</span>
+        </div>
+      </li>
+
+      <li>
+        <div class="issue-header">
+          <div class="issue-num">5</div>
+          <div class="issue-title">"Publish →" has the same visual weight as "View"</div>
+        </div>
+        <div class="issue-body">
+          <p>Publishing a planned course to WooCommerce is a significant, consequential action. It's rendered as text-xs text-brand-600 — identical visual weight to the "View" link on an already-published gateway. This is the most important action in the planning workflow. Publishing a course to E-commerce should be a full-width primary Button when the course is in Planned status, not a text link inside a checklist row.</p>
+          <span class="code-ref">calendar/page.tsx line ~587 — "Publish →" is styled identically to "View"</span>
+        </div>
+      </li>
+
+      <li>
+        <div class="issue-header">
+          <div class="issue-num">6</div>
+          <div class="issue-title">Two status vocabularies with no explanation</div>
+        </div>
+        <div class="issue-body">
+          <p>The dashboard uses: running / completed / guaranteed / monitor / at risk. The calendar uses: planned / partial_live / live / cancelled. These are different models for different things, but Alex sees both daily with no bridge between them. A course that's "at risk" on the dashboard doesn't show that signal anywhere on the calendar tile or side panel.</p>
+        </div>
+      </li>
+
+      <li>
+        <div class="issue-header">
+          <div class="issue-num">7</div>
+          <div class="issue-title">Dashboard "View all" links still point to /courses</div>
+        </div>
+        <div class="issue-body">
+          <p>Post-Sprint 28, two "View all" links on the dashboard still navigate to /courses, which redirects to /calendar?view=list. The URL flickers and the behaviour is technically incorrect. One-line fix per link.</p>
+          <span class="code-ref">dashboard/page.tsx lines 408 and 470</span>
+        </div>
+      </li>
+
+      <li>
+        <div class="issue-header">
+          <div class="issue-num">8</div>
+          <div class="issue-title">"draft" still exists in the Badge component</div>
+        </div>
+        <div class="issue-body">
+          <p>After the team decision to use "Planned" not "draft", the statusBadge map in Badge.tsx still includes draft: { label: "Draft", variant: "neutral" }. If this is ever rendered it creates incorrect terminology. The design system should enforce the standard at the component level.</p>
+          <span class="code-ref">Badge.tsx line 45 — remove or rename draft → planned</span>
+        </div>
+      </li>
+
+    </ul>
+  </section>
+
+  <!-- Quick Wins -->
+  <section>
+    <h2>Quick Wins <span style="font-size:13px;font-weight:400;color:#9ca3af;">(1–2 hours each)</span></h2>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Change</th>
+          <th>Where</th>
+          <th>Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>1</strong></td>
+          <td>✅ <strong>Gateway tick is now a clickable link</strong> to the published page — whole row is tappable</td>
+          <td>calendar/page.tsx — SidePanel</td>
+          <td><span class="time-pill time-quick">Done</span></td>
+        </tr>
+        <tr>
+          <td><strong>2</strong></td>
+          <td>Reorder dashboard: week strip + running/at-risk <em>before</em> KPI cards</td>
+          <td>dashboard/page.tsx</td>
+          <td><span class="time-pill time-quick">30 min</span></td>
+        </tr>
+        <tr>
+          <td><strong>3</strong></td>
+          <td>Move at-risk badge from /courses to /calendar in Sidebar</td>
+          <td>Sidebar.tsx line 49</td>
+          <td><span class="time-pill time-quick">15 min</span></td>
+        </tr>
+        <tr>
+          <td><strong>4</strong></td>
+          <td>Fix "View all" dashboard links to /calendar?view=list</td>
+          <td>dashboard/page.tsx lines 408, 470</td>
+          <td><span class="time-pill time-quick">10 min</span></td>
+        </tr>
+        <tr>
+          <td><strong>5</strong></td>
+          <td>Remove "draft" from Badge.tsx statusBadge map</td>
+          <td>Badge.tsx line 45</td>
+          <td><span class="time-pill time-quick">5 min</span></td>
+        </tr>
+        <tr>
+          <td><strong>6</strong></td>
+          <td>Visually separate "Decision due" from the filter pills (not interactive, shouldn't look like it is)</td>
+          <td>calendar/page.tsx toolbar</td>
+          <td><span class="time-pill time-quick">20 min</span></td>
+        </tr>
+        <tr>
+          <td><strong>7</strong></td>
+          <td>Move Edit button to SlideOver header area — add optional actions prop</td>
+          <td>calendar/page.tsx — SidePanel + SlideOver.tsx</td>
+          <td><span class="time-pill time-medium">45 min</span></td>
+        </tr>
+        <tr>
+          <td><strong>8</strong></td>
+          <td>Promote "Publish →" to a proper Button (not text link) for unpublished gateways</td>
+          <td>calendar/page.tsx — SidePanel gateway checklist</td>
+          <td><span class="time-pill time-medium">30 min</span></td>
+        </tr>
+        <tr>
+          <td><strong>9</strong></td>
+          <td>Wrap empty week-strip cells in a link to /calendar (empty day → go plan a course)</td>
+          <td>dashboard/page.tsx week strip</td>
+          <td><span class="time-pill time-quick">30 min</span></td>
+        </tr>
+        <tr>
+          <td><strong>10</strong></td>
+          <td>PageHeader title: text-xl → text-2xl (too modest for the primary page heading)</td>
+          <td>PageHeader.tsx</td>
+          <td><span class="time-pill time-quick">5 min</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Structural Improvements -->
+  <section>
+    <h2>Structural Improvements <span style="font-size:13px;font-weight:400;color:#9ca3af;">(sprint-sized)</span></h2>
+
+    <div class="improvement">
+      <h3>A. Dashboard: Operator-first layout</h3>
+      <p>The dashboard tries to be both a daily operations console and a business overview. These have different information needs and different cadences. The KPI cards (revenue this month/YTD, students, upcoming count) belong on the Revenue page. The dashboard's sole job is operational pulse: status strip at top → week strip → alerts → at-risk cards → upcoming table. Revenue is important but it's not why the portal is opened at 8am. Moving the KPIs down (or off) changes the entire character of the dashboard from "report" to "cockpit".</p>
+    </div>
+
+    <div class="improvement">
+      <h3>B. Unified navigation: one entry for Calendar + Courses</h3>
+      <p>The sidebar currently lists Calendar and Courses as separate items for what is now one destination. The correct model: single "Calendar" nav item, the at-risk badge attaches here, the Calendar/List view toggle lives inside the page (it already does). The /courses/[id] detail pages remain and are reached from within the calendar. This removes the navigation ambiguity permanently and stops the badge lighting up on the wrong item.</p>
+    </div>
+
+    <div class="improvement">
+      <h3>C. Side panel: state-driven layout</h3>
+      <p>The side panel renders everything in the same neutral order regardless of course state. It should lead with "what do I do next?": for Planned courses, the primary CTA should be a prominent full-width "Publish to E-commerce" button — not a text link inside a checklist row. For Live courses, the enrolment bar should be the hero element with clear colour coding. For at-risk courses, the recommended action string (currently only shown on the dashboard) should appear here too. This is a meaningful UX rewrite of the panel, probably half a sprint, but the daily-use impact would be significant.</p>
+    </div>
+
+    <div class="improvement">
+      <h3>D. Calendar: "Next up" context strip</h3>
+      <p>When navigating between months, there's no persistent anchor to where you are in the actual schedule. A one-liner above the calendar — "Next course: PSM in 3 days · Mon 20 Apr" — gives instant orientation without any clicks. This is especially useful after scrolling forward to look at future months and needing to re-orient.</p>
+    </div>
+
+    <div class="improvement">
+      <h3>E. Payment visibility (when Xero re-integration lands)</h3>
+      <p>There is currently no way from the portal to see whether a booking has been paid. When the Xero integration is re-enabled, payment status should be a column in the course attendee table and a signal in the side panel — not buried on a separate finance page. An unpaid booking from three weeks ago is an operational issue, not just a financial one.</p>
+    </div>
+  </section>
+
+  <!-- Priority Order -->
+  <section>
+    <h2>Priority Order — Top 5</h2>
+    <ul class="priority-list">
+      <li>
+        <div class="priority-badge">1</div>
+        <div class="priority-content">
+          <h4>Reorder the dashboard</h4>
+          <p>Fixes the primary question inversion that affects Alex every time the portal is opened. Week strip and at-risk sections before KPI cards. One afternoon, highest daily impact.</p>
+        </div>
+      </li>
+      <li>
+        <div class="priority-badge">2</div>
+        <div class="priority-content">
+          <h4>Fix the sidebar: badge on /calendar, merge or remove /courses nav item</h4>
+          <p>The at-risk badge lights up on the wrong item every day there's an at-risk course. The dual Courses/Calendar entry creates a split mental model that Sprint 28 was supposed to resolve.</p>
+        </div>
+      </li>
+      <li>
+        <div class="priority-badge">3</div>
+        <div class="priority-content">
+          <h4>Move Edit button to the side panel header</h4>
+          <p>For planned courses, editing is the primary action but requires scrolling to find. 45 minutes to add an actions prop to SlideOver and render Edit at the top.</p>
+        </div>
+      </li>
+      <li>
+        <div class="priority-badge">4</div>
+        <div class="priority-content">
+          <h4>Promote "Publish →" to a proper Button for unpublished gateways</h4>
+          <p>The most consequential action in the planning workflow currently looks like a footnote. A proper Button — even secondary variant — makes the action appropriately visible and clickable.</p>
+        </div>
+      </li>
+      <li>
+        <div class="priority-badge">5</div>
+        <div class="priority-content">
+          <h4>Fix View all links + remove draft from Badge.tsx</h4>
+          <p>Two one-line fixes that are currently technically incorrect post-Sprint 28. Dashboard links should point to /calendar?view=list. "draft" should not exist in the design system vocabulary.</p>
+        </div>
+      </li>
+    </ul>
+  </section>
+
+  <div class="report-footer">
+    BAgile Portal UX Audit &nbsp;·&nbsp; 15 April 2026 &nbsp;·&nbsp; v6.3.0 (Sprint 28) &nbsp;·&nbsp; Generated by Claude Code
+  </div>
+
+</div>
+</body>
+</html>

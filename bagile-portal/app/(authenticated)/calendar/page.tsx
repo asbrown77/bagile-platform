@@ -549,8 +549,8 @@ function SidePanel({ event, onClose, onPublish, onCancel, onEdit }: SidePanelPro
               const url = gwStatus?.url;
               const isIcAgile = gwType === "icagile";
 
-              return (
-                <div key={gwType} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
+              const rowContent = (
+                <>
                   <div className="flex items-center gap-2">
                     {isPublished ? (
                       <span className="w-5 h-5 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xs font-bold">
@@ -563,31 +563,43 @@ function SidePanel({ event, onClose, onPublish, onCancel, onEdit }: SidePanelPro
                     )}
                     <span className="text-sm font-medium text-gray-700">{gatewayLabel(gwType)}</span>
                   </div>
+                  <span className="flex items-center gap-1">
+                    {isIcAgile ? (
+                      <span className="text-xs text-gray-400 italic">Coming soon</span>
+                    ) : isPublished && url ? (
+                      <span className="text-xs text-brand-600 flex items-center gap-1 font-medium">
+                        View <ExternalLink className="w-3 h-3" />
+                      </span>
+                    ) : !isPublished && !isCancelled ? (
+                      <button
+                        onClick={(e) => { e.preventDefault(); handlePublish(gwType); }}
+                        disabled={publishing === gwType}
+                        className="text-xs text-brand-600 hover:text-brand-700 font-medium disabled:opacity-50 flex items-center gap-1"
+                      >
+                        {publishing === gwType ? (
+                          <><Loader2 className="w-3 h-3 animate-spin" /> Publishing...</>
+                        ) : (
+                          "Publish \u2192"
+                        )}
+                      </button>
+                    ) : null}
+                  </span>
+                </>
+              );
 
-                  {isIcAgile ? (
-                    <span className="text-xs text-gray-400 italic">Coming soon</span>
-                  ) : isPublished && url ? (
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-brand-600 hover:text-brand-700 flex items-center gap-1 font-medium"
-                    >
-                      View <ExternalLink className="w-3 h-3" />
-                    </a>
-                  ) : !isPublished && !isCancelled ? (
-                    <button
-                      onClick={() => handlePublish(gwType)}
-                      disabled={publishing === gwType}
-                      className="text-xs text-brand-600 hover:text-brand-700 font-medium disabled:opacity-50 flex items-center gap-1"
-                    >
-                      {publishing === gwType ? (
-                        <><Loader2 className="w-3 h-3 animate-spin" /> Publishing...</>
-                      ) : (
-                        "Publish \u2192"
-                      )}
-                    </button>
-                  ) : null}
+              return isPublished && url ? (
+                <a
+                  key={gwType}
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100 hover:bg-green-50 hover:border-green-200 transition-colors cursor-pointer"
+                >
+                  {rowContent}
+                </a>
+              ) : (
+                <div key={gwType} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
+                  {rowContent}
                 </div>
               );
             })}

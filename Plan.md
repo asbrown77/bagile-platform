@@ -95,6 +95,34 @@ _After v1 is live and used for a full month._
 
 ---
 
+### Sprint 29 — "UX Polish" _(next up)_
+
+UX audit completed 15 Apr 2026. Full report: `UX_AUDIT.html` in repo root.
+
+**Quick wins (1 session):**
+
+| # | Item | Size | Status |
+|---|------|------|--------|
+| U1 | Gateway checklist tick → clickable link to published page | XS | **DONE** (Sprint 28 follow-up) |
+| U2 | Dashboard: reorder — week strip + at-risk before KPI cards | S | READY |
+| U3 | Sidebar: move at-risk badge from /courses to /calendar; remove duplicate nav item | XS | READY |
+| U4 | Dashboard: fix "View all" links → /calendar?view=list | XS | READY |
+| U5 | Remove "draft" from Badge.tsx statusBadge map | XS | READY |
+| U6 | Separate "Decision due" legend from filter pills (not interactive, shouldn't look it) | XS | READY |
+| U7 | Side panel: move Edit button to SlideOver header (add actions prop) | S | READY |
+| U8 | Promote "Publish →" to a proper Button for unpublished gateways | S | READY |
+| U9 | Empty week-strip cells → link to /calendar (add + affordance on hover) | S | READY |
+| U10 | PageHeader title: text-xl → text-2xl | XS | READY |
+
+**Structural (sprint-sized, plan separately):**
+- Dashboard: operator-first layout — KPI cards to Revenue page, dashboard = cockpit
+- Sidebar: merge Calendar + Courses into single nav entry
+- Side panel: state-driven layout (Planned → big Publish CTA; Live → enrolment hero)
+- Calendar: "Next up" context strip above calendar
+- Payment visibility: when Xero re-integrates, payment status in attendee table + side panel
+
+---
+
 ## Pull Backlog
 
 Items below are prioritised but not yet scheduled.
