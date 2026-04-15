@@ -16,7 +16,8 @@ const COURSE_FULL_NAMES: Record<string, string> = {
   PAL:    "Professional Agile Leadership",
   PSU:    "Professional Scrum with User Experience",
   PSFS:   "Professional Scrum Facilitation Skills",
-  EBM:    "Evidence-Based Management",
+  PALEBM: "Professional Agile Leadership with EBM",
+  EBM:    "Professional Agile Leadership with EBM",  // alias for PAL-EBM
   APS:    "Applying Professional Scrum",
   APSSD:  "Applying Professional Scrum for Software Development",
 };

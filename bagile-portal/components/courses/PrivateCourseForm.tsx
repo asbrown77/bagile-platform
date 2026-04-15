@@ -36,13 +36,13 @@ export interface PrivateCourseFormProps {
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const COURSE_CODES = [
-  "PSM", "PSPO", "PSK", "PALE", "EBM", "PSFS", "APS", "APSSD", "PSU",
+  "PSM", "PSPO", "PSK", "PALE", "PALEBM", "PSFS", "APS", "APSSD", "PSU",
   "PSMAI", "PSPOAI", "PSPOA", "PSMA",
 ];
 
 /** Default duration in days for each course type (determines auto end date on create). */
 const COURSE_DURATIONS: Record<string, number> = {
-  PSM: 2, PSPO: 2, PSK: 2, PALE: 2, EBM: 1, PSFS: 1, APS: 2, APSSD: 3, PSU: 2,
+  PSM: 2, PSPO: 2, PSK: 2, PALE: 2, PALEBM: 1, PSFS: 1, APS: 2, APSSD: 3, PSU: 2,
   PSMAI: 2, PSPOAI: 2, PSPOA: 2, PSMA: 2,
 };
 

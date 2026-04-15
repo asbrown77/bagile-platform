@@ -243,7 +243,7 @@ public class CalendarQueries : ICalendarQueries
     private static readonly HashSet<string> KnownCourseTypes = new(StringComparer.OrdinalIgnoreCase)
     {
         "PSM", "PSMO", "PSMAI", "PSMA", "PSPO", "PSPOAI", "PSPOA",
-        "PSK", "PALE", "PAL", "PSU", "PSFS", "EBM", "APS", "APSSD",
+        "PSK", "PALE", "PAL", "PSU", "PSFS", "EBM", "PALEBM", "APS", "APSSD",
     };
 
     /// <summary>

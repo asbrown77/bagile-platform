@@ -5,19 +5,20 @@
 
 /** Map courseType code to badge image filename in /public/badges/. */
 const BADGE_MAP: Record<string, string> = {
-  PSM: "PSM-I.png",
-  PSMA: "PSM-II.png",
-  PSPO: "PSPO-I.png",
-  PSPOA: "PSPO-II.png",
-  PSMAI: "PSM-AI.png",
+  PSM:    "PSM-I.png",
+  PSMA:   "PSM-II.png",
+  PSPO:   "PSPO-I.png",
+  PSPOA:  "PSPO-II.png",
+  PSMAI:  "PSM-AI.png",
   PSPOAI: "PSPO-AI.png",
-  PSK: "PSK-I.png",
-  PALE: "PAL-I.png",
-  EBM: "PAL-EBM.png",
-  PSU: "PSU.png",
-  PSFS: "PSFS.png",
-  APSSD: "APS-SD.png",
-  APS: "APS.png",
+  PSK:    "PSK-I.png",
+  PALE:   "PAL-I.png",
+  PALEBM: "PAL-EBM.png",
+  EBM:    "PAL-EBM.png",  // alias — EBM is the same course as PAL-EBM
+  PSU:    "PSU.png",
+  PSFS:   "PSFS.png",
+  APSSD:  "APS-SD.png",
+  // APS (standalone) has no scrum.org badge image — omitted intentionally
 };
 
 export function getBadgeSrc(courseType: string): string | null {
@@ -27,19 +28,20 @@ export function getBadgeSrc(courseType: string): string | null {
 
 /** Friendly course type display names. */
 const COURSE_NAMES: Record<string, string> = {
-  PSM: "Professional Scrum Master",
-  PSMA: "Professional Scrum Master II",
-  PSPO: "Professional Scrum Product Owner",
-  PSPOA: "Professional Scrum Product Owner II",
-  PSMAI: "Professional Scrum Master with AI Essentials",
+  PSM:    "Professional Scrum Master",
+  PSMA:   "Professional Scrum Master Advanced",
+  PSPO:   "Professional Scrum Product Owner",
+  PSPOA:  "Professional Scrum Product Owner Advanced",
+  PSMAI:  "Professional Scrum Master with AI Essentials",
   PSPOAI: "Professional Scrum Product Owner with AI Essentials",
-  PSK: "Professional Scrum with Kanban",
-  PALE: "Professional Agile Leadership Essentials",
-  EBM: "Evidence-Based Management",
-  PSU: "Professional Scrum with UX",
-  PSFS: "Professional Scrum Facilitation Skills",
-  APSSD: "Applying Professional Scrum for Software Development",
-  APS: "Applying Professional Scrum",
+  PSK:    "Professional Scrum with Kanban",
+  PALE:   "Professional Agile Leadership Essentials",
+  PALEBM: "Professional Agile Leadership with EBM",
+  EBM:    "Professional Agile Leadership with EBM",  // alias for PAL-EBM
+  PSU:    "Professional Scrum with User Experience",
+  PSFS:   "Professional Scrum Facilitation Skills",
+  APSSD:  "Applying Professional Scrum for Software Development",
+  APS:    "Applying Professional Scrum",
 };
 
 export function getCourseDisplayName(courseType: string): string {
@@ -49,19 +51,20 @@ export function getCourseDisplayName(courseType: string): string {
 
 /** Human-readable code with hyphens: PSMAI -> PSM-AI, PSPOA -> PSPO-A */
 const CODE_DISPLAY: Record<string, string> = {
-  PSM: "PSM",
-  PSMA: "PSM-A",
-  PSPO: "PSPO",
-  PSPOA: "PSPO-A",
-  PSMAI: "PSM-AI",
+  PSM:    "PSM",
+  PSMA:   "PSM-A",
+  PSPO:   "PSPO",
+  PSPOA:  "PSPO-A",
+  PSMAI:  "PSM-AI",
   PSPOAI: "PSPO-AI",
-  PSK: "PSK",
-  PALE: "PAL-E",
-  EBM: "EBM",
-  PSU: "PSU",
-  PSFS: "PSFS",
-  APSSD: "APS-SD",
-  APS: "APS",
+  PSK:    "PSK",
+  PALE:   "PAL-E",
+  PALEBM: "PAL-EBM",
+  EBM:    "EBM",       // alias — displays as EBM per convention
+  PSU:    "PSU",
+  PSFS:   "PSFS",
+  APSSD:  "APS-SD",
+  APS:    "APS",
 };
 
 export function getCourseCodeDisplay(courseType: string): string {
@@ -127,7 +130,7 @@ export function isDeadlineUrgent(deadline: string | null): boolean {
 
 /** Scrum.org course types that need the scrum.org gateway. */
 const SCRUMORG_TYPES = new Set([
-  "PSM", "PSPO", "PSK", "PALE", "EBM", "APSSD", "APS",
+  "PSM", "PSPO", "PSK", "PALE", "PALEBM", "EBM", "APSSD", "APS",
   "PSMA", "PSPOA", "PSMAI", "PSPOAI",
 ]);
 
@@ -153,7 +156,7 @@ export function getApplicableGateways(courseType: string, isPrivate: boolean): s
 // All recognised course type codes — used to find the type within a SKU
 const KNOWN_COURSE_TYPES = new Set([
   "PSM", "PSMO", "PSMAI", "PSMA", "PSPO", "PSPOAI", "PSPOA",
-  "PSK", "PALE", "PAL", "PSU", "PSFS", "EBM", "APS", "APSSD",
+  "PSK", "PALE", "PAL", "PSU", "PSFS", "EBM", "PALEBM", "APS", "APSSD",
 ]);
 
 /**
@@ -189,7 +192,7 @@ export const COURSE_TYPE_OPTIONS = [
   { value: "PSPOAI", label: "PSPO-AI" },
   { value: "PSK", label: "PSK" },
   { value: "PALE", label: "PAL-E" },
-  { value: "EBM", label: "EBM" },
+  { value: "PALEBM", label: "EBM" },
   { value: "APS", label: "APS" },
   { value: "APSSD", label: "APS-SD" },
   { value: "PSFS", label: "PSFS" },
