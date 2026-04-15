@@ -8,8 +8,10 @@ import {
   EmailSendLog,
   getCourseAttendees, getCourseScheduleDetail, getTransfersByCourse,
   getPostCourseTemplate, removePrivateAttendee, getEmailSendLog,
+  patchCourseStatus,
   formatCurrency, formatDate,
 } from "@/lib/api";
+import { getStatusLabel, getStatusBadgeVariant } from "@/lib/calendarHelpers";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
@@ -72,6 +74,7 @@ export default function CourseDetail() {
   const [templateMissing, setTemplateMissing] = useState(false);
   const [editingAttendee, setEditingAttendee] = useState<CourseAttendee | null>(null);
   const [removingEnrolmentId, setRemovingEnrolmentId] = useState<number | null>(null);
+  const [statusChanging, setStatusChanging] = useState(false);
 
   useEffect(() => {
     if (!apiKey || !courseId) return;
@@ -156,6 +159,19 @@ export default function CourseDetail() {
       setError("Failed to remove attendee — please try again");
     } finally {
       setRemovingEnrolmentId(null);
+    }
+  }
+
+  async function handleStatusChange(newStatus: string) {
+    if (!course || newStatus === course.status) return;
+    setStatusChanging(true);
+    try {
+      await patchCourseStatus(apiKey, courseId, newStatus);
+      setCourse({ ...course, status: newStatus });
+    } catch {
+      setError("Failed to update status — please try again");
+    } finally {
+      setStatusChanging(false);
     }
   }
 
@@ -296,7 +312,8 @@ export default function CourseDetail() {
         {/* Status badges */}
         <div className="flex items-center gap-2 flex-shrink-0 mt-1">
           <Badge variant={isPrivate ? "warning" : "success"} dot>{isPrivate ? "Private" : "Public"}</Badge>
-          {course?.status && statusBadge(course.status)}
+          {/* Public course status in header; private status is in the Details card (editable) */}
+          {!isPrivate && course?.status && statusBadge(course.status)}
         </div>
       </div>
 
@@ -333,6 +350,25 @@ export default function CourseDetail() {
             <div className="flex items-center gap-2">
               <Badge variant={isVirtual ? "info" : "neutral"} dot>{isVirtual ? "Virtual" : "In-person"}</Badge>
             </div>
+
+            {/* Status — private courses only, inline changeable */}
+            {isPrivate && course.status && (
+              <div className="flex items-center gap-2">
+                <Badge variant={getStatusBadgeVariant(course.status)} dot>
+                  {getStatusLabel(course.status)}
+                </Badge>
+                <select
+                  value={course.status}
+                  disabled={statusChanging}
+                  onChange={(e) => handleStatusChange(e.target.value)}
+                  className="text-xs border border-gray-200 rounded px-1.5 py-0.5 text-gray-500 bg-white cursor-pointer hover:border-gray-400 disabled:opacity-50"
+                >
+                  {["enquiry","quoted","confirmed","completed","cancelled"].map((s) => (
+                    <option key={s} value={s}>{getStatusLabel(s)}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Reference (course code) — private courses */}
             {isPrivate && course.invoiceReference && (
