@@ -390,6 +390,7 @@ export interface CourseScheduleItem {
   currentEnrolmentCount: number;
   guaranteedToRun: boolean;
   needsAttention: boolean;
+  clientOrganisationName?: string | null;
 }
 
 export interface PagedResult<T> {
@@ -413,6 +414,16 @@ export async function getCourseSchedules(
   if (params.status) qs.set("status", params.status);
   qs.set("page", String(params.page || 1));
   qs.set("pageSize", String(params.pageSize || 50));
+  return apiRequest(`/api/course-schedules?${qs}`, apiKey);
+}
+
+export async function getPrivateCourses(
+  apiKey: string,
+  params: { from?: string; to?: string }
+): Promise<PagedResult<CourseScheduleItem>> {
+  const qs = new URLSearchParams({ type: "private", pageSize: "200" });
+  if (params.from) qs.set("from", params.from);
+  if (params.to) qs.set("to", params.to);
   return apiRequest(`/api/course-schedules?${qs}`, apiKey);
 }
 

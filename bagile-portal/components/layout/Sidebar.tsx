@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import {
   LayoutDashboard, ArrowLeftRight,
-  TrendingUp, Building2, Users, Handshake, Key, X, BarChart3, CalendarDays
+  TrendingUp, Building2, Users, Handshake, Key, X, BarChart3, CalendarDays, Lock
 } from "lucide-react";
 
 const sections = [
@@ -13,6 +13,7 @@ const sections = [
     items: [
       { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
       { label: "Course Schedule", href: "/courseschedule", icon: CalendarDays },
+      { label: "Private Courses", href: "/private-courses", icon: Lock },
       { label: "Transfers", href: "/transfers", icon: ArrowLeftRight },
     ],
   },

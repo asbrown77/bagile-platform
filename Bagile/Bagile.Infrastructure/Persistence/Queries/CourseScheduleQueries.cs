@@ -46,9 +46,11 @@ public class CourseScheduleQueries : ICourseScheduleQueries
                          AND COUNT(e.id) < 3
                     THEN true
                     ELSE false
-                END AS NeedsAttention
+                END AS NeedsAttention,
+                org.name AS ClientOrganisationName
             FROM bagile.course_schedules cs
             LEFT JOIN bagile.enrolments e ON e.course_schedule_id = cs.id AND e.status NOT IN ('cancelled', 'transferred')
+            LEFT JOIN bagile.organisations org ON org.id = cs.client_organisation_id
             WHERE 1=1
             " + (from != null ? " AND cs.start_date >= @from" : "") + @"
             " + (to != null ? " AND cs.start_date <= @to" : "") + @"
@@ -57,7 +59,8 @@ public class CourseScheduleQueries : ICourseScheduleQueries
             " + (type != null ? " AND ((cs.is_public = true AND @type = 'public') OR (cs.is_public = false AND @type = 'private'))" : "") + @"
             " + (status != null ? " AND cs.status = @status" : "") + @"
             GROUP BY cs.id, cs.sku, cs.name, cs.start_date, cs.end_date,
-                     cs.format_type, cs.trainer_name, cs.is_public, cs.status, cs.capacity
+                     cs.format_type, cs.trainer_name, cs.is_public, cs.status, cs.capacity,
+                     cs.client_organisation_id, org.name
             ORDER BY cs.start_date DESC
             LIMIT @pageSize OFFSET @offset;";
 

@@ -19,4 +19,5 @@ public record CourseScheduleDto
     public int CurrentEnrolmentCount { get; init; }
     public bool GuaranteedToRun { get; init; }      // e.g., enrolments >= 3
     public bool NeedsAttention { get; init; }       // e.g., starts in <= 7 days AND enrolments < 3
+    public string? ClientOrganisationName { get; init; }
 }
