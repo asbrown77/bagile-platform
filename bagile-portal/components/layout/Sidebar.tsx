@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import {
   LayoutDashboard, ArrowLeftRight,
-  TrendingUp, Building2, Users, Handshake, Key, X, BarChart3, CalendarDays, Lock, BookOpen
+  TrendingUp, Building2, Users, Handshake, Key, X, BarChart3, CalendarDays, Lock, BookOpen, ExternalLink
 } from "lucide-react";
 
 const sections = [
@@ -16,6 +16,7 @@ const sections = [
       { label: "Private Courses", href: "/private-courses", icon: Lock },
       { label: "Transfers", href: "/transfers", icon: ArrowLeftRight },
       { label: "Courses", href: "/course-types", icon: BookOpen },
+      { label: "Leads", href: "https://trello.com/b/hNs49hi4/b-agile-leads", icon: ExternalLink, external: true },
     ],
   },
   {
@@ -71,20 +72,16 @@ export function Sidebar({ pendingTransfers = 0, atRiskCourses = 0, onClose }: Si
               {section.label}
             </p>
             {section.items.map((item) => {
-              const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+              const isActive = !item.external && (pathname === item.href || pathname.startsWith(item.href + "/"));
               const Icon = item.icon;
               const badge = badges[item.href];
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={onClose}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors mb-0.5
+              const className = `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors mb-0.5
                     ${isActive
                       ? "bg-sidebar-active text-white border-l-2 border-accent -ml-0.5 pl-[10px]"
                       : "text-gray-400 hover:bg-sidebar-hover hover:text-gray-200"
-                    }`}
-                >
+                    }`;
+              const content = (
+                <>
                   <Icon className="w-4 h-4 shrink-0" />
                   <span className="flex-1">{item.label}</span>
                   {badge && (
@@ -92,6 +89,27 @@ export function Sidebar({ pendingTransfers = 0, atRiskCourses = 0, onClose }: Si
                       {badge}
                     </span>
                   )}
+                </>
+              );
+              return item.external ? (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={onClose}
+                  className={className}
+                >
+                  {content}
+                </a>
+              ) : (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={onClose}
+                  className={className}
+                >
+                  {content}
                 </Link>
               );
             })}
