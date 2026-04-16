@@ -136,10 +136,22 @@ Data model is already ready (`format_type`, `venue_address`, `capacity`, `price`
 | 6 | Extract SQL filter builder (eliminate string concatenation) | 0.5 day | Low |
 | 7 | Make CORS origins environment-configurable | 30 min | Low |
 
+### P5 — In-House CRM
+
+BAgile uses Trello as a lightweight leads board for now (linked from portal sidebar). Third-party CRMs (HubSpot, Salesforce etc.) are either too expensive or too generic. Build a purpose-fit CRM inside the portal when ready.
+
+Likely scope:
+- Leads / enquiries — inbound training requests from orgs, linked to existing `organisations` table
+- Contact records — named contacts per org (separate from students — these are buyers/decision-makers)
+- Pipeline stages — Enquiry → Quoted → Won / Lost
+- Activity log — notes, calls, emails per contact/org
+- Quote generation — ties into the private course quoting workflow (P0)
+
+**Decision needed:** when Trello becomes the bottleneck (volume or visibility), build this out in-house.
+
 ### Deferred
 
-- **Leads table** — deferred until CRM tool decision (HubSpot Free vs custom). Trello works for now.
-- **Communication log** — evaluate as part of CRM decision.
+- **Communication log** — evaluate as part of CRM build (P5).
 - **Zoom integration** — need to investigate where Zoom details are stored (WooCommerce product meta?)
 - **Bulk edit Organisation/Country** for public course attendees — low priority
 - **Settings page redesign** — tabbed layout (General, Templates, Trainers, API Keys) — cosmetic

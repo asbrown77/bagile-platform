@@ -16,7 +16,7 @@ const sections = [
       { label: "Private Courses", href: "/private-courses", icon: Lock },
       { label: "Transfers", href: "/transfers", icon: ArrowLeftRight },
       { label: "Courses", href: "/course-types", icon: BookOpen },
-      { label: "Leads", href: "https://trello.com/b/hNs49hi4/b-agile-leads", icon: ExternalLink, external: true },
+      { label: "Trello", href: "https://trello.com/b/hNs49hi4/b-agile-leads", icon: ExternalLink, external: true },
     ],
   },
   {
