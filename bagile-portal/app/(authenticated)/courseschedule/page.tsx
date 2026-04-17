@@ -37,7 +37,7 @@ import {
   COURSE_TYPE_OPTIONS,
 } from "@/lib/calendarHelpers";
 import { getTrainerColour, trainerInitials } from "@/lib/courseColours";
-import { addOneDayStr } from "@/lib/dateUtils";
+import { addOneDayStr, toDateStr } from "@/lib/dateUtils";
 import { loadConfig } from "@/lib/config";
 import { useSearchParams } from "next/navigation";
 import { generateCourseName } from "@/lib/privateCourseHelpers";
@@ -187,7 +187,8 @@ function AddCourseModal({ open, onClose, onSubmit, trainers, courseDefs, initial
     if (!start) return start;
     const d = new Date(start);
     d.setDate(d.getDate() + getDuration(type) - 1);
-    return d.toISOString().slice(0, 10);
+    // Use local date methods, not toISOString() (UTC), to avoid off-by-one in BST
+    return toDateStr(d);
   }
   const [isVirtual, setIsVirtual] = useState(true);
   const [venue, setVenue] = useState("");
