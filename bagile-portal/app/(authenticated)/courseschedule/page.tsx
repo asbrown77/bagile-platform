@@ -23,7 +23,7 @@ import { AlertBanner } from "@/components/ui/AlertBanner";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { SlideOver } from "@/components/ui/SlideOver";
-import { Plus, Calendar as CalendarIcon, Lock, AlertCircle, ExternalLink, Users, X, Loader2, LayoutList, Search, Upload, Download } from "lucide-react";
+import { Plus, Calendar as CalendarIcon, Lock, AlertCircle, AlertTriangle, ExternalLink, Users, X, Loader2, LayoutList, Search, Upload, Download } from "lucide-react";
 import {
   getBadgeSrc,
   getCourseCodeDisplay,
@@ -32,6 +32,7 @@ import {
   getStatusBadgeVariant,
   getStatusLabel,
   isDeadlineUrgent,
+  isLowEnrolment,
   getApplicableGateways,
   COURSE_TYPE_OPTIONS,
 } from "@/lib/calendarHelpers";
@@ -117,6 +118,11 @@ function CourseBlock({ event, badgeMap }: { event: CalendarEvent; compact?: bool
       {/* Private indicator */}
       {event.isPrivate && (
         <Lock className="w-3 h-3 text-amber-500 absolute top-0.5 right-0.5" />
+      )}
+
+      {/* Low enrolment warning dot — public courses below minimum */}
+      {isLowEnrolment(event) && (
+        <span className="absolute bottom-0.5 left-0.5 w-2 h-2 rounded-full bg-amber-400" title="Below minimum enrolments — may need cancelling" />
       )}
 
       {/* Deadline urgent dot */}
@@ -761,10 +767,17 @@ function CourseListRow({ event, onClick }: { event: CalendarEvent; onClick: () =
       <td className="px-3 py-3">
         <Badge variant={getStatusBadgeVariant(event.status)}>{getStatusLabel(event.status)}</Badge>
       </td>
-      {/* Enrolments */}
-      <td className="px-3 py-3 text-sm text-gray-600 w-16 text-center hidden md:table-cell">
-        {event.status === "planned" ? "–" : (
-          <span className="flex items-center justify-center gap-0.5">
+      {/* Enrolments — with warning if public course is below minimum */}
+      <td className="px-3 py-3 text-sm w-16 text-center hidden md:table-cell">
+        {event.status === "planned" ? (
+          <span className="text-gray-400">–</span>
+        ) : (
+          <span className={`flex items-center justify-center gap-0.5 ${isLowEnrolment(event) ? "text-amber-600 font-medium" : "text-gray-600"}`}>
+            {isLowEnrolment(event) && (
+              <span title="Below minimum enrolments — may need cancelling">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+              </span>
+            )}
             <Users className="w-3 h-3 text-gray-400" />{event.enrolmentCount}
           </span>
         )}

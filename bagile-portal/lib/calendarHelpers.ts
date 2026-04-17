@@ -142,6 +142,18 @@ export function isDeadlineUrgent(deadline: string | null): boolean {
   return diff >= 0 && diff <= 5;
 }
 
+/** Whether a public course is below its minimum enrolment and may need cancelling. */
+export function isLowEnrolment(event: {
+  isPrivate: boolean;
+  status: string;
+  enrolmentCount: number;
+  minimumEnrolments: number;
+}): boolean {
+  if (event.isPrivate) return false;
+  if (event.status === "cancelled" || event.status === "planned") return false;
+  return event.enrolmentCount < event.minimumEnrolments;
+}
+
 /** Scrum.org course types that need the scrum.org gateway. */
 const SCRUMORG_TYPES = new Set([
   "PSM", "PSPO", "PSK", "PALE", "PALEBM", "EBM", "APSSD", "APS",
