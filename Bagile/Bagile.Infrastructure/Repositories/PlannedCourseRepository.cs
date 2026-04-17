@@ -45,6 +45,22 @@ public class PlannedCourseRepository : IPlannedCourseRepository
         return await conn.QueryFirstOrDefaultAsync<PlannedCourse>(sql, new { id });
     }
 
+    public async Task<IEnumerable<PlannedCourse>> GetAllAsync(CancellationToken ct = default)
+    {
+        const string sql = @"
+            SELECT id, course_type AS CourseType, trainer_id AS TrainerId,
+                   start_date AS StartDate, end_date AS EndDate,
+                   is_virtual AS IsVirtual, venue, notes,
+                   decision_deadline AS DecisionDeadline,
+                   is_private AS IsPrivate, status,
+                   created_at AS CreatedAt, updated_at AS UpdatedAt
+            FROM bagile.planned_courses
+            ORDER BY start_date;";
+
+        await using var conn = new NpgsqlConnection(_connStr);
+        return await conn.QueryAsync<PlannedCourse>(new CommandDefinition(sql, cancellationToken: ct));
+    }
+
     public async Task UpdateAsync(int id, PlannedCourse course)
     {
         const string sql = @"

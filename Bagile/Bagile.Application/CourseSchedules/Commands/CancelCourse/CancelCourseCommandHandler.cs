@@ -27,14 +27,22 @@ public class CancelCourseCommandHandler
         CancelCourseCommand request,
         CancellationToken ct)
     {
+        // Null → controller returns 404 (schedule not found)
         var existing = await _queries.GetCourseScheduleByIdAsync(request.CourseScheduleId, ct);
         if (existing == null)
+        {
+            _logger.LogWarning(
+                "Cancel request for schedule {Id} — not found.",
+                request.CourseScheduleId);
             return null;
+        }
 
         // Idempotent — already cancelled is a no-op
         if (existing.Status is "sold_out" or "cancelled")
         {
-            _logger.LogInformation("Course {Id} already cancelled, returning current state", request.CourseScheduleId);
+            _logger.LogInformation(
+                "Course {Id} already cancelled, returning current state",
+                request.CourseScheduleId);
             return existing;
         }
 
@@ -42,8 +50,33 @@ public class CancelCourseCommandHandler
             "Cancelling course schedule {Id} ({Code}). Reason: {Reason}",
             request.CourseScheduleId, existing.CourseCode, request.Reason);
 
-        await _repository.UpdateStatusAsync(request.CourseScheduleId, "cancelled");
+        try
+        {
+            await _repository.UpdateStatusAsync(request.CourseScheduleId, "cancelled");
+        }
+        catch (Exception ex)
+        {
+            // Wrap DB failures with useful context so the controller's 500 has a
+            // meaningful message (previously surfaced as a bare NpgsqlException).
+            _logger.LogError(
+                ex,
+                "Failed to cancel schedule {Id}: UpdateStatusAsync threw.",
+                request.CourseScheduleId);
+            throw new InvalidOperationException(
+                $"Failed to update status for course schedule {request.CourseScheduleId}: {ex.Message}",
+                ex);
+        }
 
-        return await _queries.GetCourseScheduleByIdAsync(request.CourseScheduleId, ct);
+        // Second read returns the post-cancellation state. If the schedule
+        // disappeared between the two reads (unlikely, but possible), fall back
+        // to the pre-cancel snapshot with status flipped rather than returning null.
+        var updated = await _queries.GetCourseScheduleByIdAsync(request.CourseScheduleId, ct);
+        if (updated != null)
+            return updated;
+
+        _logger.LogWarning(
+            "Schedule {Id} disappeared after UpdateStatusAsync; returning pre-cancel snapshot.",
+            request.CourseScheduleId);
+        return existing with { Status = "cancelled" };
     }
 }

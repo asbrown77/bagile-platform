@@ -165,15 +165,29 @@ public class CourseSchedulesController : ControllerBase
     [HttpPost("{id}/cancel")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> CancelCourse(long id, [FromBody] CancelCourseRequest? request = null)
     {
-        var command = new CancelCourseCommand { CourseScheduleId = id, Reason = request?.Reason ?? "" };
-        var result = await _mediator.Send(command);
+        try
+        {
+            var command = new CancelCourseCommand { CourseScheduleId = id, Reason = request?.Reason ?? "" };
+            var result = await _mediator.Send(command);
 
-        if (result == null)
-            return NotFound(new { error = $"Course schedule {id} not found" });
+            if (result == null)
+                return NotFound(new { error = $"Course schedule {id} not found" });
 
-        return Ok(result);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            // Surface any DB/handler failure as a proper 500 with a useful message
+            // rather than letting ASP.NET return an empty/unhandled 500.
+            return Problem(
+                title: "Failed to cancel course schedule",
+                detail: ex.Message,
+                statusCode: StatusCodes.Status500InternalServerError,
+                instance: $"/api/course-schedules/{id}/cancel");
+        }
     }
     // ── Private Courses ────────────────────────────────────
 

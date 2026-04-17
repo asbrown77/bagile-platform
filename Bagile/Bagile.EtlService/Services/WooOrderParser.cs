@@ -201,10 +201,22 @@ namespace Bagile.EtlService.Services
             string billingEmail,
             string billingCompany)
         {
-            int count = Math.Min(baseTickets.Count, legacyTickets.Count);
-
-            for (int i = 0; i < count; i++)
+            // Apply legacy attendee data to each base ticket by positional index.
+            // Do NOT truncate via Math.Min — if legacyTickets has fewer entries than
+            // baseTickets, the remaining base tickets keep billing defaults.
+            // If legacyTickets has MORE entries than baseTickets, append the extras
+            // so we don't silently drop attendees on qty>1 orders.
+            for (int i = 0; i < baseTickets.Count; i++)
             {
+                if (i >= legacyTickets.Count)
+                {
+                    _logger.LogWarning(
+                        "WooOrderParser. Legacy ticket metadata has fewer entries ({LegacyCount}) than base ticket slots ({BaseCount}); remaining slots will use billing contact as attendee.",
+                        legacyTickets.Count,
+                        baseTickets.Count);
+                    break;
+                }
+
                 var legacy = legacyTickets[i];
                 var ticket = baseTickets[i];
 
@@ -217,10 +229,40 @@ namespace Bagile.EtlService.Services
                     ? billingCompany
                     : legacy.Company;
 
-                // THE MISSING PART
                 if (legacy.ProductId.HasValue && legacy.ProductId.Value > 0)
                 {
                     ticket.ProductId = legacy.ProductId.Value;
+                }
+            }
+
+            // Append any extra legacy attendees that have no matching base slot.
+            // This happens if the legacy metadata carries more attendees than the
+            // aggregated line_items quantity (e.g. qty=1 line with 2 attendees).
+            if (legacyTickets.Count > baseTickets.Count && baseTickets.Count > 0)
+            {
+                _logger.LogWarning(
+                    "WooOrderParser. Legacy ticket metadata has more entries ({LegacyCount}) than base ticket slots ({BaseCount}); appending extras to preserve attendees.",
+                    legacyTickets.Count,
+                    baseTickets.Count);
+
+                var template = baseTickets[0];
+                for (int i = baseTickets.Count; i < legacyTickets.Count; i++)
+                {
+                    var legacy = legacyTickets[i];
+                    var extra = new CanonicalTicketDto
+                    {
+                        Sku = template.Sku,
+                        ProductId = legacy.ProductId.HasValue && legacy.ProductId.Value > 0
+                            ? legacy.ProductId.Value
+                            : template.ProductId,
+                        FirstName = legacy.FirstName ?? billingFirst,
+                        LastName = legacy.LastName ?? billingLast,
+                        Email = string.IsNullOrWhiteSpace(legacy.Email) ? billingEmail : legacy.Email,
+                        Company = string.IsNullOrWhiteSpace(legacy.Company) ? billingCompany : legacy.Company,
+                        RawLineItem = template.RawLineItem,
+                        RawOrderPayload = template.RawOrderPayload
+                    };
+                    baseTickets.Add(extra);
                 }
             }
         }
@@ -243,10 +285,22 @@ namespace Bagile.EtlService.Services
                     return false;
                 }
 
-                int count = Math.Min(baseTickets.Count, pluginTickets.Count);
-
-                for (int i = 0; i < count; i++)
+                // Apply plugin attendee data to each base ticket by positional index.
+                // Do NOT truncate via Math.Min — if pluginTickets has fewer entries
+                // than baseTickets, the remaining base tickets keep billing defaults
+                // (synthetic student path handles duplicate emails downstream).
+                for (int i = 0; i < baseTickets.Count; i++)
                 {
+                    if (i >= pluginTickets.Count)
+                    {
+                        _logger.LogWarning(
+                            "WooOrderParser. FooEvents plugin returned fewer tickets ({PluginCount}) than base slots ({BaseCount}) for order {OrderId}; remaining slots keep billing contact.",
+                            pluginTickets.Count,
+                            baseTickets.Count,
+                            orderId);
+                        break;
+                    }
+
                     var ft = pluginTickets[i];
                     var ticket = baseTickets[i];
 
@@ -266,7 +320,39 @@ namespace Bagile.EtlService.Services
                     {
                         ticket.ProductId = ft.ProductId;
                     }
+                }
 
+                // If plugin returned MORE tickets than base slots, append the extras
+                // so we don't silently drop attendees on qty>1 orders.
+                if (pluginTickets.Count > baseTickets.Count && baseTickets.Count > 0)
+                {
+                    _logger.LogWarning(
+                        "WooOrderParser. FooEvents plugin returned more tickets ({PluginCount}) than base slots ({BaseCount}) for order {OrderId}; appending extras.",
+                        pluginTickets.Count,
+                        baseTickets.Count,
+                        orderId);
+
+                    var template = baseTickets[0];
+                    for (int i = baseTickets.Count; i < pluginTickets.Count; i++)
+                    {
+                        var ft = pluginTickets[i];
+                        string full = ft.AttendeeName ?? string.Empty;
+
+                        var extra = new CanonicalTicketDto
+                        {
+                            Sku = template.Sku,
+                            ProductId = ft.ProductId > 0 ? ft.ProductId : template.ProductId,
+                            FirstName = SplitFirst(full) ?? billingFirst,
+                            LastName = SplitLast(full) ?? billingLast,
+                            Email = string.IsNullOrWhiteSpace(ft.AttendeeEmail)
+                                ? billingEmail
+                                : ft.AttendeeEmail,
+                            Company = billingCompany,
+                            RawLineItem = template.RawLineItem,
+                            RawOrderPayload = template.RawOrderPayload
+                        };
+                        baseTickets.Add(extra);
+                    }
                 }
 
                 return true;

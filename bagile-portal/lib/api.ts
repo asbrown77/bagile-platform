@@ -1175,6 +1175,29 @@ export async function createPlannedCourse(
   return apiRequest("/api/planned-courses", apiKey, { method: "POST", body: data });
 }
 
+export interface PlannedCourse {
+  id: number;
+  courseType: string;
+  trainerId: number;
+  trainerName: string | null;
+  startDate: string;
+  endDate: string;
+  isVirtual: boolean;
+  venue: string | null;
+  notes: string | null;
+  decisionDeadline: string | null;
+  isPrivate: boolean;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function listPlannedCourses(
+  apiKey: string,
+): Promise<PlannedCourse[]> {
+  return apiRequest("/api/planned-courses", apiKey);
+}
+
 export async function updatePlannedCourse(
   apiKey: string,
   id: number,

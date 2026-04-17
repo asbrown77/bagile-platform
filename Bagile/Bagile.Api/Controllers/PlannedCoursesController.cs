@@ -6,6 +6,7 @@ using Bagile.Application.PlannedCourses.Commands.UpdatePlannedCourse;
 using Bagile.Application.PlannedCourses.Commands.DeletePlannedCourse;
 using Bagile.Application.PlannedCourses.Commands.PublishEcommerce;
 using Bagile.Application.PlannedCourses.Commands.PublishScrumOrg;
+using Bagile.Application.PlannedCourses.Queries.GetPlannedCourses;
 
 namespace Bagile.Api.Controllers;
 
@@ -18,6 +19,18 @@ public class PlannedCoursesController : ControllerBase
     public PlannedCoursesController(IMediator mediator)
     {
         _mediator = mediator;
+    }
+
+    /// <summary>
+    /// List all planned courses, ordered by start_date ascending.
+    /// Returns an array of PlannedCourseDto (includes trainer name).
+    /// </summary>
+    [HttpGet]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAll(CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetPlannedCoursesQuery(), ct);
+        return Ok(result);
     }
 
     /// <summary>
