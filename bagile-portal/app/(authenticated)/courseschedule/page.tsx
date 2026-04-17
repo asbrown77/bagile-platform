@@ -925,6 +925,7 @@ function CalendarContent() {
   const [editCourseId, setEditCourseId] = useState<number | null>(null);
   const [editInitialValues, setEditInitialValues] = useState<AddCourseModalProps["initialValues"]>(undefined);
   const [courseTypeFilter, setCourseTypeFilter] = useState("all");
+  const [gatewayFilter, setGatewayFilter] = useState(false);
   const [listDateRange, setListDateRange] = useState("upcoming");
   const [showImportModal, setShowImportModal] = useState(false);
   const [courseDefs, setCourseDefs] = useState<CourseDef[]>([]);
@@ -1007,6 +1008,10 @@ function CalendarContent() {
       if (statusFilter !== "all" && statusFilter !== "active" && e.status !== statusFilter) return false;
       if (typeFilter === "public" && e.isPrivate) return false;
       if (typeFilter === "private" && !e.isPrivate) return false;
+      if (gatewayFilter && !e.isPrivate) {
+        // Show only courses where at least one gateway is not published
+        if (!e.gateways.some((g) => !g.published)) return false;
+      }
       return true;
     });
 
@@ -1232,6 +1237,18 @@ function CalendarContent() {
               </button>
             ))}
           </div>
+          {/* Gateway filter toggle */}
+          <button
+            onClick={() => setGatewayFilter((v) => !v)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors
+              ${gatewayFilter
+                ? "bg-amber-500 text-white border-amber-500"
+                : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"}`}
+            title="Show only courses with unpublished gateways"
+          >
+            <span className={`w-2 h-2 rounded-full ${gatewayFilter ? "bg-white" : "bg-gray-300"}`} />
+            Missing gateways
+          </button>
           {(loading || listLoading) && <span className="text-xs text-gray-400">Loading...</span>}
         </div>
 
