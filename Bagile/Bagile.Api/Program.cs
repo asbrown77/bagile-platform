@@ -1,6 +1,8 @@
 ﻿using Bagile.Api.Handlers;
 using Bagile.Api.Services;
 using Bagile.Infrastructure.Clients;
+using Bagile.Infrastructure.Configuration;
+using Microsoft.Extensions.Configuration;
 using Bagile.Infrastructure.Repositories;
 using Npgsql;
 using System.Reflection;
@@ -24,6 +26,14 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
                        ?? builder.Configuration.GetValue<string>("DbConnectionString")
                        ?? throw new InvalidOperationException("Database connection string not found.");
 
+// Load secrets from bagile.company_settings (encrypted DB table).
+// Added last so DB values override env vars. Silently skipped if DB unreachable.
+var paEncryptionKey = builder.Configuration["PA_ENCRYPTION_KEY"]
+    ?? Environment.GetEnvironmentVariable("PA_ENCRYPTION_KEY");
+if (!string.IsNullOrEmpty(paEncryptionKey))
+{
+    ((IConfigurationBuilder)builder.Configuration).Add(new CompanySettingsConfigurationSource(connectionString, paEncryptionKey));
+}
 
 // Repositories
 builder.Services.AddSingleton<IRawOrderRepository>(_ => new RawOrderRepository(connectionString));
