@@ -12,6 +12,7 @@ public static class TransferEndpoints
         app.MapPost("/api/enrolments/{id}/transfer-to/{courseId}", TransferTo);
         // GET /api/transfers/pending already exists in TransfersController
         app.MapPost("/api/course-schedules/{id}/cancel-with-actions", CancelWithActions);
+        app.MapPost("/api/admin/enrolments", AdminInsertEnrolment);
     }
 
     private static async Task<IResult> MarkRefund(
@@ -160,6 +161,22 @@ public static class TransferEndpoints
         return Results.Ok(new { message = $"Course cancelled, {body.AttendeeActions.Count} attendees updated" });
     }
 
+    private static async Task<IResult> AdminInsertEnrolment(
+        AdminInsertEnrolmentRequest body,
+        IConfiguration config)
+    {
+        var connStr = GetConnStr(config);
+        await using var conn = new NpgsqlConnection(connStr);
+
+        var id = await conn.ExecuteScalarAsync<long>(
+            @"INSERT INTO bagile.enrolments (student_id, order_id, course_schedule_id, status, source)
+              VALUES (@studentId, @orderId, @courseScheduleId, 'active', 'admin')
+              RETURNING id;",
+            new { body.StudentId, body.OrderId, body.CourseScheduleId });
+
+        return Results.Ok(new { enrolmentId = id });
+    }
+
     private static string GetConnStr(IConfiguration config) =>
         config.GetConnectionString("DefaultConnection")
         ?? config.GetValue<string>("ConnectionStrings:DefaultConnection")
@@ -167,5 +184,6 @@ public static class TransferEndpoints
 
     private record MarkTransferRequest(string? Reason);
     private record AttendeeAction(long EnrolmentId, string Action); // "refund" or "transfer"
+    private record AdminInsertEnrolmentRequest(long StudentId, long? OrderId, long CourseScheduleId);
     private record CancelWithActionsRequest(List<AttendeeAction> AttendeeActions);
 }
