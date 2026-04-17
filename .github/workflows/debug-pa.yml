@@ -44,6 +44,11 @@ jobs:
             echo "=== docker logs bagile-api (last 20) ==="
             docker logs bagile-api --tail 20 2>&1
 
-            echo "=== restarting bagile-api to clear stale HttpClient DNS cache ==="
+            echo "=== DNS from inside bagile-api ==="
+            docker exec bagile-api sh -c "getent hosts bagile-pa" 2>&1 || echo "getent failed"
+            docker exec bagile-api sh -c "cat /etc/resolv.conf" 2>&1 || echo "resolv.conf failed"
+
+            echo "=== restarting bagile-api ==="
             docker restart bagile-api
+            sleep 5
             echo "restarted"
