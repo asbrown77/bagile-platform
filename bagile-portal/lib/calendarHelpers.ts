@@ -171,25 +171,29 @@ export function workingDaysUntil(targetDate: string): number {
   return count;
 }
 
-/** Warning threshold: warn when a course starts within this many working days. */
-export const LOW_ENROLMENT_WARNING_DAYS = 10;
-
 /**
- * Whether a public course is below its minimum enrolment threshold and close
- * enough to warrant a warning. Only fires within LOW_ENROLMENT_WARNING_DAYS
- * working days of the start date, respecting UK bank holidays.
+ * Whether a public course is below minimum enrolment and close enough to
+ * warrant a warning. Thresholds come from the portal config (Settings →
+ * Courses → Course Risk Thresholds):
+ *  - workingDays: interpreted as working days until start (UK bank holidays excluded)
+ *  - minEnrolments: warn when enrolmentCount is below this
  */
-export function isLowEnrolment(event: {
-  isPrivate: boolean;
-  status: string;
-  enrolmentCount: number;
-  minimumEnrolments: number;
-  startDate: string;
-}): boolean {
+export function isLowEnrolment(
+  event: {
+    isPrivate: boolean;
+    status: string;
+    enrolmentCount: number;
+    minimumEnrolments: number;
+    startDate: string;
+  },
+  thresholds: { workingDays: number; minEnrolments: number }
+): boolean {
   if (event.isPrivate) return false;
   if (event.status === "cancelled" || event.status === "planned") return false;
-  if (event.enrolmentCount >= event.minimumEnrolments) return false;
-  return workingDaysUntil(event.startDate) <= LOW_ENROLMENT_WARNING_DAYS;
+  // Use whichever minimum is more conservative
+  const minCount = Math.max(event.minimumEnrolments, thresholds.minEnrolments);
+  if (event.enrolmentCount >= minCount) return false;
+  return workingDaysUntil(event.startDate) <= thresholds.workingDays;
 }
 
 /** Scrum.org course types that need the scrum.org gateway. */

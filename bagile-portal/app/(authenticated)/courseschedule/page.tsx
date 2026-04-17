@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef, Suspense } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo, Suspense } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -38,6 +38,7 @@ import {
 } from "@/lib/calendarHelpers";
 import { getTrainerColour, trainerInitials } from "@/lib/courseColours";
 import { addOneDayStr } from "@/lib/dateUtils";
+import { loadConfig } from "@/lib/config";
 import { useSearchParams } from "next/navigation";
 import { generateCourseName } from "@/lib/privateCourseHelpers";
 import { CsvImportModal } from "@/components/courses/CsvImportModal";
@@ -67,7 +68,9 @@ function Toast({ message, type, onClose }: { message: string; type: "success" | 
 
 // ── Course block (FullCalendar event content) ───────────────
 
-function CourseBlock({ event, badgeMap }: { event: CalendarEvent; compact?: boolean; badgeMap?: Record<string, string> }) {
+interface RiskConfig { workingDays: number; minEnrolments: number; }
+
+function CourseBlock({ event, badgeMap, riskConfig }: { event: CalendarEvent; compact?: boolean; badgeMap?: Record<string, string>; riskConfig?: RiskConfig }) {
   // DB badge URLs take priority over the hardcoded BADGE_MAP fallback
   const key = event.courseType.toUpperCase().replace(/[-_\s]/g, "");
   const badgeSrc = badgeMap?.[key] ?? getBadgeSrc(event.courseType);
@@ -121,7 +124,7 @@ function CourseBlock({ event, badgeMap }: { event: CalendarEvent; compact?: bool
       )}
 
       {/* Low enrolment warning dot — public courses below minimum */}
-      {isLowEnrolment(event) && (
+      {riskConfig && isLowEnrolment(event, riskConfig) && (
         <span className="absolute bottom-0.5 left-0.5 w-2 h-2 rounded-full bg-amber-400" title="Below minimum enrolments — may need cancelling" />
       )}
 
@@ -705,7 +708,7 @@ function SidePanel({ event, onClose, onPublish, onCancel, onEdit }: SidePanelPro
 
 // ── Course List View ────────────────────────────────────────
 
-function CourseListRow({ event, onClick }: { event: CalendarEvent; onClick: () => void }) {
+function CourseListRow({ event, onClick, riskConfig }: { event: CalendarEvent; onClick: () => void; riskConfig?: RiskConfig }) {
   const badgeSrc = getBadgeSrc(event.courseType);
   const codeDisplay = getCourseCodeDisplay(event.courseType);
   const initials = event.trainerInitials || trainerInitials(event.trainerName);
@@ -771,16 +774,19 @@ function CourseListRow({ event, onClick }: { event: CalendarEvent; onClick: () =
       <td className="px-3 py-3 text-sm w-16 text-center hidden md:table-cell">
         {event.status === "planned" ? (
           <span className="text-gray-400">–</span>
-        ) : (
-          <span className={`flex items-center justify-center gap-0.5 ${isLowEnrolment(event) ? "text-amber-600 font-medium" : "text-gray-600"}`}>
-            {isLowEnrolment(event) && (
-              <span title="Below minimum enrolments — may need cancelling">
-                <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-              </span>
-            )}
-            <Users className="w-3 h-3 text-gray-400" />{event.enrolmentCount}
-          </span>
-        )}
+        ) : (() => {
+          const warn = !!riskConfig && isLowEnrolment(event, riskConfig);
+          return (
+            <span className={`flex items-center justify-center gap-0.5 ${warn ? "text-amber-600 font-medium" : "text-gray-600"}`}>
+              {warn && (
+                <span title="Below minimum enrolments — may need cancelling">
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                </span>
+              )}
+              <Users className="w-3 h-3 text-gray-400" />{event.enrolmentCount}
+            </span>
+          );
+        })()}
       </td>
       {/* Gateways */}
       <td className="px-3 py-3 hidden md:table-cell">
@@ -806,10 +812,12 @@ function CourseListView({
   events,
   loading,
   onSelect,
+  riskConfig,
 }: {
   events: CalendarEvent[];
   loading: boolean;
   onSelect: (e: CalendarEvent) => void;
+  riskConfig?: RiskConfig;
 }) {
   if (loading) {
     return (
@@ -869,6 +877,7 @@ function CourseListView({
               <CourseListRow
                 key={e.id}
                 event={e}
+                riskConfig={riskConfig}
                 onClick={() => {
                   if (e.isPrivate && e.id.startsWith("schedule-")) {
                     window.location.href = `/courses/${e.id.replace("schedule-", "")}`;
@@ -918,6 +927,12 @@ function CalendarContent() {
   const [listDateRange, setListDateRange] = useState<"upcoming" | "year" | "all">("upcoming");
   const [showImportModal, setShowImportModal] = useState(false);
   const [courseDefs, setCourseDefs] = useState<CourseDef[]>([]);
+
+  // Load portal risk thresholds from config (Settings → Courses → Course Risk Thresholds)
+  const riskConfig = useMemo<RiskConfig>(() => {
+    const cfg = loadConfig();
+    return { workingDays: cfg.atRiskDays, minEnrolments: cfg.minEnrolments };
+  }, []);
 
   // Load trainers + course definitions on mount
   useEffect(() => {
@@ -1267,7 +1282,7 @@ function CalendarContent() {
             }}
             eventContent={(arg) => {
               const ext = arg.event.extendedProps as FCEventExtended;
-              return <CourseBlock event={ext.calendarEvent} />;
+              return <CourseBlock event={ext.calendarEvent} riskConfig={riskConfig} />;
             }}
             height="auto"
             fixedWeekCount={false}
@@ -1316,6 +1331,7 @@ function CalendarContent() {
             events={filteredListEventsSearched}
             loading={listLoading}
             onSelect={setSelectedEvent}
+            riskConfig={riskConfig}
           />
         </>
       )}
