@@ -13,15 +13,15 @@ import { CourseDefsEditor } from "@/components/courses/CourseDefsEditor";
 
 // ── Tab definitions ───────────────────────────────────────
 
-type Tab = "general" | "post-course" | "pre-course" | "trainers" | "integrations" | "courses" | "claude-pa";
+type Tab = "general" | "integrations" | "courses" | "trainers" | "pre-course" | "post-course" | "claude-pa";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "general",      label: "General" },
-  { id: "post-course",  label: "Post-Course" },
-  { id: "pre-course",   label: "Pre-Course" },
-  { id: "trainers",     label: "Trainers" },
   { id: "integrations", label: "Integrations" },
   { id: "courses",      label: "Courses" },
+  { id: "trainers",     label: "Trainers" },
+  { id: "pre-course",   label: "Pre-Course" },
+  { id: "post-course",  label: "Post-Course" },
   { id: "claude-pa",    label: "AI PA" },
 ];
 
@@ -345,27 +345,30 @@ function SettingsContent() {
             </>
           )}
 
-          {/* Course Risk Thresholds — always visible on General tab */}
-          <CourseThresholds />
         </>
       )}
-
-      {/* Post-Course tab */}
-      {activeTab === "post-course" && <PostCourseTemplatesEditor />}
-
-      {/* Pre-Course tab */}
-      {activeTab === "pre-course" && <PreCourseTemplatesEditor />}
-
-      {/* Trainers tab */}
-      {activeTab === "trainers" && <TrainersEditor />}
 
       {/* Integrations tab */}
       {activeTab === "integrations" && <IntegrationsEditor />}
 
       {/* Courses tab */}
-      {activeTab === "courses" && <CourseDefsEditor />}
+      {activeTab === "courses" && (
+        <>
+          <CourseDefsEditor />
+          <CourseThresholds />
+        </>
+      )}
 
-      {/* Claude PA tab */}
+      {/* Trainers tab */}
+      {activeTab === "trainers" && <TrainersEditor />}
+
+      {/* Pre-Course tab */}
+      {activeTab === "pre-course" && <PreCourseTemplatesEditor />}
+
+      {/* Post-Course tab */}
+      {activeTab === "post-course" && <PostCourseTemplatesEditor />}
+
+      {/* AI PA tab */}
       {activeTab === "claude-pa" && <ClaudePaDocs />}
     </>
   );
