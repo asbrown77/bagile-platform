@@ -17,6 +17,22 @@ export interface ScrumOrgCreateCourseOutput {
   screenshotPath?: string;
 }
 
+// Maps portal course type codes → full names used in scrum.org course management table
+const COURSE_TYPE_NAMES: Record<string, string> = {
+  APSSD: 'Applying Professional Scrum for Software Development',
+  PSM:   'Professional Scrum Master',
+  PSMO:  'Professional Scrum Master',
+  PSPO:  'Professional Scrum Product Owner',
+  PSK:   'Professional Scrum with Kanban',
+  PALE:  'Professional Agile Leadership - Essentials',
+  EBM:   'Professional Agile Leadership - Evidence Based Management',
+  PSPOA: 'Professional Scrum Product Owner - Advanced',
+  PSMA:  'Professional Scrum Master - Advanced',
+  PSFS:  'Professional Scrum Facilitation Skills',
+  APS:   'Applying Professional Scrum',
+  PSU:   'Professional Scrum with User Experience',
+};
+
 export async function runScrumorgCreateCourse(
   page: Page,
   input: ScrumOrgCreateCourseInput
@@ -28,7 +44,7 @@ export async function runScrumorgCreateCourse(
     await navigateToCourseManagement(page);
     await findAndCopyLatestCourse(page, input.courseType, input.trainerName);
     await editCopiedCourse(page, input.startDate, input.endDate, input.registrationUrl);
-    const courseUrl = await saveCourse(page);
+    const courseUrl = await saveAndSchedule(page);
 
     return { success: true, courseUrl };
   } catch (err) {
@@ -44,16 +60,16 @@ export async function runScrumorgCreateCourse(
 async function loginToScrumOrg(page: Page, username: string, password: string): Promise<void> {
   await page.goto('https://www.scrum.org/user/login', { waitUntil: 'networkidle' });
 
-  // TODO: verify selectors against live scrum.org
-  await page.fill('input[name="name"]', username);
-  await page.fill('input[name="pass"]', password);
-  await page.click('input[type="submit"]');
+  // If already logged in, scrum.org redirects away from /user/login immediately
+  if (!page.url().includes('/user/login')) return;
 
+  await page.locator('input[name="name"]').fill(username);
+  await page.locator('input[name="pass"]').fill(password);
+  await page.locator('input[type="submit"]').click();
   await page.waitForURL((url) => !url.toString().includes('/user/login'), { timeout: 15_000 });
 }
 
 async function navigateToCourseManagement(page: Page): Promise<void> {
-  // TODO: verify URL and access permissions on live scrum.org
   await page.goto('https://www.scrum.org/admin/courses/manage', { waitUntil: 'networkidle' });
 }
 
@@ -62,8 +78,9 @@ async function findAndCopyLatestCourse(
   courseType: string,
   trainerName: string
 ): Promise<void> {
-  // TODO: verify row/cell selectors against live scrum.org course management table
-  // Assumption: table rows contain course title and trainer name as text, with a Copy link per row
+  const fullCourseName = COURSE_TYPE_NAMES[courseType.toUpperCase()] ?? courseType;
+
+  // Course management table is sorted by date descending — first match is most recent
   const rows = page.locator('table tbody tr');
   const count = await rows.count();
 
@@ -71,16 +88,25 @@ async function findAndCopyLatestCourse(
     const row = rows.nth(i);
     const rowText = await row.innerText();
 
-    if (rowText.includes(courseType) && rowText.includes(trainerName)) {
-      // TODO: verify the "Copy" link/button selector on live scrum.org
-      const copyLink = row.locator('a:has-text("Copy"), button:has-text("Copy")').first();
+    if (rowText.includes(fullCourseName) && rowText.includes(trainerName)) {
+      // Open the dropdown — the toggle is the second item in the operations dropbutton
+      const toggleBtn = row.locator('.dropbutton__toggle').first();
+      await toggleBtn.click();
+
+      // Copy link appears in the dropdown after toggle
+      const copyLink = row.locator('a[href*="replicate"]').first();
+      await copyLink.waitFor({ state: 'visible', timeout: 5_000 });
       await copyLink.click();
+      await page.waitForLoadState('networkidle');
+
+      // Confirmation page: "Are you sure you want to replicate Course...?"
+      await page.getByRole('button', { name: 'Copy' }).click();
       await page.waitForLoadState('networkidle');
       return;
     }
   }
 
-  throw new Error(`No course found for type "${courseType}" and trainer "${trainerName}"`);
+  throw new Error(`No course found for type "${courseType}" (${fullCourseName}) and trainer "${trainerName}"`);
 }
 
 async function editCopiedCourse(
@@ -89,21 +115,35 @@ async function editCopiedCourse(
   endDate: string,
   registrationUrl: string
 ): Promise<void> {
-  // TODO: verify field selectors against live scrum.org course edit form
-  await clearAndFill(page, 'input[name="start_date"]', startDate);
-  await clearAndFill(page, 'input[name="end_date"]', endDate);
-  await clearAndFill(page, 'input[name="field_registration_url[und][0][url]"]', registrationUrl);
+  // After copy confirmation, scrum.org redirects to the new course VIEW page.
+  // Extract node ID from URL (format: /courses/...-{nodeId}) and navigate to edit.
+  const nodeId = page.url().match(/-(\d+)$/)?.[1];
+  if (!nodeId) throw new Error(`Could not extract node ID from URL: ${page.url()}`);
+
+  await page.goto(`https://www.scrum.org/node/${nodeId}/edit`, { waitUntil: 'networkidle' });
+
+  // Update dates — IDs confirmed against live scrum.org edit form
+  await page.locator('#edit-field-start-date-0-value-date').fill(startDate);
+  await page.locator('#edit-field-end-date-0-value-date').fill(endDate);
+
+  // Expand "Registration & Price" section if not already open
+  const urlField = page.getByRole('textbox', { name: 'External Registration Site URL' });
+  const isVisible = await urlField.isVisible();
+  if (!isVisible) {
+    await page.getByRole('button', { name: 'Registration & Price' }).click();
+    await urlField.waitFor({ state: 'visible', timeout: 5_000 });
+  }
+  await urlField.fill(registrationUrl);
 }
 
-async function clearAndFill(page: Page, selector: string, value: string): Promise<void> {
-  const field = page.locator(selector).first();
-  await field.clear();
-  await field.fill(value);
-}
-
-async function saveCourse(page: Page): Promise<string> {
-  // TODO: verify submit button selector against live scrum.org
-  await page.click('input[type="submit"][value="Save"]');
+async function saveAndSchedule(page: Page): Promise<string> {
+  // "Save and Schedule" saves the course and shows the schedule confirmation page
+  await page.getByRole('button', { name: 'Save and Schedule' }).click();
   await page.waitForLoadState('networkidle');
+
+  // Schedule Class Confirmation page — click to go live
+  await page.getByRole('button', { name: 'Schedule Class' }).click();
+  await page.waitForLoadState('networkidle');
+
   return page.url();
 }

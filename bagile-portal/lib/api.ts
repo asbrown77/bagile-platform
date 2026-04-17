@@ -1260,9 +1260,12 @@ export async function publishGateway(
   courseId: string,
   gateway: string,
 ): Promise<unknown> {
-  // courseId is "planned-123" — extract numeric part
   const numericId = courseId.replace(/\D/g, "");
-  return apiRequest(`/api/planned-courses/${numericId}/publish/${gateway}`, apiKey, {
+  const isPlanned = courseId.startsWith("planned-");
+  const endpoint = isPlanned
+    ? `/api/planned-courses/${numericId}/publish/${gateway}`
+    : `/api/course-schedules/${numericId}/publish/${gateway}`;
+  return apiRequest(endpoint, apiKey, {
     method: "POST",
     timeoutMs: 60000,
   });

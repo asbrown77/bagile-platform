@@ -131,6 +131,7 @@ public class CourseScheduleQueries : ICourseScheduleQueries
                 cs.format_type AS FormatType,
                 cs.source_system AS SourceSystem,
                 cs.source_product_id AS SourceProductId,
+                cs.source_product_url AS SourceProductUrl,
                 cs.last_synced AS LastSynced,
                 cs.client_organisation_id AS ClientOrganisationId,
                 org.name AS ClientOrganisationName,
@@ -156,7 +157,7 @@ public class CourseScheduleQueries : ICourseScheduleQueries
             WHERE cs.id = @scheduleId
             GROUP BY cs.id, cs.sku, cs.name, cs.start_date, cs.end_date, cs.format_type,
                      cs.is_public, cs.status, cs.capacity, cs.price, cs.trainer_name,
-                     cs.source_system, cs.source_product_id, cs.last_synced,
+                     cs.source_system, cs.source_product_id, cs.source_product_url, cs.last_synced,
                      cs.client_organisation_id, org.name, org.acronym, org.contact_email,
                      cs.invoice_reference, cs.meeting_url, cs.meeting_id,
                      cs.meeting_passcode, cs.venue_address, cs.notes;";

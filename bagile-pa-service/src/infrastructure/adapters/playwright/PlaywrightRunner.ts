@@ -15,7 +15,7 @@ export class PlaywrightRunner implements IPlaywrightRunnerPort {
 
     try {
       const scriptModule = await import(
-        `../../scripts/${scriptName}/${scriptName}.script.js`
+        `../../../scripts/${scriptName}/${scriptName}.script.js`
       );
       const runFn = scriptModule[toCamelCase(scriptName)];
 

@@ -14,6 +14,8 @@ using Bagile.Application.CourseSchedules.Commands.RemovePrivateAttendee;
 using Bagile.Application.CourseSchedules.Commands.ManageCourseContacts;
 using Bagile.Application.CourseSchedules.Commands.DeleteCourseSchedule;
 using Bagile.Application.CourseSchedules.Commands.PatchCourseStatus;
+using Bagile.Application.CourseSchedules.Commands.PublishScrumOrg;
+using Bagile.Application.PlannedCourses.Commands.PublishEcommerce;
 using Bagile.Application.Templates.Queries;
 
 namespace Bagile.Api.Controllers;
@@ -395,6 +397,38 @@ public class CourseSchedulesController : ControllerBase
         var result = await _mediator.Send(
             new GetScheduleConflictsQuery(startDate, endDate, trainer));
         return Ok(result);
+    }
+
+    // ── Publishing ───────────────────────────────────────
+
+    /// <summary>
+    /// Publish a live course schedule to the Scrum.org gateway via Playwright automation.
+    /// Requires the course to already have a WooCommerce product URL (source_product_url).
+    /// </summary>
+    [HttpPost("{id}/publish/scrumorg")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> PublishScrumOrg(long id)
+    {
+        try
+        {
+            var result = await _mediator.Send(new PublishScrumOrgForScheduleCommand(id));
+            return Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
+        catch (ConflictException ex)
+        {
+            return Conflict(new { error = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
     }
 }
 
