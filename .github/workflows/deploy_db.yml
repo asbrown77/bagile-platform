@@ -47,4 +47,6 @@ jobs:
             cd /opt/bagile
             # Clean up any nested migrations directory from previous deploys
             rm -rf /opt/bagile/migrations/migrations
+            # Remove stale migration files not in the current repo (e.g. renamed/deleted files)
+            rm -f /opt/bagile/migrations/V70__delete_phantom_planned_course_1.sql
             bash deploy_db.sh ${{ github.event.inputs.environment || 'prod' }}
