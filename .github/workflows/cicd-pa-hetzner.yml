@@ -97,7 +97,10 @@ jobs:
             echo "Pulling latest PA service image..."
             docker compose -f docker-compose.prod.yml pull bagile-pa
 
-            echo "Recreating PA service container..."
+            echo "Removing stale PA container if present..."
+            docker rm -f bagile-pa 2>/dev/null || true
+
+            echo "Starting PA service container..."
             docker compose -f docker-compose.prod.yml up -d bagile-pa
 
             echo "Cleaning unused images..."
