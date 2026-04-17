@@ -34,3 +34,12 @@ jobs:
 
             echo "=== bagile-net members ==="
             docker network inspect bagile-net --format '{{range .Containers}}{{.Name}} {{.IPv4Address}}{{"\n"}}{{end}}'
+
+            echo "=== curl PA health from host ==="
+            curl -s http://172.18.0.6:3001/health || echo "host->pa direct failed"
+
+            echo "=== cat api.env (redacted) ==="
+            cd /opt/bagile && cat config/api.env | sed 's/=.*/=REDACTED/'
+
+            echo "=== docker logs bagile-api (last 20) ==="
+            docker logs bagile-api --tail 20 2>&1
