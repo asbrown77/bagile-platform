@@ -67,7 +67,8 @@ public class CalendarQueries : ICalendarQueries
         // Fetch all publications for these planned courses in one query
         var ids = courses.Select(c => c.Id).ToArray();
         var pubs = (await conn.QueryAsync<PublicationRow>(
-            @"SELECT planned_course_id AS CourseId, gateway, published_at, external_url
+            @"SELECT planned_course_id AS CourseId, gateway,
+                     published_at AS PublishedAt, external_url AS ExternalUrl
               FROM bagile.course_publications
               WHERE planned_course_id = ANY(@ids)",
             new { ids })).ToLookup(p => p.CourseId);
@@ -160,7 +161,8 @@ public class CalendarQueries : ICalendarQueries
         // Fetch publications for these course schedules
         var ids = courses.Select(c => c.Id).ToArray();
         var pubs = (await conn.QueryAsync<PublicationRow>(
-            @"SELECT course_schedule_id AS CourseId, gateway, published_at, external_url
+            @"SELECT course_schedule_id AS CourseId, gateway,
+                     published_at AS PublishedAt, external_url AS ExternalUrl
               FROM bagile.course_publications
               WHERE course_schedule_id = ANY(@ids)",
             new { ids })).ToLookup(p => p.CourseId);
