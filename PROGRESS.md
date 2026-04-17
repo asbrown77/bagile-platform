@@ -1,5 +1,40 @@
 # BAgile Platform — Progress & Lessons Learned
 
+## Known Bugs — Pick Up Next Sprint (logged 17 Apr 2026)
+
+### BUG-1: Multi-ticket sync — Maxwell Gravelle missing
+- **Order:** NobleProg #12874, qty: 2, attendees: Olorundurotimi Ojomo + Maxwell Gravelle
+- **Symptom:** Platform shows Ojomo but NOT Gravelle. Should show 8 attendees, shows 7.
+- **FooEvents:** Ticket #12899728328 exists for Gravelle — just not synced to platform.
+- **Root cause (suspected):** Multi-ticket orders (qty > 1) only sync the first attendee.
+- **Fix needed:** Enrolment sync logic — iterate all tickets on a multi-qty order, not just ticket[0].
+
+### BUG-2: Multi-ticket sync — PSPO-AI 31 Mar missing attendees
+- **Order:** #12902, qty: 5, 5 attendees in FooEvents but only 2 show on platform.
+- **Same root cause as BUG-1** — multi-ticket sync drops attendees 3–5.
+- Fix BUG-1 and retest this order.
+
+### BUG-3: cancel_course endpoint returns 500
+- **Endpoint:** `DELETE` or cancel action, schedule ID 90 (PSFS 4 May course)
+- **Symptom:** Returns 500 — no useful error surfaced to caller.
+- **Workaround used:** Set WooCommerce product to `outofstock` directly via REST API.
+- **Fix needed:** Investigate server logs for schedule ID 90 cancellation, fix underlying error, add proper error response.
+
+### BUG-4: GET /planned-courses endpoint + portal UI missing
+- **Context:** `planned_courses` table exists, APSSD-080626-AB added (id: 1) via POST endpoint.
+- **Missing:** `GET /api/planned-courses` list endpoint + portal page to view/manage planned courses.
+- **Note:** POST (create) works. Read and UI are the gap.
+
+### INFRA-1: GHCR PAT expired on Hetzner server
+- **Symptom:** Docker pulls from `ghcr.io` fail — PAT has expired.
+- **Fix:** Alex generates new GitHub PAT with `read:packages` scope, then:
+  ```
+  ssh root@142.132.227.7
+  echo 'NEW_PAT_HERE' | docker login ghcr.io -u asbrown77 --password-stdin
+  ```
+
+---
+
 ## Sprint 23 — Professional Private Courses (1 Apr 2026)
 
 **Status:** Complete — committed in 4 separate commits.
