@@ -95,10 +95,10 @@ jobs:
             EOF
 
             echo "Pulling latest PA service image..."
-            docker compose pull bagile-pa
+            docker compose -f docker-compose.prod.yml pull bagile-pa
 
             echo "Recreating PA service container..."
-            docker compose up -d bagile-pa
+            docker compose -f docker-compose.prod.yml up -d bagile-pa
 
             echo "Cleaning unused images..."
             docker system prune -f
