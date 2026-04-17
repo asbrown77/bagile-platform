@@ -13,6 +13,7 @@ public class WooProductDto
     [JsonConverter(typeof(NullableDecimalConverter))]
     public decimal? Price { get; set; }
 
+    [JsonPropertyName("permalink")] public string? Permalink { get; set; }
     [JsonPropertyName("stock_quantity")] public int? StockQuantity { get; set; }
 
     [JsonPropertyName("meta_data")] public List<WooMetaData>? MetaData { get; set; }

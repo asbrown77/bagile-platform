@@ -20,11 +20,11 @@ public class CourseScheduleRepository : ICourseScheduleRepository
             INSERT INTO bagile.course_schedules
                 (name, status, start_date, end_date, capacity, price, sku,
                  trainer_name, format_type, is_public,
-                 source_system, source_product_id, last_synced)
+                 source_system, source_product_id, source_product_url, last_synced)
             VALUES
                 (@Name, @Status, @StartDate, @EndDate, @Capacity, @Price, @Sku,
                  @TrainerName, @FormatType, @IsPublic,
-                 @SourceSystem, @SourceProductId, now())
+                 @SourceSystem, @SourceProductId, @SourceProductUrl, now())
             ON CONFLICT (source_system, source_product_id)
             DO UPDATE SET
                 name = EXCLUDED.name,
@@ -42,6 +42,7 @@ public class CourseScheduleRepository : ICourseScheduleRepository
                 trainer_name = EXCLUDED.trainer_name,
                 format_type = EXCLUDED.format_type,
                 is_public = EXCLUDED.is_public,
+                source_product_url = EXCLUDED.source_product_url,
                 last_synced = now();";
 
         await using var conn = new NpgsqlConnection(_connStr);

@@ -46,6 +46,7 @@ public static class WooMapper
         return new CourseSchedule
         {
             SourceProductId = source.Id,
+            SourceProductUrl = source.Permalink,
             Name = source.Name,
             Status = source.Status,
             Price = source.Price,

@@ -133,6 +133,7 @@ public class CalendarQueries : ICalendarQueries
                    cs.venue_address               AS Venue,
                    cs.notes                       AS Notes,
                    cs.source_product_id           AS SourceProductId,
+                   cs.source_product_url          AS SourceProductUrl,
                    COUNT(e.id)::int               AS EnrolmentCount
             FROM bagile.course_schedules cs
             LEFT JOIN bagile.enrolments e ON e.course_schedule_id = cs.id
@@ -178,7 +179,7 @@ public class CalendarQueries : ICalendarQueries
             {
                 var pub = coursePubs.FirstOrDefault(p =>
                     string.Equals(p.Gateway, g, StringComparison.OrdinalIgnoreCase));
-                var url = pub?.ExternalUrl ?? DeriveUrl(g, c.SourceProductId, wooSiteUrl);
+                var url = pub?.ExternalUrl ?? DeriveUrl(g, c.SourceProductId, wooSiteUrl, c.SourceProductUrl);
                 return new GatewayStatusDto
                 {
                     Type = g,
@@ -247,12 +248,14 @@ public class CalendarQueries : ICalendarQueries
     /// Derive a gateway URL when no explicit publication record exists.
     /// For e-commerce: construct WooCommerce shortlink from the product ID.
     /// </summary>
-    private static string? DeriveUrl(string gateway, long? sourceProductId, string wooSiteUrl)
+    private static string? DeriveUrl(string gateway, long? sourceProductId, string wooSiteUrl, string? sourceProductUrl = null)
     {
-        if (gateway == "ecommerce" && sourceProductId.HasValue && sourceProductId > 0
-            && !string.IsNullOrEmpty(wooSiteUrl))
+        if (gateway == "ecommerce")
         {
-            return $"{wooSiteUrl}/?p={sourceProductId}";
+            if (!string.IsNullOrEmpty(sourceProductUrl))
+                return sourceProductUrl;
+            if (sourceProductId.HasValue && sourceProductId > 0 && !string.IsNullOrEmpty(wooSiteUrl))
+                return $"{wooSiteUrl}/?p={sourceProductId}";
         }
         return null;
     }
@@ -376,6 +379,7 @@ public class CalendarQueries : ICalendarQueries
         public string? Venue { get; set; }
         public string? Notes { get; set; }
         public long? SourceProductId { get; set; }
+        public string? SourceProductUrl { get; set; }
         public int EnrolmentCount { get; set; }
     }
 

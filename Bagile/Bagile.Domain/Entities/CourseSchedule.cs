@@ -23,6 +23,7 @@ public class CourseSchedule
     public bool IsPublic { get; set; } = true;
     public string SourceSystem { get; set; } = "woo";
     public long? SourceProductId { get; set; }
+    public string? SourceProductUrl { get; set; }
     public DateTime LastSynced { get; set; } = DateTime.UtcNow;
     public long? ClientOrganisationId { get; set; }
     public string? Notes { get; set; }
