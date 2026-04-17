@@ -29,8 +29,8 @@ jobs:
             echo "=== cat config/pa.env ==="
             cd /opt/bagile && cat config/pa.env | sed 's/=.*/=REDACTED/'
 
-            echo "=== curl from bagile-api to bagile-pa ==="
-            docker exec bagile-api curl -sv http://bagile-pa:3001/health 2>&1 || echo "curl failed"
+            echo "=== connectivity from bagile-api to bagile-pa ==="
+            docker exec bagile-api wget -qO- http://bagile-pa:3001/health 2>&1 || echo "wget failed"
 
             echo "=== bagile-net members ==="
             docker network inspect bagile-net --format '{{range .Containers}}{{.Name}} {{.IPv4Address}}{{"\n"}}{{end}}'
