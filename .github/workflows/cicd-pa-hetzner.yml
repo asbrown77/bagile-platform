@@ -70,11 +70,13 @@ jobs:
           PA_API_KEYS: ${{ secrets.PA_API_KEYS }}
           PA_ENCRYPTION_KEY: ${{ secrets.PA_ENCRYPTION_KEY }}
           PA_CORS_ORIGINS: ${{ vars.PA_CORS_ORIGINS }}
+          SCRUMORG_USERNAME: ${{ secrets.SCRUMORG_USERNAME }}
+          SCRUMORG_PASSWORD: ${{ secrets.SCRUMORG_PASSWORD }}
         with:
           host: ${{ vars.HETZNER_HOST }}
           username: root
           key: ${{ secrets.HETZNER_SSH_KEY }}
-          envs: GHCR_PAT,DATABASE_URL,PA_API_KEYS,PA_ENCRYPTION_KEY,PA_CORS_ORIGINS
+          envs: GHCR_PAT,DATABASE_URL,PA_API_KEYS,PA_ENCRYPTION_KEY,PA_CORS_ORIGINS,SCRUMORG_USERNAME,SCRUMORG_PASSWORD
           script: |
             cd /opt/bagile
 
@@ -92,6 +94,8 @@ jobs:
             PA_API_KEYS=${PA_API_KEYS}
             PA_ENCRYPTION_KEY=${PA_ENCRYPTION_KEY}
             PA_CORS_ORIGINS=${PA_CORS_ORIGINS}
+            SCRUMORG_USERNAME=${SCRUMORG_USERNAME}
+            SCRUMORG_PASSWORD=${SCRUMORG_PASSWORD}
             EOF
 
             echo "Pulling latest PA service image..."
