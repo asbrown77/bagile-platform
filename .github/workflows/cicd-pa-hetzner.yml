@@ -70,20 +70,11 @@ jobs:
           PA_API_KEYS: ${{ secrets.PA_API_KEYS }}
           PA_ENCRYPTION_KEY: ${{ secrets.PA_ENCRYPTION_KEY }}
           PA_CORS_ORIGINS: ${{ secrets.PA_CORS_ORIGINS }}
-          BAGILE_API_URL: ${{ secrets.BAGILE_API_URL }}
-          BAGILE_API_KEY: ${{ secrets.BAGILE_API_KEY }}
-          N8N_BASE_URL: ${{ secrets.N8N_BASE_URL }}
-          WC_BASE_URL: ${{ secrets.WC_BASE_URL }}
-          WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
-          XERO_CLIENT_ID: ${{ secrets.XERO_CLIENT_ID }}
-          XERO_CLIENT_SECRET: ${{ secrets.XERO_CLIENT_SECRET }}
-          XERO_TENANT_ID: ${{ secrets.XERO_TENANT_ID }}
-          XERO_REFRESH_TOKEN: ${{ secrets.XERO_REFRESH_TOKEN }}
         with:
           host: ${{ vars.HETZNER_HOST }}
           username: root
           key: ${{ secrets.HETZNER_SSH_KEY }}
-          envs: GHCR_PAT,DATABASE_URL,PA_API_KEYS,PA_ENCRYPTION_KEY,PA_CORS_ORIGINS,BAGILE_API_URL,BAGILE_API_KEY,N8N_BASE_URL,WC_BASE_URL,WP_ADMIN_URL,XERO_CLIENT_ID,XERO_CLIENT_SECRET,XERO_TENANT_ID,XERO_REFRESH_TOKEN
+          envs: GHCR_PAT,DATABASE_URL,PA_API_KEYS,PA_ENCRYPTION_KEY,PA_CORS_ORIGINS
           script: |
             cd /opt/bagile
 
@@ -98,15 +89,6 @@ jobs:
             PA_API_KEYS=${PA_API_KEYS}
             PA_ENCRYPTION_KEY=${PA_ENCRYPTION_KEY}
             PA_CORS_ORIGINS=${PA_CORS_ORIGINS}
-            BAGILE_API_URL=${BAGILE_API_URL}
-            BAGILE_API_KEY=${BAGILE_API_KEY}
-            N8N_BASE_URL=${N8N_BASE_URL}
-            WC_BASE_URL=${WC_BASE_URL}
-            WP_ADMIN_URL=${WP_ADMIN_URL}
-            XERO_CLIENT_ID=${XERO_CLIENT_ID}
-            XERO_CLIENT_SECRET=${XERO_CLIENT_SECRET}
-            XERO_TENANT_ID=${XERO_TENANT_ID}
-            XERO_REFRESH_TOKEN=${XERO_REFRESH_TOKEN}
             EOF
 
             echo "Pulling latest PA service image..."
