@@ -80,30 +80,44 @@ async function findAndCopyLatestCourse(
 ): Promise<void> {
   const fullCourseName = COURSE_TYPE_NAMES[courseType.toUpperCase()] ?? courseType;
 
-  // Course management table is sorted by date descending — first match is most recent
-  const rows = page.locator('table tbody tr');
-  const count = await rows.count();
+  // The admin table may be paginated — keep clicking "next" until we find a match or exhaust all pages
+  let pageNum = 1;
+  while (true) {
+    const rows = page.locator('table tbody tr');
+    const count = await rows.count();
 
-  for (let i = 0; i < count; i++) {
-    const row = rows.nth(i);
-    const rowText = await row.innerText();
+    for (let i = 0; i < count; i++) {
+      const row = rows.nth(i);
+      const rowText = await row.innerText();
 
-    if (rowText.includes(fullCourseName) && rowText.includes(trainerName)) {
-      // Open the dropdown — the toggle is the second item in the operations dropbutton
-      const toggleBtn = row.locator('.dropbutton__toggle').first();
-      await toggleBtn.click();
+      if (rowText.includes(fullCourseName) && rowText.includes(trainerName)) {
+        // Open the dropdown — the toggle is the second item in the operations dropbutton
+        const toggleBtn = row.locator('.dropbutton__toggle').first();
+        await toggleBtn.click();
 
-      // Copy link appears in the dropdown after toggle
-      const copyLink = row.locator('a[href*="replicate"]').first();
-      await copyLink.waitFor({ state: 'visible', timeout: 5_000 });
-      await copyLink.click();
-      await page.waitForLoadState('networkidle');
+        // Copy link appears in the dropdown after toggle
+        const copyLink = row.locator('a[href*="replicate"]').first();
+        await copyLink.waitFor({ state: 'visible', timeout: 5_000 });
+        await copyLink.click();
+        await page.waitForLoadState('networkidle');
 
-      // Confirmation page: "Are you sure you want to replicate Course...?"
-      await page.getByRole('button', { name: 'Copy' }).click();
-      await page.waitForLoadState('networkidle');
-      return;
+        // Confirmation page: "Are you sure you want to replicate Course...?"
+        await page.getByRole('button', { name: 'Copy' }).click();
+        await page.waitForLoadState('networkidle');
+        return;
+      }
     }
+
+    // Try to go to the next page
+    const nextLink = page.locator('a[title="Go to next page"], a.pager__link--next, li.pager__item--next a').first();
+    const nextVisible = await nextLink.isVisible().catch(() => false);
+    if (!nextVisible) break;
+
+    pageNum++;
+    await nextLink.click();
+    await page.waitForLoadState('networkidle');
+
+    if (pageNum > 20) break; // safety limit
   }
 
   throw new Error(`No course found for type "${courseType}" (${fullCourseName}) and trainer "${trainerName}"`);
