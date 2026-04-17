@@ -2,4 +2,4 @@
 -- Required so that source_product_url (added in V75) gets populated
 -- for all existing products, not just ones modified since last incremental sync.
 DELETE FROM bagile.sync_metadata
-WHERE source_name = 'woo' AND entity_type = 'products';
+WHERE source = 'woo' AND entity_type = 'products';
