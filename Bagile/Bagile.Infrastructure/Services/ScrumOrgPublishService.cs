@@ -1,45 +1,33 @@
-using System.Diagnostics;
+using System.Net.Http.Headers;
+using System.Text;
 using System.Text.Json;
 using Bagile.Application.Common.Interfaces;
-using Bagile.Domain.Repositories;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace Bagile.Infrastructure.Services;
 
 /// <summary>
-/// Creates Scrum.org course listings by shelling out to a Playwright Node.js script.
-/// The script handles login, finding the template course, copying, and editing.
+/// Creates Scrum.org course listings by calling the bagile-pa HTTP service,
+/// which runs a Playwright browser automation script.
 ///
-/// In production, this runs on a machine with Node.js and Playwright installed.
-/// The Docker API container proxies the request to a worker that has browser access.
-/// For now, the script runs locally.
+/// Requires bagile-pa to be on bagile-net and reachable at PaService:BaseUrl.
 /// </summary>
 public class ScrumOrgPublishService : IScrumOrgPublishService
 {
+    private static readonly HttpClient _httpClient = new();
+
     private readonly ILogger<ScrumOrgPublishService> _logger;
-    private readonly string _scriptPath;
-    private readonly string _username;
-    private readonly string _password;
+    private readonly string _baseUrl;
+    private readonly string _apiKey;
 
     public ScrumOrgPublishService(
         IConfiguration config,
-        IServiceConfigRepository serviceConfig,
         ILogger<ScrumOrgPublishService> logger)
     {
         _logger = logger;
-        _scriptPath = config["ScrumOrg:ScriptPath"]
-            ?? Path.Combine(AppContext.BaseDirectory, "scripts", "publish-scrumorg.js");
-
-        // DB-first: use values from service_config if set, fall back to IConfiguration.
-        var cfgUsername = config["ScrumOrg:Username"] ?? "";
-        var cfgPassword = config["ScrumOrg:Password"] ?? "";
-
-        var dbUsername = serviceConfig.GetAsync("scrumorg.username").GetAwaiter().GetResult();
-        var dbPassword = serviceConfig.GetAsync("scrumorg.password").GetAwaiter().GetResult();
-
-        _username = !string.IsNullOrWhiteSpace(dbUsername) ? dbUsername : cfgUsername;
-        _password = !string.IsNullOrWhiteSpace(dbPassword) ? dbPassword : cfgPassword;
+        _baseUrl = (config["PaService:BaseUrl"] ?? "http://bagile-pa:3001").TrimEnd('/');
+        _apiKey = config["PaService:ApiKey"] ?? "";
     }
 
     public async Task<ScrumOrgPublishResult?> CreateListingAsync(
@@ -47,80 +35,78 @@ public class ScrumOrgPublishService : IScrumOrgPublishService
         CancellationToken ct = default)
     {
         _logger.LogInformation(
-            "Creating Scrum.org listing for {CourseType} on {StartDate} by {Trainer}",
+            "Creating Scrum.org listing for {CourseType} on {StartDate} by {Trainer} via PA service",
             request.CourseType, request.StartDate.ToString("yyyy-MM-dd"), request.TrainerName);
+
+        var payload = new
+        {
+            courseType = request.CourseType,
+            trainerName = request.TrainerName,
+            startDate = request.StartDate.ToString("yyyy-MM-dd"),
+            endDate = request.EndDate.ToString("yyyy-MM-dd"),
+            registrationUrl = request.RegistrationUrl,
+        };
+
+        var json = JsonSerializer.Serialize(payload);
+        using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        using var httpRequest = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"{_baseUrl}/playwright/create-scrumorg-course")
+        {
+            Content = content
+        };
+
+        if (!string.IsNullOrWhiteSpace(_apiKey))
+            httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
 
         try
         {
-            // Build the arguments for the Playwright script
-            var args = new Dictionary<string, string>
-            {
-                ["courseType"] = request.CourseType,
-                ["startDate"] = request.StartDate.ToString("yyyy-MM-dd"),
-                ["endDate"] = request.EndDate.ToString("yyyy-MM-dd"),
-                ["trainerName"] = request.TrainerName,
-                ["registrationUrl"] = request.RegistrationUrl,
-                ["username"] = _username,
-                ["password"] = _password
-            };
+            var response = await _httpClient.SendAsync(httpRequest, ct);
+            var responseBody = await response.Content.ReadAsStringAsync(ct);
 
-            var argsJson = JsonSerializer.Serialize(args);
-
-            var psi = new ProcessStartInfo
+            if (!response.IsSuccessStatusCode)
             {
-                FileName = "node",
-                Arguments = $"\"{_scriptPath}\" '{argsJson}'",
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-
-            using var process = Process.Start(psi);
-            if (process == null)
-            {
-                _logger.LogError("Failed to start Playwright script process");
-                return null;
+                _logger.LogError(
+                    "PA service returned {StatusCode} for Scrum.org publish: {Body}",
+                    (int)response.StatusCode, responseBody);
+                throw new InvalidOperationException(
+                    $"PA service returned HTTP {(int)response.StatusCode}: {responseBody}");
             }
 
-            var stdout = await process.StandardOutput.ReadToEndAsync(ct);
-            var stderr = await process.StandardError.ReadToEndAsync(ct);
-
-            await process.WaitForExitAsync(ct);
-
-            if (process.ExitCode != 0)
-            {
-                _logger.LogError("Playwright script failed with exit code {Code}: {Stderr}",
-                    process.ExitCode, stderr);
-                return null;
-            }
-
-            // Script outputs JSON with listingUrl
-            var result = JsonSerializer.Deserialize<ScriptOutput>(stdout.Trim(),
+            var result = JsonSerializer.Deserialize<PaServiceResponse>(responseBody,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-            if (result?.ListingUrl == null)
+            if (result?.Success != true || result.CourseUrl == null)
             {
-                _logger.LogError("Playwright script returned no listing URL. Output: {Output}", stdout);
-                return null;
+                var reason = result?.ErrorMessage ?? "no courseUrl in response";
+                _logger.LogError("PA service reported failure: {Error}", reason);
+                throw new InvalidOperationException($"Scrum.org publish failed: {reason}");
             }
 
-            _logger.LogInformation("Scrum.org listing created: {Url}", result.ListingUrl);
+            _logger.LogInformation("Scrum.org listing created: {Url}", result.CourseUrl);
 
             return new ScrumOrgPublishResult
             {
-                ListingUrl = result.ListingUrl
+                ListingUrl = result.CourseUrl
             };
+        }
+        catch (InvalidOperationException)
+        {
+            throw; // propagate meaningful errors to the command handler
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error running Scrum.org publish script");
-            return null;
+            _logger.LogError(ex, "Error calling PA service for Scrum.org publish");
+            throw new InvalidOperationException($"Failed to reach PA service: {ex.Message}", ex);
         }
     }
 
-    private record ScriptOutput
+    private record PaServiceResponse
     {
-        public string? ListingUrl { get; init; }
+        public bool Success { get; init; }
+        public string? CourseUrl { get; init; }
+        public string? ErrorMessage { get; init; }
+        public int DurationMs { get; init; }
     }
 }
