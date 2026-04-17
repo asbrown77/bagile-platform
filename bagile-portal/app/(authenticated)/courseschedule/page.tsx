@@ -23,7 +23,7 @@ import { AlertBanner } from "@/components/ui/AlertBanner";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { SlideOver } from "@/components/ui/SlideOver";
-import { Plus, Calendar as CalendarIcon, Lock, AlertCircle, AlertTriangle, ExternalLink, Users, X, Loader2, LayoutList, Search, Upload, Download } from "lucide-react";
+import { Plus, Calendar as CalendarIcon, Lock, AlertCircle, AlertTriangle, ExternalLink, Users, X, Loader2, LayoutList, Upload, Download } from "lucide-react";
 import {
   getBadgeSrc,
   getCourseCodeDisplay,
@@ -923,8 +923,8 @@ function CalendarContent() {
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [editCourseId, setEditCourseId] = useState<number | null>(null);
   const [editInitialValues, setEditInitialValues] = useState<AddCourseModalProps["initialValues"]>(undefined);
-  const [listSearch, setListSearch] = useState("");
-  const [listDateRange, setListDateRange] = useState<"upcoming" | "year" | "all">("upcoming");
+  const [courseTypeFilter, setCourseTypeFilter] = useState("all");
+  const [listDateRange, setListDateRange] = useState("upcoming");
   const [showImportModal, setShowImportModal] = useState(false);
   const [courseDefs, setCourseDefs] = useState<CourseDef[]>([]);
 
@@ -951,13 +951,13 @@ function CalendarContent() {
     if (listDateRange === "upcoming") {
       from = today;
       to = new Date(Date.now() + 366 * 24 * 3600 * 1000).toISOString().split("T")[0];
-    } else if (listDateRange === "year") {
-      const y = new Date().getFullYear();
-      from = `${y}-01-01`;
-      to = `${y}-12-31`;
-    } else {
+    } else if (listDateRange === "all") {
       from = "2020-01-01";
       to = "2030-12-31";
+    } else {
+      // It's a year string e.g. "2025"
+      from = `${listDateRange}-01-01`;
+      to = `${listDateRange}-12-31`;
     }
     setListError("");
     getCalendarEvents(apiKey, from, to)
@@ -1003,16 +1003,24 @@ function CalendarContent() {
   const filteredEvents = applyFilters(events);
   const filteredListEvents = applyFilters(listEvents);
 
-  // Search filter on top of trainer/status filters
+  // Course type filter on top of trainer/status filters
   const filteredListEventsSearched = filteredListEvents.filter((e) => {
-    if (!listSearch) return true;
-    const q = listSearch.toLowerCase();
-    return (
-      e.courseType.toLowerCase().includes(q) ||
-      getCourseDisplayName(e.courseType).toLowerCase().includes(q) ||
-      getCourseCodeDisplay(e.courseType).toLowerCase().includes(q)
-    );
+    if (courseTypeFilter === "all") return true;
+    return e.courseType.toUpperCase().replace(/[-_\s]/g, "") ===
+      courseTypeFilter.toUpperCase().replace(/[-_\s]/g, "");
   });
+
+  // Sorted unique course types from loaded events for the dropdown
+  const courseTypeOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const e of listEvents) {
+      const key = e.courseType.toUpperCase().replace(/[-_\s]/g, "");
+      if (!seen.has(key)) seen.set(key, getCourseCodeDisplay(e.courseType));
+    }
+    return [...seen.entries()]
+      .sort((a, b) => a[1].localeCompare(b[1]))
+      .map(([value, label]) => ({ value, label }));
+  }, [listEvents]);
 
   // Convert to FullCalendar events
   const fcEvents = filteredEvents.map((e) => ({
@@ -1294,33 +1302,29 @@ function CalendarContent() {
         <>
           {/* List view filters */}
           <div className="flex items-center gap-3 mb-4 flex-wrap">
-            <div className="relative flex-1 min-w-[180px] max-w-xs">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search courses..."
-                value={listSearch}
-                onChange={(e) => setListSearch(e.target.value)}
-                className="w-full pl-10 pr-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
-              />
-            </div>
-            <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden">
-              {([
-                { key: "upcoming", label: "Upcoming" },
-                { key: "year", label: String(new Date().getFullYear()) },
-                { key: "all", label: "All" },
-              ] as const).map(({ key, label }, i) => (
-                <button
-                  key={key}
-                  onClick={() => setListDateRange(key)}
-                  className={`px-3 py-1.5 text-xs font-medium transition-colors
-                    ${listDateRange === key ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}
-                    ${i > 0 ? "border-l border-gray-200" : ""}`}
-                >
-                  {label}
-                </button>
+            {/* Course type dropdown */}
+            <select
+              value={courseTypeFilter}
+              onChange={(e) => setCourseTypeFilter(e.target.value)}
+              className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+            >
+              <option value="all">All courses</option>
+              {courseTypeOptions.map(({ value, label }) => (
+                <option key={value} value={value}>{label}</option>
               ))}
-            </div>
+            </select>
+            {/* Date range dropdown */}
+            <select
+              value={listDateRange}
+              onChange={(e) => setListDateRange(e.target.value)}
+              className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+            >
+              <option value="upcoming">Upcoming</option>
+              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 1 + i).map((y) => (
+                <option key={y} value={String(y)}>{y}</option>
+              ))}
+              <option value="all">All time</option>
+            </select>
           </div>
           {listError && (
             <div className="mb-4">
