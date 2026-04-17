@@ -1667,7 +1667,6 @@ GET  https://api.bagile.co.uk:3001/health`}
         <p className="text-sm font-semibold text-amber-800 mb-2">Before the HTTP API goes live</p>
         <ul className="text-xs text-amber-700 space-y-1 list-disc list-inside">
           <li>Start HTTP server on Hetzner — <code>npm run start:http</code> in <code>bagile-pa-service/</code> via PM2 or systemd</li>
-          <li>Push Flyway migrations V69 + V70 to the Hetzner production database (local Docker DB is done)</li>
           <li>Generate OpenAPI spec for ChatGPT Custom GPT Action (once server is live)</li>
           <li>Verify scrum.org Playwright selectors — run <code>pa_create_scrumorg_course</code> once against the live site</li>
         </ul>
