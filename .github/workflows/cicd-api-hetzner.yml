@@ -82,6 +82,7 @@ jobs:
           WOOCOMMERCE_WEBHOOK_SECRET: ${{ secrets.WOOCOMMERCE_WEBHOOK_SECRET }}
           WOOCOMMERCE_CONSUMER_KEY: ${{ secrets.WOOCOMMERCE_CONSUMER_KEY }}
           WOOCOMMERCE_CONSUMER_SECRET: ${{ secrets.WOOCOMMERCE_CONSUMER_SECRET }}
+          PA_API_KEYS: ${{ secrets.PA_API_KEYS }}
           PA_ENCRYPTION_KEY: ${{ secrets.PA_ENCRYPTION_KEY }}
           XERO_WEBHOOK_SECRET: ${{ secrets.XERO_WEBHOOK_SECRET }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
@@ -92,7 +93,7 @@ jobs:
           host: ${{ vars.HETZNER_HOST }}
           username: root
           key: ${{ secrets.HETZNER_SSH_KEY }}
-          envs: GHCR_PAT,DB_CONNECTION_STRING,BAGILE_API_KEY,WOOCOMMERCE_WEBHOOK_SECRET,WOOCOMMERCE_CONSUMER_KEY,WOOCOMMERCE_CONSUMER_SECRET,PA_ENCRYPTION_KEY,XERO_WEBHOOK_SECRET,SMTP_PASSWORD,PORTAL_GOOGLE_CLIENT_ID,PORTAL_JWT_SECRET,PORTAL_ALLOWED_EMAILS
+          envs: GHCR_PAT,DB_CONNECTION_STRING,BAGILE_API_KEY,WOOCOMMERCE_WEBHOOK_SECRET,WOOCOMMERCE_CONSUMER_KEY,WOOCOMMERCE_CONSUMER_SECRET,PA_API_KEYS,PA_ENCRYPTION_KEY,XERO_WEBHOOK_SECRET,SMTP_PASSWORD,PORTAL_GOOGLE_CLIENT_ID,PORTAL_JWT_SECRET,PORTAL_ALLOWED_EMAILS
           script: |
             cd /opt/bagile
 
@@ -106,6 +107,8 @@ jobs:
             mkdir -p config
 
             echo "Writing API env file from GitHub secrets..."
+            # Extract the raw key (first segment before ':') from PA_API_KEYS
+            PA_INTERNAL_KEY=$(echo "${PA_API_KEYS}" | cut -d',' -f1 | cut -d':' -f1)
             cat > config/api.env <<EOF
             ASPNETCORE_ENVIRONMENT=Production
             ConnectionStrings__DefaultConnection=${DB_CONNECTION_STRING}
@@ -117,6 +120,8 @@ jobs:
             WooCommerce__ConsumerSecret=${WOOCOMMERCE_CONSUMER_SECRET}
 
             PA_ENCRYPTION_KEY=${PA_ENCRYPTION_KEY}
+            PaService__BaseUrl=http://bagile-pa:3001
+            PaService__ApiKey=${PA_INTERNAL_KEY}
 
             Xero__WebhookSecret=${XERO_WEBHOOK_SECRET}
 

@@ -81,6 +81,9 @@ jobs:
             echo "Refreshing GHCR credentials on Hetzner..."
             echo "${GHCR_PAT}" | docker login ghcr.io -u asbrown77 --password-stdin
 
+            echo "Pulling latest repo (docker-compose and config)..."
+            git pull origin main
+
             echo "Writing PA service env file..."
             mkdir -p config
             cat > config/pa.env <<EOF
