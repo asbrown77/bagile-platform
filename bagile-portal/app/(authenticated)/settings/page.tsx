@@ -7,13 +7,13 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { AlertBanner } from "@/components/ui/AlertBanner";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Key, Plus, Settings2, FileText, ChevronLeft, Save, Eye, Code, Users, Pencil, Trash2, X, Check } from "lucide-react";
+import { Key, Plus, Settings2, FileText, ChevronLeft, Save, Eye, Code, Users, Pencil, Trash2, X, Check, Bot, Shield, Zap, Globe } from "lucide-react";
 import { loadConfig, saveConfig, type PortalConfig } from "@/lib/config";
 import { CourseDefsEditor } from "@/components/courses/CourseDefsEditor";
 
 // ── Tab definitions ───────────────────────────────────────
 
-type Tab = "general" | "post-course" | "pre-course" | "trainers" | "integrations" | "courses";
+type Tab = "general" | "post-course" | "pre-course" | "trainers" | "integrations" | "courses" | "claude-pa";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "general",      label: "General" },
@@ -22,6 +22,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "trainers",     label: "Trainers" },
   { id: "integrations", label: "Integrations" },
   { id: "courses",      label: "Courses" },
+  { id: "claude-pa",    label: "Claude PA" },
 ];
 
 // ── Root export (wraps in Suspense for useSearchParams) ───
@@ -363,6 +364,9 @@ function SettingsContent() {
 
       {/* Courses tab */}
       {activeTab === "courses" && <CourseDefsEditor />}
+
+      {/* Claude PA tab */}
+      {activeTab === "claude-pa" && <ClaudePaDocs />}
     </>
   );
 }
@@ -1470,3 +1474,206 @@ function TrainersEditor() {
   );
 }
 
+// ── Claude PA Docs ────────────────────────────────────────
+
+const PA_TOOLS = [
+  { name: "pa_ping",                     system: "Service",     description: "Health check — confirms the PA service is running" },
+  { name: "pa_morning_brief",            system: "Overview",    description: "Aggregates Trello CRM, pending transfers, and at-risk courses into a single briefing" },
+  { name: "pa_tasks_list",               system: "Tasks",       description: "Lists open PA inbox tasks from the database" },
+  { name: "pa_tasks_complete",           system: "Tasks",       description: "Marks a task as completed by ID" },
+  { name: "pa_health_status",            system: "Monitoring",  description: "Shows the last automation run result per automation type" },
+  { name: "pa_transfer_fooevent_ticket", system: "WordPress",   description: "Playwright: cancels an old FooEvents ticket and creates a new one for the transferred course" },
+  { name: "pa_update_trello_card",       system: "Trello",      description: "Moves a card, adds a comment, and sets or clears a due date via the Trello API" },
+  { name: "pa_cancel_course",            system: "WooCommerce", description: "Marks a WooCommerce course product as Sold Out (outofstock) without deleting it" },
+  { name: "pa_lookup_xero_invoice",      system: "Xero",        description: "Finds an invoice by number or contact name — auto-refreshes the Xero token" },
+  { name: "pa_label_gmail_draft",        system: "Gmail/n8n",   description: "Applies the Employee/Pam label to a draft via the n8n webhook" },
+  { name: "pa_create_scrumorg_course",   system: "Scrum.org",   description: "Playwright: copies the latest course listing on scrum.org and updates dates and URL" },
+];
+
+const SYSTEM_COLOURS: Record<string, string> = {
+  "Service":     "bg-gray-100 text-gray-600",
+  "Overview":    "bg-blue-50 text-blue-700",
+  "Tasks":       "bg-indigo-50 text-indigo-700",
+  "Monitoring":  "bg-amber-50 text-amber-700",
+  "WordPress":   "bg-orange-50 text-orange-700",
+  "Trello":      "bg-sky-50 text-sky-700",
+  "WooCommerce": "bg-purple-50 text-purple-700",
+  "Xero":        "bg-green-50 text-green-700",
+  "Gmail/n8n":   "bg-red-50 text-red-700",
+  "Scrum.org":   "bg-teal-50 text-teal-700",
+};
+
+const HTTP_CALLERS = [
+  { name: "portal",  role: "admin",  description: "BAgile Portal (this app) — reads and manages tasks" },
+  { name: "chatgpt", role: "reader", description: "ChatGPT Custom GPT Action — read-only task access" },
+  { name: "n8n",     role: "admin",  description: "n8n automation workflows — full task and webhook access" },
+];
+
+function ClaudePaDocs() {
+  return (
+    <div className="space-y-6">
+
+      {/* What is it */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="p-2 bg-violet-50 rounded-lg">
+            <Bot className="w-5 h-5 text-violet-600" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Claude PA — Personal Assistant Service</h2>
+            <p className="text-sm text-gray-500">Internal automation layer between Claude and BAgile&apos;s tools</p>
+          </div>
+        </div>
+        <p className="text-sm text-gray-600 leading-relaxed">
+          The PA Service is a TypeScript server that gives Claude (and other callers) a set of pre-built tools for
+          routine business operations. Instead of Claude making raw API calls to Trello, Xero, WooCommerce, and
+          scrum.org individually, each tool is a single auditable action with proper error handling.
+          It runs as an MCP server for Claude Code sessions and exposes the same operations over HTTP for the Portal,
+          n8n, and ChatGPT.
+        </p>
+        <div className="mt-4 grid grid-cols-3 gap-3 text-center">
+          <div className="bg-gray-50 rounded-lg p-3">
+            <p className="text-2xl font-bold text-gray-900">11</p>
+            <p className="text-xs text-gray-500 mt-0.5">MCP tools</p>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-3">
+            <p className="text-2xl font-bold text-gray-900">83</p>
+            <p className="text-xs text-gray-500 mt-0.5">automated tests</p>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-3">
+            <p className="text-2xl font-bold text-gray-900">8</p>
+            <p className="text-xs text-gray-500 mt-0.5">connected systems</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Tool list */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-200 flex items-center gap-3">
+          <div className="p-2 bg-violet-50 rounded-lg">
+            <Zap className="w-4 h-4 text-violet-600" />
+          </div>
+          <h2 className="text-sm font-semibold text-gray-900">Available Tools</h2>
+        </div>
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Tool name</th>
+              <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase hidden md:table-cell">System</th>
+              <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">What it does</th>
+            </tr>
+          </thead>
+          <tbody>
+            {PA_TOOLS.map((tool) => (
+              <tr key={tool.name} className="border-t border-gray-100 hover:bg-gray-50">
+                <td className="px-4 py-2.5 font-mono text-xs text-gray-700 whitespace-nowrap">{tool.name}</td>
+                <td className="px-4 py-2.5 hidden md:table-cell">
+                  <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${SYSTEM_COLOURS[tool.system] ?? "bg-gray-100 text-gray-600"}`}>
+                    {tool.system}
+                  </span>
+                </td>
+                <td className="px-4 py-2.5 text-gray-600 text-xs">{tool.description}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* How to connect */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 bg-violet-50 rounded-lg">
+            <Globe className="w-4 h-4 text-violet-600" />
+          </div>
+          <h2 className="text-sm font-semibold text-gray-900">How to Connect</h2>
+        </div>
+
+        <div className="space-y-5">
+          <div>
+            <p className="text-sm font-medium text-gray-800 mb-1">Claude Code — MCP (already configured for Alex)</p>
+            <p className="text-xs text-gray-500 mb-2">
+              Registered in <code className="bg-gray-100 px-1 rounded">.mcp.json</code> on Alex&apos;s machine as <code className="bg-gray-100 px-1 rounded">bagile-pa</code>.
+              All 11 tools appear automatically in any Claude Code session inside the agent directory. No additional setup needed.
+            </p>
+          </div>
+
+          <div>
+            <p className="text-sm font-medium text-gray-800 mb-1">HTTP API — Portal, n8n, ChatGPT</p>
+            <p className="text-xs text-gray-500 mb-2">
+              The same operations are available over HTTP on port 3001. All requests require a
+              <code className="bg-gray-100 mx-1 px-1 rounded">Authorization: Bearer &lt;key&gt;</code> header.
+              The <code className="bg-gray-100 px-1 rounded">/health</code> endpoint is public (no auth required).
+            </p>
+            <pre className="bg-gray-900 rounded-lg p-4 text-gray-300 text-xs overflow-x-auto leading-relaxed">
+{`# List open tasks
+GET  https://api.bagile.co.uk:3001/tasks
+Authorization: Bearer <your-key>
+
+# Mark a task complete
+PATCH https://api.bagile.co.uk:3001/tasks/:id
+Authorization: Bearer <your-key>
+
+# Health check (no auth)
+GET  https://api.bagile.co.uk:3001/health`}
+            </pre>
+            <p className="text-xs text-gray-400 mt-2">
+              The HTTP server needs to be started on Hetzner before these URLs go live.
+              Run <code className="bg-gray-100 px-1 rounded">npm run start:http</code> in <code className="bg-gray-100 px-1 rounded">bagile-pa-service/</code> with a process manager (PM2 or systemd).
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* API keys & callers */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-200 flex items-center gap-3">
+          <div className="p-2 bg-violet-50 rounded-lg">
+            <Shield className="w-4 h-4 text-violet-600" />
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-gray-900">API Keys &amp; Caller Access</h2>
+            <p className="text-xs text-gray-500">Keys are stored in <code>.mcp.json → PA_API_KEYS</code> on Alex&apos;s machine. Ask Alex for a key.</p>
+          </div>
+        </div>
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Caller</th>
+              <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Role</th>
+              <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">What they can do</th>
+            </tr>
+          </thead>
+          <tbody>
+            {HTTP_CALLERS.map((c) => (
+              <tr key={c.name} className="border-t border-gray-100">
+                <td className="px-4 py-3 font-medium text-gray-800 capitalize">{c.name}</td>
+                <td className="px-4 py-3">
+                  <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${c.role === "admin" ? "bg-green-50 text-green-700" : "bg-blue-50 text-blue-700"}`}>
+                    {c.role}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-xs text-gray-600">{c.description}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 text-xs text-gray-500 space-y-0.5">
+          <p><strong>admin</strong> — read tasks, mark complete, and trigger automations (when those HTTP routes are added)</p>
+          <p><strong>reader</strong> — read tasks and mark complete only; blocked from admin-only routes</p>
+        </div>
+      </div>
+
+      {/* Outstanding */}
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
+        <p className="text-sm font-semibold text-amber-800 mb-2">Before the HTTP API goes live</p>
+        <ul className="text-xs text-amber-700 space-y-1 list-disc list-inside">
+          <li>Start HTTP server on Hetzner — <code>npm run start:http</code> in <code>bagile-pa-service/</code> via PM2 or systemd</li>
+          <li>Push Flyway migrations V69 + V70 to the Hetzner production database (local Docker DB is done)</li>
+          <li>Generate OpenAPI spec for ChatGPT Custom GPT Action (once server is live)</li>
+          <li>Verify scrum.org Playwright selectors — run <code>pa_create_scrumorg_course</code> once against the live site</li>
+        </ul>
+      </div>
+
+    </div>
+  );
+}
