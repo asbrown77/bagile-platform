@@ -65,6 +65,7 @@ jobs:
       - name: Deploy PA service via SSH
         uses: appleboy/ssh-action@v1.2.0
         env:
+          GHCR_PAT: ${{ secrets.GHCR_PAT }}
           DATABASE_URL: ${{ secrets.PA_DATABASE_URL }}
           PA_API_KEYS: ${{ secrets.PA_API_KEYS }}
           PA_ENCRYPTION_KEY: ${{ secrets.PA_ENCRYPTION_KEY }}
@@ -82,9 +83,12 @@ jobs:
           host: ${{ vars.HETZNER_HOST }}
           username: root
           key: ${{ secrets.HETZNER_SSH_KEY }}
-          envs: DATABASE_URL,PA_API_KEYS,PA_ENCRYPTION_KEY,PA_CORS_ORIGINS,BAGILE_API_URL,BAGILE_API_KEY,N8N_BASE_URL,WC_BASE_URL,WP_ADMIN_URL,XERO_CLIENT_ID,XERO_CLIENT_SECRET,XERO_TENANT_ID,XERO_REFRESH_TOKEN
+          envs: GHCR_PAT,DATABASE_URL,PA_API_KEYS,PA_ENCRYPTION_KEY,PA_CORS_ORIGINS,BAGILE_API_URL,BAGILE_API_KEY,N8N_BASE_URL,WC_BASE_URL,WP_ADMIN_URL,XERO_CLIENT_ID,XERO_CLIENT_SECRET,XERO_TENANT_ID,XERO_REFRESH_TOKEN
           script: |
             cd /opt/bagile
+
+            echo "Refreshing GHCR credentials on Hetzner..."
+            echo "${GHCR_PAT}" | docker login ghcr.io -u asbrown77 --password-stdin
 
             echo "Writing PA service env file..."
             mkdir -p config
