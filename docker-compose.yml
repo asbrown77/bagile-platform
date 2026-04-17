@@ -1,4 +1,15 @@
 services:
+  bagile-pa:
+    container_name: bagile-pa
+    image: ghcr.io/asbrown77/bagile-pa:latest
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    env_file:
+      - config/pa.env
+    depends_on:
+      - postgres
+
   postgres:
     container_name: bagile-db
     image: postgres:16
