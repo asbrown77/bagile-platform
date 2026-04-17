@@ -22,7 +22,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "trainers",     label: "Trainers" },
   { id: "integrations", label: "Integrations" },
   { id: "courses",      label: "Courses" },
-  { id: "claude-pa",    label: "Claude PA" },
+  { id: "claude-pa",    label: "AI PA" },
 ];
 
 // ── Root export (wraps in Suspense for useSearchParams) ───
@@ -1520,16 +1520,15 @@ function ClaudePaDocs() {
             <Bot className="w-5 h-5 text-violet-600" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">Claude PA — Personal Assistant Service</h2>
-            <p className="text-sm text-gray-500">Internal automation layer between Claude and BAgile&apos;s tools</p>
+            <h2 className="text-lg font-semibold text-gray-900">AI PA — Personal Assistant Service</h2>
+            <p className="text-sm text-gray-500">AI-agnostic automation layer between any authorised AI and BAgile&apos;s tools</p>
           </div>
         </div>
         <p className="text-sm text-gray-600 leading-relaxed">
-          The PA Service is a TypeScript server that gives Claude (and other callers) a set of pre-built tools for
-          routine business operations. Instead of Claude making raw API calls to Trello, Xero, WooCommerce, and
-          scrum.org individually, each tool is a single auditable action with proper error handling.
-          It runs as an MCP server for Claude Code sessions and exposes the same operations over HTTP for the Portal,
-          n8n, and ChatGPT.
+          The PA Service is a TypeScript server that gives any authorised AI assistant a set of pre-built tools for
+          routine business operations. Tools are single auditable actions with proper error handling — no AI needs to
+          make raw API calls to Trello, Xero, WooCommerce, or scrum.org directly.
+          Claude Code connects via MCP; the Portal, n8n, and ChatGPT connect over HTTP. Same operations, same data, different callers.
         </p>
         <div className="mt-4 grid grid-cols-3 gap-3 text-center">
           <div className="bg-gray-50 rounded-lg p-3">
@@ -1590,15 +1589,15 @@ function ClaudePaDocs() {
 
         <div className="space-y-5">
           <div>
-            <p className="text-sm font-medium text-gray-800 mb-1">Claude Code — MCP (already configured for Alex)</p>
+            <p className="text-sm font-medium text-gray-800 mb-1">Claude Code — MCP (configured for Alex)</p>
             <p className="text-xs text-gray-500 mb-2">
-              Registered in <code className="bg-gray-100 px-1 rounded">.mcp.json</code> on Alex&apos;s machine as <code className="bg-gray-100 px-1 rounded">bagile-pa</code>.
-              All 11 tools appear automatically in any Claude Code session inside the agent directory. No additional setup needed.
+              Registered in <code className="bg-gray-100 px-1 rounded">.mcp.json</code> as <code className="bg-gray-100 px-1 rounded">bagile-pa</code>.
+              All 11 tools appear automatically in any Claude Code session. This is Claude-specific — other AI systems use the HTTP interface below.
             </p>
           </div>
 
           <div>
-            <p className="text-sm font-medium text-gray-800 mb-1">HTTP API — Portal, n8n, ChatGPT</p>
+            <p className="text-sm font-medium text-gray-800 mb-1">HTTP API — Portal, n8n, ChatGPT (any AI or tool)</p>
             <p className="text-xs text-gray-500 mb-2">
               The same operations are available over HTTP on port 3001. All requests require a
               <code className="bg-gray-100 mx-1 px-1 rounded">Authorization: Bearer &lt;key&gt;</code> header.
