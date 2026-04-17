@@ -4,6 +4,7 @@ import rateLimit from 'express-rate-limit';
 import { Pool } from 'pg';
 import { createTasksRouter } from './routes/tasks.js';
 import { createCredentialsRouter } from './routes/credentials.js';
+import { createCompanySettingsRouter } from './routes/company-settings.js';
 import { apiKeyAuth, parseApiKeys } from './middleware/apiKeyAuth.js';
 
 const DEFAULT_RATE_LIMIT = 60; // requests per minute per IP
@@ -58,6 +59,7 @@ export function createHttpServer(pool: Pool, opts: HttpServerOptions): express.A
 
   // ADMIN routes — admin key required (enforced inside the router)
   app.use('/credentials', createCredentialsRouter(pool));
+  app.use('/company-settings', createCompanySettingsRouter(pool));
 
   return app;
 }

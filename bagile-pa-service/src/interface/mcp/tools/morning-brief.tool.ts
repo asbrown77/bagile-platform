@@ -6,10 +6,9 @@ import { BagileApiAdapter } from "../../../infrastructure/adapters/bagile-api/Ba
 import { GmailStubAdapter } from "../../../infrastructure/adapters/gmail/GmailStubAdapter.js";
 import { CalendarStubAdapter } from "../../../infrastructure/adapters/calendar/CalendarStubAdapter.js";
 import { buildCredentialResolver } from "../../../infrastructure/credentials/buildCredentialResolver.js";
+import { buildCompanySettingsResolver } from "../../../infrastructure/credentials/buildCompanySettingsResolver.js";
 
 export function registerMorningBrief(server: McpServer): void {
-  const bagileUrl = process.env.BAGILE_API_URL ?? "https://api.bagile.co.uk";
-  const bagileKey = process.env.BAGILE_API_KEY ?? "";
   const boardId = process.env.TRELLO_BOARD_ID ?? "hNs49hi4";
   const userId = process.env.PA_USER_ID ?? "unknown";
   const tenantId = process.env.PA_TENANT_ID ?? "bagile";
@@ -25,8 +24,11 @@ export function registerMorningBrief(server: McpServer): void {
       const briefDate = date ?? new Date().toISOString().slice(0, 10);
 
       const resolver = buildCredentialResolver(userId, tenantId);
+      const company = buildCompanySettingsResolver(tenantId);
       const trelloKey = (await resolver("trello_api_key")) ?? "";
       const trelloToken = (await resolver("trello_token")) ?? "";
+      const bagileUrl = (await company("bagile_api_url")) ?? "https://api.bagile.co.uk";
+      const bagileKey = (await company("bagile_api_key")) ?? "";
 
       const useCase = new MorningBriefUseCase(
         new TrelloAdapter(trelloKey, trelloToken),

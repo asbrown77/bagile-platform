@@ -10,6 +10,7 @@ import { registerLookupXeroInvoice } from "./interface/mcp/tools/lookup-xero-inv
 import { registerLabelGmailDraft } from "./interface/mcp/tools/label-gmail-draft.tool.js";
 import { registerCreateScrumOrgCourse } from "./interface/mcp/tools/create-scrumorg-course.tool.js";
 import { registerCredentials } from "./interface/mcp/tools/credentials.tool.js";
+import { registerCompanySettings } from "./interface/mcp/tools/company-settings.tool.js";
 
 export function createServer(): McpServer {
   const server = new McpServer({
@@ -37,6 +38,7 @@ export function createServer(): McpServer {
   registerLabelGmailDraft(server);
   registerCreateScrumOrgCourse(server);
   registerCredentials(server);
+  registerCompanySettings(server);
 
   return server;
 }
