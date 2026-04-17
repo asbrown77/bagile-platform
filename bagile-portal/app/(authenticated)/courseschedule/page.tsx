@@ -927,6 +927,7 @@ function CalendarContent() {
   const [listDateRange, setListDateRange] = useState("upcoming");
   const [showImportModal, setShowImportModal] = useState(false);
   const [courseDefs, setCourseDefs] = useState<CourseDef[]>([]);
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
 
   // Load portal risk thresholds from config (Settings → Courses → Course Risk Thresholds)
   const riskConfig = useMemo<RiskConfig>(() => {
@@ -934,11 +935,19 @@ function CalendarContent() {
     return { workingDays: cfg.atRiskDays, minEnrolments: cfg.minEnrolments };
   }, []);
 
-  // Load trainers + course definitions on mount
+  // Load trainers + course definitions + available years on mount
   useEffect(() => {
     if (!apiKey) return;
     getTrainers(apiKey).then(setTrainers).catch(() => {});
     getCourseDefinitions(apiKey).then(setCourseDefs).catch(() => {});
+    // Fetch all events once just to discover which years have data
+    getCalendarEvents(apiKey, "2020-01-01", "2030-12-31")
+      .then((all) => {
+        const years = [...new Set(all.map((e) => new Date(e.startDate).getFullYear()))]
+          .sort((a, b) => a - b);
+        setAvailableYears(years);
+      })
+      .catch(() => {});
   }, [apiKey]);
 
   // Load list events when switching to list view or date range changes
@@ -1320,7 +1329,7 @@ function CalendarContent() {
               className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
             >
               <option value="upcoming">Upcoming</option>
-              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 1 + i).map((y) => (
+              {availableYears.map((y) => (
                 <option key={y} value={String(y)}>{y}</option>
               ))}
               <option value="all">All time</option>
