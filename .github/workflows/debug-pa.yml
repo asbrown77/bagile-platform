@@ -44,13 +44,12 @@ jobs:
             echo "=== docker logs bagile-api (last 20) ==="
             docker logs bagile-api --tail 20 2>&1
 
-            echo "=== DNS tests from inside bagile-api ==="
-            docker exec bagile-api sh -c "getent hosts bagile-pa; echo exit:\$?" 2>&1 || echo "getent bagile-pa failed"
-            docker exec bagile-api sh -c "getent hosts bagile-etl; echo exit:\$?" 2>&1 || echo "getent bagile-etl failed"
-            docker exec bagile-api sh -c "cat /etc/hosts" 2>&1 || echo "hosts failed"
+            echo "=== check chromium in pa container ==="
+            docker exec bagile-pa sh -c "/usr/bin/chromium --version 2>&1" || echo "chromium check failed"
+            docker exec bagile-pa sh -c "ls -la /usr/bin/chrom* 2>&1" || echo "ls chromium failed"
 
-            echo "=== try direct IP from inside bagile-api ==="
-            docker exec bagile-api sh -c "wget -qO- http://172.18.0.6:3001/health 2>&1" || echo "wget failed"
+            echo "=== pa latest logs ==="
+            docker logs bagile-pa --tail 20 2>&1 || echo "no pa logs"
 
-            echo "=== pa container IP on bagile-net ==="
-            docker inspect bagile-pa --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'
+            echo "=== pa container status ==="
+            docker inspect bagile-pa --format '{{.State.Status}} restarts:{{.RestartCount}}' 2>/dev/null || echo "pa not found"
