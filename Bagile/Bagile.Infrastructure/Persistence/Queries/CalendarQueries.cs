@@ -174,9 +174,9 @@ public class CalendarQueries : ICalendarQueries
             var coursePubs = pubs[c.Id].ToList();
 
             // Legacy WooCommerce courses pre-date the publication tracking system.
-            // All applicable gateways are treated as published — they were live before
-            // this portal existed. Use any stored URL if present; for e-commerce fall
-            // back to the WooCommerce shortlink (?p=ID) derived from source_product_id.
+            // ecommerce is always published (it's on WooCommerce by definition).
+            // For other gateways (scrumorg, icagile), only mark published if we have
+            // a confirmed URL — avoids a green tick with no link.
             var gateways = applicableGateways.Select(g =>
             {
                 var pub = coursePubs.FirstOrDefault(p =>
@@ -185,7 +185,7 @@ public class CalendarQueries : ICalendarQueries
                 return new GatewayStatusDto
                 {
                     Type = g,
-                    Published = true,
+                    Published = g == "ecommerce" || url != null,
                     Url = url
                 };
             }).ToList();

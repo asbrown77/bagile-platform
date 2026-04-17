@@ -9,7 +9,8 @@ public static class GatewayConfig
     private static readonly HashSet<string> ScrumOrgTypes = new(StringComparer.OrdinalIgnoreCase)
     {
         "PSM", "PSPO", "PSK", "PALE", "EBM", "APSSD", "APS",
-        "PSMA", "PSPOA", "PSMAI", "PSPOAI"
+        "PSMA", "PSPOA"
+        // PSMAI and PSPOAI are b-agile AI Essentials courses — not listed on scrum.org
     };
 
     /// <summary>
