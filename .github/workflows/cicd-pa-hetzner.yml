@@ -66,10 +66,10 @@ jobs:
         uses: appleboy/ssh-action@v1.2.0
         env:
           GHCR_PAT: ${{ secrets.GHCR_PAT }}
-          DATABASE_URL: ${{ secrets.PA_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.DB_CONNECTION_STRING }}
           PA_API_KEYS: ${{ secrets.PA_API_KEYS }}
           PA_ENCRYPTION_KEY: ${{ secrets.PA_ENCRYPTION_KEY }}
-          PA_CORS_ORIGINS: ${{ secrets.PA_CORS_ORIGINS }}
+          PA_CORS_ORIGINS: ${{ vars.PA_CORS_ORIGINS }}
         with:
           host: ${{ vars.HETZNER_HOST }}
           username: root
