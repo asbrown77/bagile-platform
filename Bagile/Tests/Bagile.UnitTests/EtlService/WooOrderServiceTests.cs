@@ -185,8 +185,11 @@ public class WooOrderServiceTests
             }
         };
 
-        _students.Setup(x => x.UpsertAsync(It.IsAny<Student>()))
-            .ReturnsAsync(32L); // same studentId for both — the bug scenario
+        var studentIdSeq = 32L;
+        _students.Setup(x => x.UpsertAsync(It.Is<Student>(s => s.Email == "admin@partner.com")))
+            .ReturnsAsync(32L); // same studentId for both shared-email tickets
+        _students.Setup(x => x.UpsertAsync(It.Is<Student>(s => s.Email != "admin@partner.com")))
+            .ReturnsAsync(() => ++studentIdSeq); // synthetic student gets a new id
 
         _courses.Setup(x => x.GetIdBySkuAsync("PSMA-230426-AB"))
             .ReturnsAsync(19);
@@ -198,10 +201,13 @@ public class WooOrderServiceTests
 
         await _service.ProcessAsync(dto, CancellationToken.None);
 
-        // Both tickets must get their own enrolment row despite sharing a studentId
-        _enrolments.Verify(x => x.InsertAsync(It.Is<Enrolment>(e =>
-            e.StudentId == 32 && e.CourseScheduleId == 19 && e.OrderId == 200
-        )), Times.Exactly(2));
+        // First ticket uses studentId=32, second ticket triggers a synthetic student
+        _students.Verify(x => x.UpsertAsync(It.Is<Student>(s =>
+            s.Email.EndsWith("@woo.partner")
+        )), Times.Once);
+
+        // Each ticket gets its own enrolment row
+        _enrolments.Verify(x => x.InsertAsync(It.IsAny<Enrolment>()), Times.Exactly(2));
     }
 
     [Test]

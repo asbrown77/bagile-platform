@@ -95,10 +95,19 @@ namespace Bagile.EtlService.Services
             // tickets sharing one email (e.g. partner admin address) both
             // resolve to the same studentId and UpsertAsync treats the second
             // call as a re-sync of the first, leaving one enrolment short.
+            //
+            // When two tickets on the same order share a studentId and there is
+            // no existing slot to claim, a synthetic student is created for the
+            // extra seat (email: firstname.lastname.externalid@woo.partner) so
+            // the unique (student_id, order_id, course_schedule_id) constraint
+            // is not violated. The synthetic email is deterministic, so
+            // reprocessing the same order is idempotent.
             var existingBySchedule = (await _enrolmentRepo.GetByOrderIdAsync(dto.OrderId))
                 .Where(e => e.Status != "cancelled" && e.Status != "transferred")
                 .GroupBy(e => e.CourseScheduleId!.Value)
                 .ToDictionary(g => g.Key, g => new Queue<Enrolment>(g.OrderBy(e => e.Id)));
+
+            var usedStudentSlots = new Dictionary<long, HashSet<long>>(); // scheduleId → studentIds already assigned
 
             foreach (var ticket in dto.Tickets)
             {
@@ -109,6 +118,21 @@ namespace Bagile.EtlService.Services
                     continue;
 
                 var status = isCancelled ? "cancelled" : "active";
+
+                // Detect duplicate: same studentId already assigned to this schedule in this batch.
+                // Create a synthetic student so the unique constraint isn't violated.
+                if (!usedStudentSlots.TryGetValue(scheduleId.Value, out var assignedStudents))
+                {
+                    assignedStudents = new HashSet<long>();
+                    usedStudentSlots[scheduleId.Value] = assignedStudents;
+                }
+
+                if (assignedStudents.Contains(studentId))
+                {
+                    studentId = await CreateSyntheticStudentAsync(ticket, dto);
+                }
+
+                assignedStudents.Add(studentId);
 
                 if (existingBySchedule.TryGetValue(scheduleId.Value, out var slots) && slots.Count > 0)
                 {
@@ -388,6 +412,24 @@ namespace Bagile.EtlService.Services
                     Country = dto.BillingCountry
                 };
             }
+
+            return await _studentRepo.UpsertAsync(student);
+        }
+
+        private async Task<long> CreateSyntheticStudentAsync(CanonicalTicketDto ticket, CanonicalWooOrderDto dto)
+        {
+            var first = (ticket.FirstName ?? "").ToLowerInvariant().Replace(" ", "");
+            var last  = (ticket.LastName  ?? "").ToLowerInvariant().Replace(" ", "");
+            var syntheticEmail = $"{first}.{last}.{dto.ExternalId}@woo.partner";
+
+            var student = new Student
+            {
+                Email     = syntheticEmail,
+                FirstName = ticket.FirstName ?? "",
+                LastName  = ticket.LastName  ?? "",
+                Company   = string.IsNullOrWhiteSpace(ticket.Company) ? dto.BillingCompany : ticket.Company,
+                Country   = dto.BillingCountry
+            };
 
             return await _studentRepo.UpsertAsync(student);
         }
