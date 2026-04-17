@@ -10,10 +10,16 @@ export class PlaywrightRunner implements IPlaywrightRunnerPort {
     const start = Date.now();
     const { scriptName, input, headless = true } = options;
 
-    const browser = await chromium.launch({ headless });
-    const page = await browser.newPage();
+    // Use system Chromium if PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH is set (e.g. in Docker).
+    // Also pass --no-sandbox which is required when running as root in a container.
+    const executablePath = process.env['PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH'] || undefined;
+    const launchArgs = executablePath ? ['--no-sandbox', '--disable-setuid-sandbox'] : [];
+
+    let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
 
     try {
+      browser = await chromium.launch({ headless, executablePath, args: launchArgs });
+      const page = await browser.newPage();
       const scriptModule = await import(
         `../../../scripts/${scriptName}/${scriptName}.script.js`
       );
@@ -58,7 +64,7 @@ export class PlaywrightRunner implements IPlaywrightRunnerPort {
         durationMs: Date.now() - start,
       };
     } finally {
-      await browser.close();
+      await browser?.close();
     }
   }
 }
