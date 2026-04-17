@@ -315,6 +315,19 @@ namespace Bagile.Infrastructure.Repositories
             return await conn.ExecuteScalarAsync<int>(sql, new { courseScheduleId });
         }
 
+        public async Task UpdateStudentAndStatusAsync(long id, long studentId, string status)
+        {
+            const string sql = @"
+                UPDATE bagile.enrolments
+                SET student_id = @studentId,
+                    status     = @status,
+                    updated_at = NOW()
+                WHERE id = @id;";
+
+            await using var conn = new NpgsqlConnection(_conn);
+            await conn.ExecuteAsync(sql, new { id, studentId, status });
+        }
+
 
     }
 }

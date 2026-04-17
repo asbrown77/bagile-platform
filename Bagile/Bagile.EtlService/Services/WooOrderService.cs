@@ -89,7 +89,17 @@ namespace Bagile.EtlService.Services
                 return;
             }
 
-            // NORMAL ENROLMENTS — one student + enrolment per ticket
+            // NORMAL ENROLMENTS — one student + enrolment per ticket.
+            // Pre-load existing enrolments grouped by schedule so each ticket
+            // claims its own slot. This prevents the same-email bug where two
+            // tickets sharing one email (e.g. partner admin address) both
+            // resolve to the same studentId and UpsertAsync treats the second
+            // call as a re-sync of the first, leaving one enrolment short.
+            var existingBySchedule = (await _enrolmentRepo.GetByOrderIdAsync(dto.OrderId))
+                .Where(e => e.Status != "cancelled" && e.Status != "transferred")
+                .GroupBy(e => e.CourseScheduleId!.Value)
+                .ToDictionary(g => g.Key, g => new Queue<Enrolment>(g.OrderBy(e => e.Id)));
+
             foreach (var ticket in dto.Tickets)
             {
                 var studentId = await CreateStudentFromTicketOrBillingAsync(ticket, dto);
@@ -98,16 +108,24 @@ namespace Bagile.EtlService.Services
                 if (!scheduleId.HasValue)
                     continue;
 
-                var enrol = new Enrolment
-                {
-                    StudentId = studentId,
-                    OrderId = dto.OrderId,
-                    CourseScheduleId = scheduleId.Value,
-                    IsCancelled = isCancelled,
-                    Status = isCancelled ? "cancelled" : "active"
-                };
+                var status = isCancelled ? "cancelled" : "active";
 
-                await _enrolmentRepo.UpsertAsync(enrol);
+                if (existingBySchedule.TryGetValue(scheduleId.Value, out var slots) && slots.Count > 0)
+                {
+                    var slot = slots.Dequeue();
+                    await _enrolmentRepo.UpdateStudentAndStatusAsync(slot.Id, studentId, status);
+                }
+                else
+                {
+                    await _enrolmentRepo.InsertAsync(new Enrolment
+                    {
+                        StudentId = studentId,
+                        OrderId = dto.OrderId,
+                        CourseScheduleId = scheduleId.Value,
+                        IsCancelled = isCancelled,
+                        Status = status
+                    });
+                }
             }
         }
 

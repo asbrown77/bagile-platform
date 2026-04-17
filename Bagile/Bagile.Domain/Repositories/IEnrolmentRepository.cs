@@ -34,4 +34,6 @@ public interface IEnrolmentRepository
     /// Used to decide whether a ghost course can be hard-deleted.
     /// </summary>
     Task<int> CountActiveByScheduleAsync(long courseScheduleId);
+
+    Task UpdateStudentAndStatusAsync(long id, long studentId, string status);
 }
