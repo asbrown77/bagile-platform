@@ -1,0 +1,30 @@
+name: Debug - PA container status
+
+on:
+  workflow_dispatch:
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check PA container on Hetzner
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ vars.HETZNER_HOST }}
+          username: root
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          script: |
+            echo "=== docker ps ==="
+            docker ps --filter name=bagile-pa
+
+            echo "=== docker inspect networks ==="
+            docker inspect bagile-pa --format '{{json .NetworkSettings.Networks}}' 2>/dev/null || echo "container not found"
+
+            echo "=== docker logs (last 50 lines) ==="
+            docker logs bagile-pa --tail 50 2>&1
+
+            echo "=== port check ==="
+            ss -tlnp | grep 3001 || echo "nothing on 3001"
+
+            echo "=== cat config/pa.env ==="
+            cd /opt/bagile && cat config/pa.env | sed 's/=.*/=REDACTED/'
