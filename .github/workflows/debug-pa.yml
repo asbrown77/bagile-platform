@@ -44,11 +44,13 @@ jobs:
             echo "=== docker logs bagile-api (last 20) ==="
             docker logs bagile-api --tail 20 2>&1
 
-            echo "=== DNS from inside bagile-api ==="
-            docker exec bagile-api sh -c "getent hosts bagile-pa" 2>&1 || echo "getent failed"
-            docker exec bagile-api sh -c "cat /etc/resolv.conf" 2>&1 || echo "resolv.conf failed"
+            echo "=== DNS tests from inside bagile-api ==="
+            docker exec bagile-api sh -c "getent hosts bagile-pa; echo exit:\$?" 2>&1 || echo "getent bagile-pa failed"
+            docker exec bagile-api sh -c "getent hosts bagile-etl; echo exit:\$?" 2>&1 || echo "getent bagile-etl failed"
+            docker exec bagile-api sh -c "cat /etc/hosts" 2>&1 || echo "hosts failed"
 
-            echo "=== restarting bagile-api ==="
-            docker restart bagile-api
-            sleep 5
-            echo "restarted"
+            echo "=== try direct IP from inside bagile-api ==="
+            docker exec bagile-api sh -c "wget -qO- http://172.18.0.6:3001/health 2>&1" || echo "wget failed"
+
+            echo "=== pa container IP on bagile-net ==="
+            docker inspect bagile-pa --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'
