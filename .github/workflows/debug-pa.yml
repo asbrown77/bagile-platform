@@ -43,3 +43,7 @@ jobs:
 
             echo "=== docker logs bagile-api (last 20) ==="
             docker logs bagile-api --tail 20 2>&1
+
+            echo "=== restarting bagile-api to clear stale HttpClient DNS cache ==="
+            docker restart bagile-api
+            echo "restarted"
