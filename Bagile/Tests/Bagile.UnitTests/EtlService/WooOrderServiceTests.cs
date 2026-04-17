@@ -157,9 +157,51 @@ public class WooOrderServiceTests
         _courses.Setup(x => x.GetIdBySkuAsync("11840"))
             .ReturnsAsync(200);
 
+        _enrolments.Setup(x => x.GetByOrderIdAsync(105))
+            .ReturnsAsync(new List<Enrolment>());
+        _enrolments.Setup(x => x.InsertAsync(It.IsAny<Enrolment>()))
+            .ReturnsAsync(1L);
+
         await _service.ProcessAsync(dto, CancellationToken.None);
 
-        _enrolments.Verify(x => x.UpsertAsync(It.IsAny<Enrolment>()), Times.Exactly(2));
+        _enrolments.Verify(x => x.InsertAsync(It.IsAny<Enrolment>()), Times.Exactly(2));
+    }
+
+    [Test]
+    public async Task ProcessAsync_DuplicateEmailTickets_CreatesTwoEnrolments()
+    {
+        // Regression test for the NobleProg bug:
+        // two tickets on the same order share one email (partner admin address),
+        // both resolve to the same studentId — must still produce two enrolments.
+        var dto = new CanonicalWooOrderDto
+        {
+            OrderId = 200,
+            BillingEmail = "admin@partner.com",
+            RawPayload = "{}",
+            Tickets = new List<CanonicalTicketDto>
+            {
+                new() { Email = "admin@partner.com", FirstName = "Alice", LastName = "One", Sku = "PSMA-230426-AB" },
+                new() { Email = "admin@partner.com", FirstName = "Bob",   LastName = "Two", Sku = "PSMA-230426-AB" }
+            }
+        };
+
+        _students.Setup(x => x.UpsertAsync(It.IsAny<Student>()))
+            .ReturnsAsync(32L); // same studentId for both — the bug scenario
+
+        _courses.Setup(x => x.GetIdBySkuAsync("PSMA-230426-AB"))
+            .ReturnsAsync(19);
+
+        _enrolments.Setup(x => x.GetByOrderIdAsync(200))
+            .ReturnsAsync(new List<Enrolment>());
+        _enrolments.Setup(x => x.InsertAsync(It.IsAny<Enrolment>()))
+            .ReturnsAsync(1L);
+
+        await _service.ProcessAsync(dto, CancellationToken.None);
+
+        // Both tickets must get their own enrolment row despite sharing a studentId
+        _enrolments.Verify(x => x.InsertAsync(It.Is<Enrolment>(e =>
+            e.StudentId == 32 && e.CourseScheduleId == 19 && e.OrderId == 200
+        )), Times.Exactly(2));
     }
 
     [Test]
@@ -191,6 +233,11 @@ public class WooOrderServiceTests
         _courses.Setup(x => x.GetIdBySkuAsync("PSPO-300326-AB"))
             .ReturnsAsync(77);
 
+        _enrolments.Setup(x => x.GetByOrderIdAsync(42))
+            .ReturnsAsync(new List<Enrolment>());
+        _enrolments.Setup(x => x.InsertAsync(It.IsAny<Enrolment>()))
+            .ReturnsAsync(1L);
+
         // Act
         await _service.ProcessAsync(dto, CancellationToken.None);
 
@@ -201,7 +248,7 @@ public class WooOrderServiceTests
             s.Email == "attendee2@company.com")), Times.Once);
 
         // Assert — two enrolments with different student IDs
-        _enrolments.Verify(x => x.UpsertAsync(It.IsAny<Enrolment>()), Times.Exactly(2));
+        _enrolments.Verify(x => x.InsertAsync(It.IsAny<Enrolment>()), Times.Exactly(2));
     }
 
     [Test]
@@ -227,12 +274,16 @@ public class WooOrderServiceTests
         _order.Setup(x => x.UpsertOrderAsync(It.IsAny<Order>())).ReturnsAsync(42);
         _students.Setup(x => x.UpsertAsync(It.IsAny<Student>())).ReturnsAsync(50);
         _courses.Setup(x => x.GetIdBySkuAsync("PSPO-300326-AB")).ReturnsAsync(77);
+        _enrolments.Setup(x => x.GetByOrderIdAsync(42))
+            .ReturnsAsync(new List<Enrolment>());
+        _enrolments.Setup(x => x.InsertAsync(It.IsAny<Enrolment>()))
+            .ReturnsAsync(1L);
 
         // Act
         await _service.ProcessAsync(dto, CancellationToken.None);
 
         // Assert — normal enrolment created, no transfer
-        _enrolments.Verify(x => x.UpsertAsync(It.IsAny<Enrolment>()), Times.Once);
+        _enrolments.Verify(x => x.InsertAsync(It.IsAny<Enrolment>()), Times.Once);
         _enrolments.Verify(x => x.MarkTransferredAsync(It.IsAny<long>(), It.IsAny<long>()), Times.Never);
         _enrolments.Verify(x => x.FindHeuristicTransferSourceAsync(It.IsAny<long>(), It.IsAny<string>()), Times.Never);
     }
