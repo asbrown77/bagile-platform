@@ -142,16 +142,54 @@ export function isDeadlineUrgent(deadline: string | null): boolean {
   return diff >= 0 && diff <= 5;
 }
 
-/** Whether a public course is below its minimum enrolment and may need cancelling. */
+// ── UK Bank Holidays (England) — update annually ─────────────
+// Source: https://www.gov.uk/bank-holidays
+const UK_BANK_HOLIDAYS = new Set([
+  // 2025
+  "2025-01-01", "2025-04-18", "2025-04-21", "2025-05-05",
+  "2025-05-26", "2025-08-25", "2025-12-25", "2025-12-26",
+  // 2026
+  "2026-01-01", "2026-04-03", "2026-04-06", "2026-05-04",
+  "2026-05-25", "2026-08-31", "2026-12-25", "2026-12-28",
+]);
+
+/** Count working days (Mon–Fri, excluding UK bank holidays) from today up to (not including) a target date. */
+export function workingDaysUntil(targetDate: string): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(targetDate);
+  target.setHours(0, 0, 0, 0);
+
+  let count = 0;
+  const cursor = new Date(today);
+  while (cursor < target) {
+    const day = cursor.getDay(); // 0=Sun, 6=Sat
+    const iso = cursor.toISOString().slice(0, 10);
+    if (day !== 0 && day !== 6 && !UK_BANK_HOLIDAYS.has(iso)) count++;
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return count;
+}
+
+/** Warning threshold: warn when a course starts within this many working days. */
+export const LOW_ENROLMENT_WARNING_DAYS = 10;
+
+/**
+ * Whether a public course is below its minimum enrolment threshold and close
+ * enough to warrant a warning. Only fires within LOW_ENROLMENT_WARNING_DAYS
+ * working days of the start date, respecting UK bank holidays.
+ */
 export function isLowEnrolment(event: {
   isPrivate: boolean;
   status: string;
   enrolmentCount: number;
   minimumEnrolments: number;
+  startDate: string;
 }): boolean {
   if (event.isPrivate) return false;
   if (event.status === "cancelled" || event.status === "planned") return false;
-  return event.enrolmentCount < event.minimumEnrolments;
+  if (event.enrolmentCount >= event.minimumEnrolments) return false;
+  return workingDaysUntil(event.startDate) <= LOW_ENROLMENT_WARNING_DAYS;
 }
 
 /** Scrum.org course types that need the scrum.org gateway. */
