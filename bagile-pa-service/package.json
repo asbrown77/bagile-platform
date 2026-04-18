@@ -21,6 +21,8 @@
     "express-rate-limit": "^7.2.0",
     "pg": "^8.13.3",
     "playwright": "^1.44.0",
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
     "zod": "^4.3.6"
   },
   "devDependencies": {

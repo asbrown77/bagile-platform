@@ -1,9 +1,22 @@
-import { chromium } from 'playwright';
+import { chromium as chromiumExtra } from 'playwright-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+import { fileURLToPath, pathToFileURL } from 'url';
+import { dirname, resolve as resolvePath } from 'path';
 import type {
   IPlaywrightRunnerPort,
   PlaywrightRunOptions,
   PlaywrightRunResult,
 } from '../../../domain/ports/IPlaywrightRunnerPort.js';
+
+// Stealth plugin patches navigator.webdriver, plugins, languages, WebGL vendor, etc.
+// so Cloudflare's JS challenge cannot distinguish headless Chrome from a real browser.
+chromiumExtra.use(StealthPlugin());
+
+// Absolute path to the scripts directory, resolved relative to THIS file's location.
+// Using import.meta.url avoids any ambiguity when this module is loaded dynamically
+// or cached across process restarts.
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const SCRIPTS_DIR = resolvePath(__dirname, '../../../scripts');
 
 export class PlaywrightRunner implements IPlaywrightRunnerPort {
   async run(options: PlaywrightRunOptions): Promise<PlaywrightRunResult> {
@@ -15,29 +28,29 @@ export class PlaywrightRunner implements IPlaywrightRunnerPort {
     const executablePath = process.env['PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH'] || undefined;
     // --disable-blink-features=AutomationControlled removes navigator.webdriver=true,
     // which Cloudflare and similar WAFs use to fingerprint headless/automated browsers.
+    // The stealth plugin handles deeper fingerprinting; this arg is a belt-and-suspenders addition.
     const launchArgs = [
       '--disable-blink-features=AutomationControlled',
       ...(executablePath ? ['--no-sandbox', '--disable-setuid-sandbox'] : []),
     ];
 
-    let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
+    let browser: Awaited<ReturnType<typeof chromiumExtra.launch>> | undefined;
 
     try {
-      browser = await chromium.launch({ headless, executablePath, args: launchArgs });
+      browser = await chromiumExtra.launch({ headless, executablePath, args: launchArgs });
       // Realistic browser context so user-agent and viewport don't reveal automation.
+      // The stealth plugin already patches many fingerprints at launch time; these context
+      // options provide an additional realistic layer.
       const context = await browser.newContext({
         userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
         viewport: { width: 1280, height: 800 },
         locale: 'en-GB',
       });
-      // Also remove the webdriver property via an init script (belt-and-suspenders).
-      await context.addInitScript(() => {
-        Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-      });
       const page = await context.newPage();
-      const scriptModule = await import(
-        `../../../scripts/${scriptName}/${scriptName}.script.js`
-      );
+      const scriptPath = pathToFileURL(
+        resolvePath(SCRIPTS_DIR, scriptName, `${scriptName}.script.js`)
+      ).href;
+      const scriptModule = await import(scriptPath);
       const runFn = scriptModule[toCamelCase(scriptName)];
 
       const resolve = options.credentialResolver;
