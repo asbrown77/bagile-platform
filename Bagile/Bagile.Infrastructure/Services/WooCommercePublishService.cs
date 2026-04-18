@@ -45,6 +45,20 @@ public class WooCommercePublishService : IWooCommercePublishService
         ["Chris Bexon"] = "bNy27xgkQhymtSsYnUZRmQ",
     };
 
+    // Trainer name → Zoom recurring meeting/webinar ID (used for WooCommerceEventsZoomWebinar)
+    private static readonly Dictionary<string, string> TrainerZoomMeetingIds = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Alex Brown"] = "85023208940_meetings",
+        ["Chris Bexon"] = "84523846342_meetings",
+    };
+
+    // Trainer name → WooCommerce user ID for select_a_trainer field
+    private static readonly Dictionary<string, string> TrainerWooUserIds = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Alex Brown"] = "383",
+        ["Chris Bexon"] = "380",
+    };
+
     // Fallback template course type when no product exists for the exact type.
     // Keys: course type with no live/draft product. Values: fallback type to search instead.
     private static readonly Dictionary<string, string> CourseTypeFallbacks = new(StringComparer.OrdinalIgnoreCase)
@@ -100,7 +114,7 @@ public class WooCommercePublishService : IWooCommercePublishService
     public async Task<WooPublishResult?> CreateProductAsync(WooPublishRequest request, CancellationToken ct = default)
     {
         // 1. Find the most recent product of the same course type to use as template
-        var templateProduct = await FindTemplateProductAsync(request.CourseType, ct);
+        var templateProduct = await FindTemplateProductAsync(request.CourseType, request.TrainerName, ct);
         if (templateProduct == null)
         {
             _logger.LogError("No template product found for course type {CourseType}", request.CourseType);
@@ -140,7 +154,7 @@ public class WooCommercePublishService : IWooCommercePublishService
         };
     }
 
-    public async Task<string?> FindTemplateSkuAsync(string courseType, CancellationToken ct = default)
+    public async Task<string?> FindTemplateSkuAsync(string courseType, string? trainerName = null, CancellationToken ct = default)
     {
         var searchOrder = new List<string> { courseType.ToUpperInvariant() };
         if (CourseTypeFallbacks.TryGetValue(courseType, out var fallback))
@@ -148,7 +162,7 @@ public class WooCommercePublishService : IWooCommercePublishService
 
         foreach (var typeToSearch in searchOrder)
         {
-            var match = await SearchTemplateByPrefixAsync(typeToSearch + "-", ct);
+            var match = await SearchTemplateByPrefixAsync(typeToSearch + "-", trainerName, ct);
             if (match?.Sku != null) return match.Sku;
         }
 
@@ -235,7 +249,7 @@ public class WooCommercePublishService : IWooCommercePublishService
         return warnings;
     }
 
-    private async Task<JsonDocument?> FindTemplateProductAsync(string courseType, CancellationToken ct)
+    private async Task<JsonDocument?> FindTemplateProductAsync(string courseType, string? trainerName, CancellationToken ct)
     {
         // Try to find a product for the exact course type, then fall back to a related type.
         // Build the search order: exact type first, then fallback if defined.
@@ -246,7 +260,7 @@ public class WooCommercePublishService : IWooCommercePublishService
         foreach (var typeToSearch in searchOrder)
         {
             var skuPrefix = typeToSearch + "-";
-            var template = await SearchTemplateByPrefixAsync(skuPrefix, ct);
+            var template = await SearchTemplateByPrefixAsync(skuPrefix, trainerName, ct);
             if (template != null)
             {
                 if (!typeToSearch.Equals(courseType, StringComparison.OrdinalIgnoreCase))
@@ -260,20 +274,39 @@ public class WooCommercePublishService : IWooCommercePublishService
         return null;
     }
 
-    private async Task<WooProductDto?> SearchTemplateByPrefixAsync(string skuPrefix, CancellationToken ct)
+    private async Task<WooProductDto?> SearchTemplateByPrefixAsync(string skuPrefix, string? trainerName, CancellationToken ct)
     {
         // WooCommerce full-text search is unreliable for SKU-based lookup (search index may be stale).
         // Use direct product listing instead: fetch the 100 most recent products per status and
         // filter by SKU prefix client-side. For a small shop (< 100 active products per status)
         // this reliably covers all candidates.
+        //
+        // When a trainer name is provided, prefer the product whose SKU ends with the trainer's
+        // initials (e.g. "-AB") before falling back to the highest-id product of any trainer.
+        var trainerInitials = trainerName != null ? GetTrainerInitials(trainerName) : null;
+
         foreach (var status in new[] { "publish", "draft" })
         {
             var products = await _wooClient.ListProductsByStatusAsync(status: status, perPage: 100, ct: ct);
-            var match = products
+            var candidates = products
                 .Where(p => p.Sku != null && p.Sku.StartsWith(skuPrefix, StringComparison.OrdinalIgnoreCase))
-                .OrderByDescending(p => p.Id)
-                .FirstOrDefault();
-            if (match != null) return match;
+                .ToList();
+
+            if (candidates.Count == 0) continue;
+
+            // Trainer-preferred: look for a SKU ending with "-{initials}" first
+            if (trainerInitials != null)
+            {
+                var suffix = $"-{trainerInitials}";
+                var preferred = candidates
+                    .Where(p => p.Sku!.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+                    .OrderByDescending(p => p.Id)
+                    .FirstOrDefault();
+                if (preferred != null) return preferred;
+            }
+
+            // Fall back to highest id of any trainer
+            return candidates.OrderByDescending(p => p.Id).First();
         }
         return null;
     }
@@ -394,6 +427,8 @@ public class WooCommercePublishService : IWooCommercePublishService
         var endExpireTimestamp = new DateTimeOffset(request.EndDate, TimeSpan.Zero).ToUnixTimeSeconds();
 
         var zoomHostId = GetTrainerZoomHostId(request.TrainerName);
+        TrainerZoomMeetingIds.TryGetValue(request.TrainerName, out var zoomMeetingId);
+        TrainerWooUserIds.TryGetValue(request.TrainerName, out var trainerWooUserId);
         var location = request.IsVirtual ? "Live virtual training" : (request.Venue ?? "");
 
         var mailchimpTags = request.CourseType.Equals("PSMA", StringComparison.OrdinalIgnoreCase)
@@ -423,9 +458,9 @@ public class WooCommercePublishService : IWooCommercePublishService
             ["WooCommerceEventsLocation"] = location,
             ["event_type"] = request.IsVirtual ? "Live virtual training" : "Face to Face",
 
-            // Zoom
+            // Zoom — host and recurring meeting ID are trainer-specific
             ["WooCommerceEventsZoomHost"] = zoomHostId,
-            ["WooCommerceEventsZoomWebinar"] = "auto",
+            ["WooCommerceEventsZoomWebinar"] = zoomMeetingId ?? "auto",
 
             // Expiration (product expires on end date → changes to draft)
             ["_expiration-date"] = endExpireTimestamp,
@@ -435,6 +470,9 @@ public class WooCommercePublishService : IWooCommercePublishService
 
             // MailChimp
             ["WooCommerceEventsMailchimpTags"] = mailchimpTags,
+
+            // Trainer selector (WooCommerce user ID for the trainer ACF field)
+            ["select_a_trainer"] = trainerWooUserId != null ? $"[\"{trainerWooUserId}\"]" : "",
         };
     }
 

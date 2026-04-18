@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { ClipboardList, CheckCircle2 } from "lucide-react";
 import { useApiKey } from "@/lib/hooks/useApiKey";
-import { PlannedCourse, CoursePublication, listPlannedCourses, formatDate } from "@/lib/api";
+import { PlannedCourse, CoursePublication, listPlannedCourses, formatDate, SCRUMORG_APPLICABLE_COURSE_TYPES } from "@/lib/api";
 import { getBadgeSrc, getCourseCodeDisplay, getCourseDisplayName, getStatusLabel, getStatusBadgeVariant } from "@/lib/calendarHelpers";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/Badge";
@@ -46,6 +46,7 @@ function PlannedCourseRow({ course }: { course: PlannedCourse }) {
 
   const ecommercePub = course.publications?.find((p) => p.gateway === "ecommerce");
   const scrumorgPub = course.publications?.find((p) => p.gateway === "scrumorg");
+  const scrumorgApplicable = SCRUMORG_APPLICABLE_COURSE_TYPES.has(courseType.toUpperCase());
 
   return (
     <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
@@ -84,7 +85,14 @@ function PlannedCourseRow({ course }: { course: PlannedCourse }) {
       <td className="px-4 py-3">
         <div className="flex flex-col gap-1">
           <GatewayBadge label="WooCommerce" pub={ecommercePub} />
-          <GatewayBadge label="Scrum.org" pub={scrumorgPub} />
+          {scrumorgApplicable ? (
+            <GatewayBadge label="Scrum.org" pub={scrumorgPub} />
+          ) : (
+            <span className="inline-flex items-center gap-1 text-xs text-gray-300" title="Not listed on scrum.org">
+              <span className="w-3.5 h-3.5 flex items-center justify-center shrink-0">–</span>
+              Scrum.org
+            </span>
+          )}
         </div>
       </td>
       <td className="px-4 py-3">

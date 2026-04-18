@@ -1313,6 +1313,14 @@ export async function setServiceConfig(
   });
 }
 
+// ── Gateway Applicability ─────────────────────────────────
+
+/** Course types that are listed on scrum.org. PSMAI and PSPOAI are b-agile's own AI variants
+ *  and are NOT scrum.org certified courses. All others in this set are. */
+export const SCRUMORG_APPLICABLE_COURSE_TYPES = new Set([
+  'PSM', 'PSMO', 'PSPO', 'PSK', 'PALE', 'EBM', 'PSPOA', 'PSMA', 'PSFS', 'APS', 'APSSD', 'PSU',
+]);
+
 // ── Course Definitions ────────────────────────────────────
 
 export interface CourseDef {

@@ -165,7 +165,7 @@ public class PlannedCoursesController : ControllerBase
         if (course == null)
             return NotFound(new { error = $"Planned course {id} not found" });
 
-        var sku = await _woo.FindTemplateSkuAsync(course.CourseType, ct);
+        var sku = await _woo.FindTemplateSkuAsync(course.CourseType, course.TrainerName, ct);
         if (sku == null)
             return NotFound(new { error = $"No template product found for course type {course.CourseType}" });
 

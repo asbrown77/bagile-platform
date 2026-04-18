@@ -24,7 +24,7 @@ public interface IWooCommercePublishService
     /// preview in the UI before the user clicks "Create in shop".
     /// Returns null if no suitable template exists.
     /// </summary>
-    Task<string?> FindTemplateSkuAsync(string courseType, CancellationToken ct = default);
+    Task<string?> FindTemplateSkuAsync(string courseType, string? trainerName = null, CancellationToken ct = default);
 }
 
 public record WooPublishRequest
