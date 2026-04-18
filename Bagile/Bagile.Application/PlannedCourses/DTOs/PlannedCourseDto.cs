@@ -16,4 +16,5 @@ public record PlannedCourseDto
     public string Status { get; init; } = "planned";
     public DateTime CreatedAt { get; init; }
     public DateTime UpdatedAt { get; init; }
+    public IReadOnlyList<CoursePublicationDto> Publications { get; init; } = Array.Empty<CoursePublicationDto>();
 }

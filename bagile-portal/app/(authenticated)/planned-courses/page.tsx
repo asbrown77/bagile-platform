@@ -1,13 +1,41 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ClipboardList } from "lucide-react";
+import { ClipboardList, CheckCircle2 } from "lucide-react";
 import { useApiKey } from "@/lib/hooks/useApiKey";
-import { PlannedCourse, listPlannedCourses, formatDate } from "@/lib/api";
+import { PlannedCourse, CoursePublication, listPlannedCourses, formatDate } from "@/lib/api";
 import { getBadgeSrc, getCourseCodeDisplay, getCourseDisplayName, getStatusLabel, getStatusBadgeVariant } from "@/lib/calendarHelpers";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/Badge";
 import { SkeletonRow } from "@/components/ui/Skeleton";
+
+function GatewayBadge({ label, pub }: { label: string; pub: CoursePublication | undefined }) {
+  if (pub) {
+    return pub.externalUrl ? (
+      <a
+        href={pub.externalUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1 text-xs text-green-700 font-medium hover:underline"
+        title={`Published ${pub.publishedAt ? new Date(pub.publishedAt).toLocaleDateString("en-GB") : ""}`}
+      >
+        <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+        {label}
+      </a>
+    ) : (
+      <span className="inline-flex items-center gap-1 text-xs text-green-700 font-medium">
+        <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+        {label}
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 text-xs text-gray-400">
+      <span className="w-3.5 h-3.5 flex items-center justify-center shrink-0">–</span>
+      {label}
+    </span>
+  );
+}
 
 function PlannedCourseRow({ course }: { course: PlannedCourse }) {
   const courseType = course.courseType;
@@ -15,6 +43,9 @@ function PlannedCourseRow({ course }: { course: PlannedCourse }) {
   const codeDisplay = getCourseCodeDisplay(courseType);
   const courseName = getCourseDisplayName(courseType);
   const status = course.status ?? "planned";
+
+  const ecommercePub = course.publications?.find((p) => p.gateway === "ecommerce");
+  const scrumorgPub = course.publications?.find((p) => p.gateway === "scrumorg");
 
   return (
     <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
@@ -51,6 +82,12 @@ function PlannedCourseRow({ course }: { course: PlannedCourse }) {
         {course.trainerName ?? "—"}
       </td>
       <td className="px-4 py-3">
+        <div className="flex flex-col gap-1">
+          <GatewayBadge label="WooCommerce" pub={ecommercePub} />
+          <GatewayBadge label="Scrum.org" pub={scrumorgPub} />
+        </div>
+      </td>
+      <td className="px-4 py-3">
         <Badge variant={getStatusBadgeVariant(status)} dot>
           {getStatusLabel(status)}
         </Badge>
@@ -79,7 +116,7 @@ export default function PlannedCoursesPage() {
     <div className="p-6 max-w-6xl mx-auto">
       <PageHeader
         title="Planned Courses"
-        subtitle="Courses scheduled in the portal but not yet published to sales channels"
+        subtitle="Courses scheduled in the portal and their publication status"
       />
 
       {error && (
@@ -97,20 +134,21 @@ export default function PlannedCoursesPage() {
                 <th className="px-4 py-3">Title</th>
                 <th className="px-4 py-3">Start Date</th>
                 <th className="px-4 py-3">Trainer</th>
+                <th className="px-4 py-3">Gateways</th>
                 <th className="px-4 py-3">Status</th>
               </tr>
             </thead>
             <tbody>
               {loading && (
                 <>
-                  <SkeletonRow cols={5} />
-                  <SkeletonRow cols={5} />
-                  <SkeletonRow cols={5} />
+                  <SkeletonRow cols={6} />
+                  <SkeletonRow cols={6} />
+                  <SkeletonRow cols={6} />
                 </>
               )}
               {!loading && courses.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-12 text-center">
+                  <td colSpan={6} className="px-4 py-12 text-center">
                     <div className="flex flex-col items-center gap-2 text-gray-400">
                       <ClipboardList className="w-8 h-8" />
                       <p className="text-sm">No planned courses yet.</p>

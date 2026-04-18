@@ -1174,6 +1174,14 @@ export async function createPlannedCourse(
   return apiRequest("/api/planned-courses", apiKey, { method: "POST", body: data });
 }
 
+export interface CoursePublication {
+  id: number;
+  gateway: string;
+  publishedAt: string | null;
+  externalUrl: string | null;
+  woocommerceProductId: number | null;
+}
+
 export interface PlannedCourse {
   id: number;
   courseType: string;
@@ -1189,6 +1197,7 @@ export interface PlannedCourse {
   status: string;
   createdAt: string;
   updatedAt: string;
+  publications: CoursePublication[];
 }
 
 export async function listPlannedCourses(
