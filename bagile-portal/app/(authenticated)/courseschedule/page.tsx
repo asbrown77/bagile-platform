@@ -17,6 +17,7 @@ import {
   publishGateway,
   updatePlannedCourse,
   formatDate,
+  getShopTemplate,
 } from "@/lib/api";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { AlertBanner } from "@/components/ui/AlertBanner";
@@ -452,9 +453,10 @@ interface SidePanelProps {
   onPublish: (eventId: string, gateway: string) => Promise<void>;
   onCancel: (eventId: string) => Promise<void>;
   onEdit?: (eventId: string) => void;
+  shopTemplateSku?: string | null;
 }
 
-function SidePanel({ event, onClose, onPublish, onCancel, onEdit }: SidePanelProps) {
+function SidePanel({ event, onClose, onPublish, onCancel, onEdit, shopTemplateSku }: SidePanelProps) {
   const [publishing, setPublishing] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -595,17 +597,22 @@ function SidePanel({ event, onClose, onPublish, onCancel, onEdit }: SidePanelPro
                 {isCreated && url ? (
                   <span className="text-xs text-brand-600 flex items-center gap-1 font-medium">View <ExternalLink className="w-3 h-3" /></span>
                 ) : !isCancelled ? (
-                  <Button
-                    size="sm"
-                    onClick={(e) => { e.preventDefault(); handlePublish(shopGw); }}
-                    disabled={publishing === shopGw}
-                  >
-                    {publishing === shopGw ? (
-                      <><Loader2 className="w-3 h-3 animate-spin" /> Creating...</>
-                    ) : (
-                      "Create in shop →"
+                  <div className="flex flex-col items-end gap-1">
+                    <Button
+                      size="sm"
+                      onClick={(e) => { e.preventDefault(); handlePublish(shopGw); }}
+                      disabled={publishing === shopGw}
+                    >
+                      {publishing === shopGw ? (
+                        <><Loader2 className="w-3 h-3 animate-spin" /> Creating...</>
+                      ) : (
+                        "Create in shop →"
+                      )}
+                    </Button>
+                    {shopTemplateSku && (
+                      <span className="text-xs text-gray-400">copies {shopTemplateSku}</span>
                     )}
-                  </Button>
+                  </div>
                 ) : null}
               </span>
             </>
@@ -949,6 +956,7 @@ function CalendarContent() {
   const [listLoading, setListLoading] = useState(false);
   const [listError, setListError] = useState("");
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [shopTemplateSku, setShopTemplateSku] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [currentRange, setCurrentRange] = useState<{ from: string; to: string } | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -1211,6 +1219,24 @@ function CalendarContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [events]);
 
+  // Fetch shop template SKU when a planned course panel opens (not yet in shop)
+  useEffect(() => {
+    if (
+      !selectedEvent ||
+      !selectedEvent.id.startsWith("planned-") ||
+      selectedEvent.isPrivate ||
+      selectedEvent.gateways.some((g) => g.type === "ecommerce" && g.published)
+    ) {
+      setShopTemplateSku(null);
+      return;
+    }
+    let cancelled = false;
+    getShopTemplate(apiKey, selectedEvent.id).then((res) => {
+      if (!cancelled) setShopTemplateSku(res?.templateSku ?? null);
+    });
+    return () => { cancelled = true; };
+  }, [selectedEvent?.id, apiKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <>
       <PageHeader
@@ -1418,6 +1444,7 @@ function CalendarContent() {
         onPublish={handlePublish}
         onCancel={handleCancel}
         onEdit={handleOpenEdit}
+        shopTemplateSku={shopTemplateSku}
       />
 
       {/* Add / Edit course modal */}

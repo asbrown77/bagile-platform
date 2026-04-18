@@ -1270,6 +1270,23 @@ export async function publishGateway(
   });
 }
 
+export async function getShopTemplate(
+  apiKey: string,
+  courseId: string,
+): Promise<{ templateSku: string } | null> {
+  const numericId = courseId.replace(/\D/g, "");
+  const isPlanned = courseId.startsWith("planned-");
+  const endpoint = isPlanned
+    ? `/api/planned-courses/${numericId}/shop-template`
+    : null;
+  if (!endpoint) return null;
+  try {
+    return await apiRequest(endpoint, apiKey);
+  } catch {
+    return null;
+  }
+}
+
 // ── Service Config (credentials stored in DB) ────────────
 
 export async function getServiceConfig(apiKey: string): Promise<Record<string, string>> {

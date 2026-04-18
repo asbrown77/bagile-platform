@@ -17,6 +17,14 @@ public interface IWooCommercePublishService
     /// Updates an existing WooCommerce product's meta_data (e.g., to add Scrum.org listing URL).
     /// </summary>
     Task<bool> UpdateProductMetaAsync(long productId, Dictionary<string, string> metaUpdates, CancellationToken ct = default);
+
+    /// <summary>
+    /// Returns the SKU of the WooCommerce product that would be used as the template
+    /// when creating a shop product for the given course type. Useful for showing a
+    /// preview in the UI before the user clicks "Create in shop".
+    /// Returns null if no suitable template exists.
+    /// </summary>
+    Task<string?> FindTemplateSkuAsync(string courseType, CancellationToken ct = default);
 }
 
 public record WooPublishRequest

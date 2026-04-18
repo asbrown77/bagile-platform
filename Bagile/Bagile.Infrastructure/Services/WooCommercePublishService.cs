@@ -140,6 +140,21 @@ public class WooCommercePublishService : IWooCommercePublishService
         };
     }
 
+    public async Task<string?> FindTemplateSkuAsync(string courseType, CancellationToken ct = default)
+    {
+        var searchOrder = new List<string> { courseType.ToUpperInvariant() };
+        if (CourseTypeFallbacks.TryGetValue(courseType, out var fallback))
+            searchOrder.Add(fallback.ToUpperInvariant());
+
+        foreach (var typeToSearch in searchOrder)
+        {
+            var match = await SearchTemplateByPrefixAsync(typeToSearch + "-", ct);
+            if (match?.Sku != null) return match.Sku;
+        }
+
+        return null;
+    }
+
     public async Task<bool> UpdateProductMetaAsync(
         long productId,
         Dictionary<string, string> metaUpdates,

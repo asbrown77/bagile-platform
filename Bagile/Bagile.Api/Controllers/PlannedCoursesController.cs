@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Bagile.Application.Common.Interfaces;
 using Bagile.Application.PlannedCourses.Commands.CreatePlannedCourse;
 using Bagile.Application.PlannedCourses.Commands.BulkCreatePlannedCourses;
 using Bagile.Application.PlannedCourses.Commands.UpdatePlannedCourse;
@@ -15,10 +16,17 @@ namespace Bagile.Api.Controllers;
 public class PlannedCoursesController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly IWooCommercePublishService _woo;
+    private readonly IPlannedCourseQueries _plannedCourseQueries;
 
-    public PlannedCoursesController(IMediator mediator)
+    public PlannedCoursesController(
+        IMediator mediator,
+        IWooCommercePublishService woo,
+        IPlannedCourseQueries plannedCourseQueries)
     {
         _mediator = mediator;
+        _woo = woo;
+        _plannedCourseQueries = plannedCourseQueries;
     }
 
     /// <summary>
@@ -140,6 +148,28 @@ public class PlannedCoursesController : ControllerBase
         {
             return BadRequest(new { error = ex.Message });
         }
+    }
+
+    /// <summary>
+    /// Returns the WooCommerce product SKU that would be used as the template
+    /// when the user clicks "Create in shop". Shows this as a preview in the UI
+    /// before the user commits to creation.
+    /// Returns 404 if the planned course doesn't exist or no template product is found.
+    /// </summary>
+    [HttpGet("{id}/shop-template")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetShopTemplate(int id, CancellationToken ct)
+    {
+        var course = await _plannedCourseQueries.GetByIdAsync(id, ct);
+        if (course == null)
+            return NotFound(new { error = $"Planned course {id} not found" });
+
+        var sku = await _woo.FindTemplateSkuAsync(course.CourseType, ct);
+        if (sku == null)
+            return NotFound(new { error = $"No template product found for course type {course.CourseType}" });
+
+        return Ok(new { templateSku = sku });
     }
 
     /// <summary>
