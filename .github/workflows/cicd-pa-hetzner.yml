@@ -72,11 +72,12 @@ jobs:
           PA_CORS_ORIGINS: ${{ vars.PA_CORS_ORIGINS }}
           SCRUMORG_USERNAME: ${{ secrets.SCRUMORG_USERNAME }}
           SCRUMORG_PASSWORD: ${{ secrets.SCRUMORG_PASSWORD }}
+          SCRUMORG_SESSION_COOKIES: ${{ secrets.SCRUMORG_SESSION_COOKIES }}
         with:
           host: ${{ vars.HETZNER_HOST }}
           username: root
           key: ${{ secrets.HETZNER_SSH_KEY }}
-          envs: GHCR_PAT,DATABASE_URL,PA_API_KEYS,PA_ENCRYPTION_KEY,PA_CORS_ORIGINS,SCRUMORG_USERNAME,SCRUMORG_PASSWORD
+          envs: GHCR_PAT,DATABASE_URL,PA_API_KEYS,PA_ENCRYPTION_KEY,PA_CORS_ORIGINS,SCRUMORG_USERNAME,SCRUMORG_PASSWORD,SCRUMORG_SESSION_COOKIES
           script: |
             cd /opt/bagile
 
@@ -88,15 +89,18 @@ jobs:
 
             echo "Writing PA service env file..."
             mkdir -p config
-            cat > config/pa.env <<EOF
-            DATABASE_URL=${DATABASE_URL}
-            PA_HTTP_PORT=3001
-            PA_API_KEYS=${PA_API_KEYS}
-            PA_ENCRYPTION_KEY=${PA_ENCRYPTION_KEY}
-            PA_CORS_ORIGINS=${PA_CORS_ORIGINS}
-            SCRUMORG_USERNAME=${SCRUMORG_USERNAME}
-            SCRUMORG_PASSWORD=${SCRUMORG_PASSWORD}
-            EOF
+            # Write each line separately to avoid heredoc special-character expansion issues.
+            # SCRUMORG_SESSION_COOKIES is JSON and must be written safely.
+            {
+              echo "DATABASE_URL=${DATABASE_URL}"
+              echo "PA_HTTP_PORT=3001"
+              echo "PA_API_KEYS=${PA_API_KEYS}"
+              echo "PA_ENCRYPTION_KEY=${PA_ENCRYPTION_KEY}"
+              echo "PA_CORS_ORIGINS=${PA_CORS_ORIGINS}"
+              echo "SCRUMORG_USERNAME=${SCRUMORG_USERNAME}"
+              echo "SCRUMORG_PASSWORD=${SCRUMORG_PASSWORD}"
+              printf 'SCRUMORG_SESSION_COOKIES=%s\n' "${SCRUMORG_SESSION_COOKIES}"
+            } > config/pa.env
 
             echo "Pulling latest PA service image..."
             docker compose -f docker-compose.prod.yml pull bagile-pa
