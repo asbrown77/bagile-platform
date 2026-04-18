@@ -1230,6 +1230,7 @@ function CalendarContent() {
       setShopTemplateSku(null);
       return;
     }
+    if (!apiKey) return;
     let cancelled = false;
     getShopTemplate(apiKey, selectedEvent.id).then((res) => {
       if (!cancelled) setShopTemplateSku(res?.templateSku ?? null);
