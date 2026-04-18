@@ -39,18 +39,18 @@ public class CalendarQueries : ICalendarQueries
     {
         // Fetch planned courses with trainer info and publication status
         var sql = @"
-            SELECT pc.id,
-                   pc.course_type,
-                   pc.start_date,
-                   pc.end_date,
-                   pc.is_virtual,
-                   pc.is_private,
-                   pc.status,
-                   pc.decision_deadline,
-                   pc.venue,
-                   pc.notes,
-                   t.id   AS trainer_id,
-                   t.name AS trainer_name
+            SELECT pc.id              AS Id,
+                   pc.course_type     AS CourseType,
+                   pc.start_date      AS StartDate,
+                   pc.end_date        AS EndDate,
+                   pc.is_virtual      AS IsVirtual,
+                   pc.is_private      AS IsPrivate,
+                   pc.status          AS Status,
+                   pc.decision_deadline AS DecisionDeadline,
+                   pc.venue           AS Venue,
+                   pc.notes           AS Notes,
+                   t.id               AS TrainerId,
+                   t.name             AS TrainerName
             FROM bagile.planned_courses pc
             JOIN bagile.trainers t ON t.id = pc.trainer_id
             WHERE pc.start_date >= @from
