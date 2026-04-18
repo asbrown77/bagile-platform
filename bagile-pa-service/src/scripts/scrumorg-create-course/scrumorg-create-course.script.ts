@@ -88,21 +88,11 @@ async function loginToScrumOrg(
     }
 
     await page.context().addCookies(cookies);
-
-    // Verify the cookies actually authenticate us against the admin area.
-    // Use a lightweight request — go to home page and check for logout link.
-    await page.goto('https://www.scrum.org', { waitUntil: 'networkidle' });
-    const isLoggedIn = await page.locator('a[href*="/user/logout"]').first()
-      .isVisible()
-      .catch(() => false);
-
-    if (isLoggedIn) return; // cookies are valid — skip form login
-
-    // Cookies were present but auth check failed — do not silently fall through
-    const cookieCount = cookies.length;
-    throw new Error(
-      `Session cookies injected but auth verification failed — cookies may be expired. Cookie key count: ${cookieCount}`,
-    );
+    // Proceed directly — navigateToCourseManagement will detect if the session
+    // is invalid (redirect to /user/login or /access-denied) and throw there.
+    // Navigating to a separate verification page is unnecessary and adds another
+    // Cloudflare-challenged roundtrip on data-center IPs.
+    return;
   }
 
   // --- Form-based auth (fallback) ---
