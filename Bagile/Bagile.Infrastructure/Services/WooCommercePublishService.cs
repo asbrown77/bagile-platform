@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Bagile.Application.Common.Interfaces;
 using Bagile.Infrastructure.Clients;
+using Bagile.Infrastructure.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Bagile.Infrastructure.Services;
