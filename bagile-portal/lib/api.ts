@@ -38,14 +38,13 @@ async function apiRequest<T>(path: string, apiKey: string, options?: { method?: 
         }
         throw new Error("API error: 401");
       }
-      if (res.status >= 500) {
-        try {
-          const body = await res.json();
-          const detail = body?.message || body?.error || "";
-          throw new Error(`API error: ${res.status}${detail ? ` — ${detail}` : ""}`);
-        } catch (jsonErr) {
-          if (jsonErr instanceof Error && jsonErr.message.startsWith("API error:")) throw jsonErr;
-        }
+      // For any non-401 error, try to extract the error message from the body
+      try {
+        const body = await res.json();
+        const detail = body?.message || body?.error || "";
+        throw new Error(`API error: ${res.status}${detail ? ` — ${detail}` : ""}`);
+      } catch (jsonErr) {
+        if (jsonErr instanceof Error && jsonErr.message.startsWith("API error:")) throw jsonErr;
       }
       throw new Error(`API error: ${res.status}`);
     }
