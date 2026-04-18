@@ -67,6 +67,12 @@ export class PlaywrightRunner implements IPlaywrightRunnerPort {
       const wpPassword = await resolveOrEnv('wp_app_password', 'WP_APP_PASSWORD');
       const scrumorgUsername = await resolveOrEnv('scrumorg_username', 'SCRUMORG_USERNAME');
       const scrumorgPassword = await resolveOrEnv('scrumorg_password', 'SCRUMORG_PASSWORD');
+      // Pre-authenticated session cookies stored in company settings.
+      // When present, the scrumorg script injects them directly to skip the login form,
+      // bypassing Cloudflare's bot-detection challenge on data-center IPs.
+      const scrumorgSessionCookies = resolve
+        ? (await resolve('scrumorg_session_cookies')) ?? undefined
+        : undefined;
 
       const output = await runFn(page, {
         ...input,
@@ -75,6 +81,7 @@ export class PlaywrightRunner implements IPlaywrightRunnerPort {
         wpPassword,
         scrumorgUsername,
         scrumorgPassword,
+        scrumorgSessionCookies,
         headless,
       });
 

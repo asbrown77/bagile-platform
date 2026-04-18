@@ -3,6 +3,10 @@ import type { Page } from 'playwright';
 export interface ScrumOrgCreateCourseInput {
   scrumorgUsername: string;
   scrumorgPassword: string;
+  // Optional pre-authenticated session cookies (JSON array of Playwright cookie objects).
+  // When present, the script injects them directly, bypassing the login form entirely.
+  // This avoids Cloudflare bot-detection on the login page from data-center IPs.
+  scrumorgSessionCookies?: string;
   courseType: string;
   trainerName: string;
   startDate: string;       // YYYY-MM-DD
@@ -40,7 +44,12 @@ export async function runScrumorgCreateCourse(
   const screenshotPath = `screenshots/scrumorg-${Date.now()}.png`;
 
   try {
-    await loginToScrumOrg(page, input.scrumorgUsername, input.scrumorgPassword);
+    await loginToScrumOrg(
+      page,
+      input.scrumorgUsername,
+      input.scrumorgPassword,
+      input.scrumorgSessionCookies,
+    );
     await navigateToCourseManagement(page);
     await findAndCopyLatestCourse(page, input.courseType, input.trainerName);
     await editCopiedCourse(page, input.startDate, input.endDate, input.registrationUrl);
@@ -57,7 +66,42 @@ export async function runScrumorgCreateCourse(
   }
 }
 
-async function loginToScrumOrg(page: Page, username: string, password: string): Promise<void> {
+async function loginToScrumOrg(
+  page: Page,
+  username: string,
+  password: string,
+  sessionCookiesJson?: string,
+): Promise<void> {
+  // --- Cookie-based auth (preferred): bypass login form entirely ---
+  // Session cookies can be stored in company settings and injected here,
+  // avoiding any Cloudflare challenge on the login page from data-center IPs.
+  if (sessionCookiesJson) {
+    let cookies: Array<{
+      name: string; value: string; domain: string; path: string;
+      expires?: number; httpOnly?: boolean; secure?: boolean;
+      sameSite?: 'Strict' | 'Lax' | 'None';
+    }>;
+    try {
+      cookies = JSON.parse(sessionCookiesJson);
+    } catch {
+      throw new Error('scrumorg_session_cookies is not valid JSON');
+    }
+
+    await page.context().addCookies(cookies);
+
+    // Verify the cookies actually authenticate us against the admin area.
+    // Use a lightweight request — go to home page and check for logout link.
+    await page.goto('https://www.scrum.org', { waitUntil: 'networkidle' });
+    const isLoggedIn = await page.locator('a[href*="/user/logout"]').first()
+      .isVisible()
+      .catch(() => false);
+
+    if (isLoggedIn) return; // cookies are valid — skip form login
+
+    // Cookies expired or invalid — fall through to form login below
+  }
+
+  // --- Form-based auth (fallback) ---
   // Use networkidle so any Cloudflare JS challenge completes before we inspect the page.
   await page.goto('https://www.scrum.org/user/login', { waitUntil: 'networkidle' });
 
@@ -118,18 +162,16 @@ async function findAndCopyLatestCourse(
       const rowText = await row.innerText();
 
       if (rowText.includes(fullCourseName) && rowText.includes(trainerName)) {
-        // Open the dropdown — the toggle is the second item in the operations dropbutton
-        const toggleBtn = row.locator('.dropbutton__toggle').first();
-        await toggleBtn.click();
+        // Navigate directly to the replicate URL — more reliable than toggling the dropdown
+        const replicateHref = await row.locator('a[href*="replicate"]').getAttribute('href').catch(() => null);
+        if (!replicateHref) throw new Error(`No replicate link found for row: ${rowText.substring(0, 100)}`);
 
-        // Copy link appears in the dropdown after toggle
-        const copyLink = row.locator('a[href*="replicate"]').first();
-        await copyLink.waitFor({ state: 'visible', timeout: 5_000 });
-        await copyLink.click();
-        await page.waitForLoadState('networkidle');
+        await page.goto(`https://www.scrum.org${replicateHref}`, { waitUntil: 'networkidle' });
 
         // Confirmation page: "Are you sure you want to replicate Course...?"
-        await page.getByRole('button', { name: 'Copy' }).click();
+        const confirmBtn = page.locator('input[type="submit"][value="Copy"], button:has-text("Copy")').first();
+        await confirmBtn.waitFor({ state: 'visible', timeout: 10_000 });
+        await confirmBtn.click();
         await page.waitForLoadState('networkidle');
         return;
       }
