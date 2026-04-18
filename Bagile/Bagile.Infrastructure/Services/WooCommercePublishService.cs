@@ -183,6 +183,7 @@ public class WooCommercePublishService : IWooCommercePublishService
             ["sku"] = sku,
             ["type"] = "simple",
             ["status"] = "draft",
+            ["menu_order"] = int.Parse(request.StartDate.ToString("yyyyMMdd")),
             ["catalog_visibility"] = "visible",
             ["description"] = GetStringProp(root, "description"),
             ["short_description"] = GetStringProp(root, "short_description"),
