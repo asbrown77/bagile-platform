@@ -44,4 +44,6 @@ public record WooPublishResult
 {
     public long ProductId { get; init; }
     public string ProductUrl { get; init; } = "";
+    /// <summary>Non-fatal issues detected during post-creation sanity check.</summary>
+    public IReadOnlyList<string> Warnings { get; init; } = [];
 }

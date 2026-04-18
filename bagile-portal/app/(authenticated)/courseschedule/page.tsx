@@ -590,6 +590,8 @@ function SidePanel({ event, onClose, onPublish, onCancel, onEdit }: SidePanelPro
               const isPublished = gwStatus?.published || false;
               const url = gwStatus?.url;
               const isIcAgile = gwType === "icagile";
+              const ecommercePublished = event.gateways.find((g) => g.type === "ecommerce")?.published || false;
+              const needsEcommerce = gwType === "scrumorg" && !ecommercePublished;
 
               const rowContent = (
                 <>
@@ -612,6 +614,8 @@ function SidePanel({ event, onClose, onPublish, onCancel, onEdit }: SidePanelPro
                       <span className="text-xs text-brand-600 flex items-center gap-1 font-medium">
                         View <ExternalLink className="w-3 h-3" />
                       </span>
+                    ) : needsEcommerce ? (
+                      <span className="text-xs text-gray-400 italic">E-commerce first</span>
                     ) : !isPublished && !isCancelled ? (
                       <Button
                         size="sm"
@@ -926,6 +930,7 @@ function CalendarContent() {
   const [editInitialValues, setEditInitialValues] = useState<AddCourseModalProps["initialValues"]>(undefined);
   const [courseTypeFilter, setCourseTypeFilter] = useState("all");
   const [gatewayFilter, setGatewayFilter] = useState(false);
+  const [decisionFilter, setDecisionFilter] = useState(false);
   const [listDateRange, setListDateRange] = useState("upcoming");
   const [showImportModal, setShowImportModal] = useState(false);
   const [courseDefs, setCourseDefs] = useState<CourseDef[]>([]);
@@ -1011,6 +1016,14 @@ function CalendarContent() {
       if (gatewayFilter && !e.isPrivate) {
         // Show only courses where at least one gateway is not published
         if (!e.gateways.some((g) => !g.published)) return false;
+      }
+      if (decisionFilter) {
+        if (!e.decisionDeadline) return false;
+        const dl = new Date(e.decisionDeadline);
+        dl.setHours(0, 0, 0, 0);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (dl < today) return false;
       }
       return true;
     });
@@ -1285,10 +1298,15 @@ function CalendarContent() {
               {label}
             </button>
           ))}
-          <div className="flex items-center gap-1.5 ml-1">
+          <button
+            onClick={() => setDecisionFilter((v) => !v)}
+            className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border font-medium transition-colors
+              ${decisionFilter ? "bg-white font-semibold text-red-500 border-red-500" : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"}`}
+            title="Show only courses with an upcoming decision deadline"
+          >
             <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
-            <span className="text-xs text-gray-400">Decision due</span>
-          </div>
+            Decision due
+          </button>
         </div>
       </div>
 

@@ -98,10 +98,16 @@ public class WooCommercePublishService : IWooCommercePublishService
 
         _logger.LogInformation("Created WooCommerce product {ProductId}: {Url}", productId, permalink);
 
+        // Sanity check: re-fetch and verify critical fields landed correctly
+        var warnings = await VerifyProductAsync(productId, request, ct);
+        if (warnings.Count > 0)
+            _logger.LogWarning("Product {ProductId} created with warnings: {Warnings}", productId, string.Join("; ", warnings));
+
         return new WooPublishResult
         {
             ProductId = productId,
-            ProductUrl = permalink
+            ProductUrl = permalink,
+            Warnings = warnings
         };
     }
 
@@ -116,6 +122,73 @@ public class WooCommercePublishService : IWooCommercePublishService
 
         var result = await _wooClient.UpdateProductAsync(productId, payload, ct);
         return result != null;
+    }
+
+    private async Task<IReadOnlyList<string>> VerifyProductAsync(long productId, WooPublishRequest request, CancellationToken ct)
+    {
+        var warnings = new List<string>();
+        try
+        {
+            var product = await _wooClient.GetProductFullAsync(productId, ct);
+            if (product == null)
+            {
+                warnings.Add("Could not re-fetch product for sanity check");
+                return warnings;
+            }
+
+            var root = product.RootElement;
+            var initials = GetTrainerInitials(request.TrainerName);
+            var dateCode = request.StartDate.ToString("ddMMyy");
+            var expectedSku = $"{request.CourseType.ToUpperInvariant()}-{dateCode}-{initials}";
+            var expectedMenuOrder = int.Parse(request.StartDate.ToString("yyyyMMdd"));
+            var expectedStartDate = request.StartDate.ToString("yyyy-MM-dd");
+
+            // Check SKU
+            var actualSku = GetStringProp(root, "sku");
+            if (!string.Equals(actualSku, expectedSku, StringComparison.OrdinalIgnoreCase))
+                warnings.Add($"SKU mismatch: expected {expectedSku}, got '{actualSku}'");
+
+            // Check price
+            var price = GetStringProp(root, "regular_price");
+            if (string.IsNullOrEmpty(price) || price == "0" || price == "0.00")
+                warnings.Add($"Price is missing or zero — check template product has a price set");
+
+            // Check menu_order
+            if (root.TryGetProperty("menu_order", out var menuOrderEl))
+            {
+                var actualOrder = menuOrderEl.GetInt32();
+                if (actualOrder != expectedMenuOrder)
+                    warnings.Add($"menu_order mismatch: expected {expectedMenuOrder}, got {actualOrder}");
+            }
+            else
+            {
+                warnings.Add("menu_order field missing from product");
+            }
+
+            // Check FooEvents start date
+            if (root.TryGetProperty("meta_data", out var metaData))
+            {
+                var fooDate = metaData.EnumerateArray()
+                    .FirstOrDefault(m => m.GetProperty("key").GetString() == "WooCommerceEventsDate");
+                if (fooDate.ValueKind != JsonValueKind.Undefined)
+                {
+                    var actualDate = fooDate.GetProperty("value").GetString() ?? "";
+                    if (actualDate != expectedStartDate)
+                        warnings.Add($"FooEvents date mismatch: expected {expectedStartDate}, got '{actualDate}'");
+                }
+                else
+                {
+                    warnings.Add("WooCommerceEventsDate meta field missing — FooEvents may not show the event");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Sanity check failed for product {ProductId}", productId);
+            warnings.Add($"Sanity check error: {ex.Message}");
+        }
+
+        return warnings;
     }
 
     private async Task<JsonDocument?> FindTemplateProductAsync(string courseType, CancellationToken ct)

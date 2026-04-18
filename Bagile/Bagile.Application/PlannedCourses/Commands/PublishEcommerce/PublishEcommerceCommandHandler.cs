@@ -71,7 +71,8 @@ public class PublishEcommerceCommandHandler
         {
             ProductId = result.ProductId,
             ProductUrl = result.ProductUrl,
-            Status = "created"
+            Status = result.Warnings.Count > 0 ? "created_with_warnings" : "created",
+            Warnings = result.Warnings
         };
     }
 }
