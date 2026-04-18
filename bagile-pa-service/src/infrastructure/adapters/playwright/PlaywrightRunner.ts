@@ -19,7 +19,15 @@ export class PlaywrightRunner implements IPlaywrightRunnerPort {
 
     try {
       browser = await chromium.launch({ headless, executablePath, args: launchArgs });
-      const page = await browser.newPage();
+      // Use a realistic browser context to avoid headless-bot detection.
+      // Some sites (including Scrum.org) redirect or deny headless Chrome based on
+      // user-agent and other fingerprints, causing silent auth failures.
+      const context = await browser.newContext({
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        viewport: { width: 1280, height: 800 },
+        locale: 'en-GB',
+      });
+      const page = await context.newPage();
       const scriptModule = await import(
         `../../../scripts/${scriptName}/${scriptName}.script.js`
       );

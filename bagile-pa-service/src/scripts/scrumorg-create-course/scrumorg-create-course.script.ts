@@ -58,19 +58,42 @@ export async function runScrumorgCreateCourse(
 }
 
 async function loginToScrumOrg(page: Page, username: string, password: string): Promise<void> {
-  await page.goto('https://www.scrum.org/user/login', { waitUntil: 'networkidle' });
+  await page.goto('https://www.scrum.org/user/login', { waitUntil: 'domcontentloaded' });
 
-  // If already logged in, scrum.org redirects away from /user/login immediately
-  if (!page.url().includes('/user/login')) return;
+  // Reliably check if already authenticated: look for the Drupal user-menu or logout link.
+  // Do NOT rely solely on URL — bot-detection redirects can send headless Chrome away from
+  // /user/login even when not logged in, causing a false "already authenticated" signal.
+  const isLoggedIn = await page.locator('a[href*="/user/logout"], nav .menu--account').first()
+    .isVisible()
+    .catch(() => false);
+
+  if (isLoggedIn) return;
+
+  // Navigate explicitly to login page if we were redirected elsewhere
+  if (!page.url().includes('/user/login')) {
+    await page.goto('https://www.scrum.org/user/login', { waitUntil: 'domcontentloaded' });
+  }
 
   await page.locator('input[name="name"]').fill(username);
   await page.locator('input[name="pass"]').fill(password);
   await page.locator('input[type="submit"]').click();
-  await page.waitForURL((url) => !url.toString().includes('/user/login'), { timeout: 15_000 });
+  await page.waitForURL((url) => !url.toString().includes('/user/login'), { timeout: 20_000 });
+
+  // Verify we are actually authenticated after the redirect
+  await page.waitForSelector('a[href*="/user/logout"], nav .menu--account', { timeout: 10_000 });
 }
 
 async function navigateToCourseManagement(page: Page): Promise<void> {
-  await page.goto('https://www.scrum.org/admin/courses/manage', { waitUntil: 'networkidle' });
+  await page.goto('https://www.scrum.org/admin/courses/manage', { waitUntil: 'domcontentloaded' });
+
+  // Confirm we landed on the manage page, not a redirect to login
+  if (page.url().includes('/user/login') || page.url().includes('/access-denied')) {
+    await page.screenshot({ path: `screenshots/scrumorg-manage-denied-${Date.now()}.png` }).catch(() => undefined);
+    throw new Error(`Cannot access course management page — not authenticated (redirected to ${page.url()})`);
+  }
+
+  // Wait for the table to appear
+  await page.waitForSelector('table tbody tr', { timeout: 15_000 });
 }
 
 async function findAndCopyLatestCourse(
