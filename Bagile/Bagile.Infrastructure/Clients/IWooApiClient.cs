@@ -16,8 +16,16 @@ namespace Bagile.Infrastructure.Clients
 
         /// <summary>
         /// Search products by keyword (name/SKU). Returns up to perPage results.
+        /// Note: WooCommerce search may miss products not in the search index. Prefer
+        /// ListProductsByStatusAsync for SKU-prefix based template discovery.
         /// </summary>
         Task<IReadOnlyList<WooProductDto>> SearchProductsAsync(string keyword, int perPage = 10, string status = "publish", CancellationToken ct = default);
+
+        /// <summary>
+        /// List products by status without a search filter. Used for template product discovery
+        /// when the search index is unreliable. Returns up to perPage results ordered by ID desc.
+        /// </summary>
+        Task<IReadOnlyList<WooProductDto>> ListProductsByStatusAsync(string status = "publish", int perPage = 100, CancellationToken ct = default);
 
         /// <summary>
         /// Get full product JSON (all fields including meta_data) for a single product.

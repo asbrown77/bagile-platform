@@ -176,6 +176,21 @@ public class WooApiClient : IWooApiClient
     }
 
     // ------------------------------------------------------------
+    // List Products by Status (no search — bypasses WooCommerce search index)
+    // ------------------------------------------------------------
+    public async Task<IReadOnlyList<WooProductDto>> ListProductsByStatusAsync(
+        string status = "publish",
+        int perPage = 100,
+        CancellationToken ct = default)
+    {
+        var url = $"/wp-json/wc/v3/products?status={status}&per_page={perPage}&orderby=id&order=desc";
+        _logger.LogInformation("Listing Woo products by status: {Url}", url);
+
+        var items = await SafeGet<List<WooProductDto>>(url, ct);
+        return items?.AsReadOnly() ?? (IReadOnlyList<WooProductDto>)Array.Empty<WooProductDto>();
+    }
+
+    // ------------------------------------------------------------
     // Get Full Product (raw JSON with all meta)
     // ------------------------------------------------------------
     public async Task<JsonDocument?> GetProductFullAsync(long productId, CancellationToken ct = default)

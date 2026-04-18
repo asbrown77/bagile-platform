@@ -44,6 +44,34 @@ public class WooCommercePublishService : IWooCommercePublishService
         ["Chris Bexon"] = "bNy27xgkQhymtSsYnUZRmQ",
     };
 
+    // Fallback template course type when no product exists for the exact type.
+    // Keys: course type with no live/draft product. Values: fallback type to search instead.
+    private static readonly Dictionary<string, string> CourseTypeFallbacks = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["PSPOA"]  = "PSPO",   // PSPO-A → PSPO (same family)
+        ["PSMA"]   = "PSM",    // PSM-A → PSM (same family)
+        ["PALEBM"] = "PALE",   // PAL-EBM → PAL-E (closest structure)
+    };
+
+    // Authoritative GBP prices per course type. Used when falling back to a different template
+    // type so we don't inherit the wrong price.
+    private static readonly Dictionary<string, string> CourseTypePrices = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["PSM"]    = "950",
+        ["PSPO"]   = "950",
+        ["PSK"]    = "950",
+        ["PALE"]   = "995",
+        ["PSMA"]   = "1050",
+        ["PSPOA"]  = "1095",
+        ["PSMAI"]  = "550",
+        ["PSPOAI"] = "550",
+        ["EBM"]    = "595",
+        ["PALEBM"] = "595",
+        ["PSFS"]   = "595",
+        ["APS"]    = "595",
+        ["APSSD"]  = "1495",
+    };
+
     // Course type → featured image ID (from live WooCommerce products, verified 14 Apr 2026)
     private static readonly Dictionary<string, int> CourseImageIds = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -193,34 +221,45 @@ public class WooCommercePublishService : IWooCommercePublishService
 
     private async Task<JsonDocument?> FindTemplateProductAsync(string courseType, CancellationToken ct)
     {
-        // Search by course type prefix in SKU (most reliable)
-        var skuPrefix = courseType.ToUpperInvariant() + "-";
-        var products = await _wooClient.SearchProductsAsync(skuPrefix, perPage: 5, status: "publish", ct: ct);
+        // Try to find a product for the exact course type, then fall back to a related type.
+        // Build the search order: exact type first, then fallback if defined.
+        var searchOrder = new List<string> { courseType.ToUpperInvariant() };
+        if (CourseTypeFallbacks.TryGetValue(courseType, out var fallback))
+            searchOrder.Add(fallback.ToUpperInvariant());
 
-        // Find one whose SKU starts with our prefix
-        var template = products
-            .Where(p => p.Sku != null && p.Sku.StartsWith(skuPrefix, StringComparison.OrdinalIgnoreCase))
-            .OrderByDescending(p => p.Id) // Most recent by ID
-            .FirstOrDefault();
-
-        if (template == null)
+        foreach (var typeToSearch in searchOrder)
         {
-            // Try draft products too
-            products = await _wooClient.SearchProductsAsync(skuPrefix, perPage: 5, status: "draft", ct: ct);
-            template = products
+            var skuPrefix = typeToSearch + "-";
+            var template = await SearchTemplateByPrefixAsync(skuPrefix, ct);
+            if (template != null)
+            {
+                if (!typeToSearch.Equals(courseType, StringComparison.OrdinalIgnoreCase))
+                    _logger.LogInformation("Using {FallbackType} as template for {CourseType} (no exact match found)", typeToSearch, courseType);
+                return await _wooClient.GetProductFullAsync(template.Id, ct);
+            }
+        }
+
+        _logger.LogWarning("No template product found for course type {CourseType} (tried: {Searched})",
+            courseType, string.Join(", ", searchOrder));
+        return null;
+    }
+
+    private async Task<WooProductDto?> SearchTemplateByPrefixAsync(string skuPrefix, CancellationToken ct)
+    {
+        // WooCommerce full-text search is unreliable for SKU-based lookup (search index may be stale).
+        // Use direct product listing instead: fetch the 100 most recent products per status and
+        // filter by SKU prefix client-side. For a small shop (< 100 active products per status)
+        // this reliably covers all candidates.
+        foreach (var status in new[] { "publish", "draft" })
+        {
+            var products = await _wooClient.ListProductsByStatusAsync(status: status, perPage: 100, ct: ct);
+            var match = products
                 .Where(p => p.Sku != null && p.Sku.StartsWith(skuPrefix, StringComparison.OrdinalIgnoreCase))
                 .OrderByDescending(p => p.Id)
                 .FirstOrDefault();
+            if (match != null) return match;
         }
-
-        if (template == null)
-        {
-            _logger.LogWarning("No template product found with SKU prefix {Prefix}", skuPrefix);
-            return null;
-        }
-
-        // Fetch the full product with all meta_data
-        return await _wooClient.GetProductFullAsync(template.Id, ct);
+        return null;
     }
 
     private async Task<JsonElement> BuildProductPayloadAsync(JsonDocument template, WooPublishRequest request, CancellationToken ct)
@@ -246,8 +285,11 @@ public class WooCommercePublishService : IWooCommercePublishService
         var tags = await BuildTagsAsync(root, request, ct);
         var images = BuildImages(request.CourseType, root);
 
-        // Price fields — copy from template
-        var price = GetStringProp(root, "regular_price");
+        // Price: use our authoritative price map if known; otherwise copy from template.
+        // This prevents inheriting the wrong price when using a fallback template type.
+        var price = CourseTypePrices.TryGetValue(request.CourseType, out var knownPrice)
+            ? knownPrice
+            : GetStringProp(root, "regular_price");
 
         var payload = new Dictionary<string, object?>
         {
