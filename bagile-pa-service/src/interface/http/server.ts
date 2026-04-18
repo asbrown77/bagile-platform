@@ -63,7 +63,7 @@ export function createHttpServer(pool: Pool, opts: HttpServerOptions): express.A
   app.use('/company-settings', createCompanySettingsRouter(pool));
 
   // PLAYWRIGHT routes — server-to-server browser automation (admin key required)
-  app.use('/playwright', createPlaywrightRouter());
+  app.use('/playwright', createPlaywrightRouter(pool));
 
   return app;
 }

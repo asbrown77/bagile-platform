@@ -41,14 +41,18 @@ export function getCredentialStore(): ICredentialStore | null {
  */
 async function getServiceConfig(key: string): Promise<string | undefined> {
   const pool = getPool();
-  if (!pool) return undefined;
+  if (!pool) {
+    console.error(`[credentials] getServiceConfig(${key}): no pool — DATABASE_URL missing or pool init failed`);
+    return undefined;
+  }
   try {
     const { rows } = await pool.query<{ value: string }>(
       `SELECT value FROM bagile.service_config WHERE key = $1`,
       [key],
     );
     return rows[0]?.value ?? undefined;
-  } catch {
+  } catch (err) {
+    console.error(`[credentials] getServiceConfig(${key}): DB query failed — ${(err as Error).message}`);
     return undefined;
   }
 }
@@ -66,6 +70,7 @@ async function getServiceConfig(key: string): Promise<string | undefined> {
 const ENV_FALLBACKS: Record<string, string> = {
   scrumorg_username: 'SCRUMORG_USERNAME',
   scrumorg_password: 'SCRUMORG_PASSWORD',
+  scrumorg_session_cookies: 'SCRUMORG_SESSION_COOKIES',
   trello_api_key: 'TRELLO_API_KEY',
   trello_token: 'TRELLO_TOKEN',
   wp_username: 'WP_USERNAME',

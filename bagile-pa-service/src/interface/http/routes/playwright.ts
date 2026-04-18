@@ -1,11 +1,12 @@
 import { Router } from 'express';
+import { Pool } from 'pg';
 import { CreateScrumOrgCourseUseCase } from '../../../application/use-cases/create-scrumorg-course/CreateScrumOrgCourseUseCase.js';
 import { PlaywrightRunner } from '../../../infrastructure/adapters/playwright/PlaywrightRunner.js';
 import { buildCredentialResolver } from '../../../infrastructure/credentials/buildCredentialResolver.js';
 
 const useCase = new CreateScrumOrgCourseUseCase(new PlaywrightRunner());
 
-export function createPlaywrightRouter(): Router {
+export function createPlaywrightRouter(pool: Pool): Router {
   const router = Router();
 
   /**
@@ -44,6 +45,36 @@ export function createPlaywrightRouter(): Router {
     } else {
       res.status(500).json(result);
     }
+  });
+
+  /**
+   * GET /playwright/debug
+   *
+   * Diagnostic endpoint — checks whether the DB is reachable from this container
+   * and whether scrumorg_session_cookies exists in bagile.service_config.
+   * Protected by apiKeyAuth (any valid key; no admin requirement).
+   */
+  router.get('/debug', async (_req, res) => {
+    let dbConnected = false;
+    let cookieFound = false;
+    let cookieLength = 0;
+    let error: string | null = null;
+
+    try {
+      const { rows } = await pool.query<{ value: string }>(
+        `SELECT value FROM bagile.service_config WHERE key = $1`,
+        ['scrumorg_session_cookies'],
+      );
+      dbConnected = true;
+      if (rows[0]?.value) {
+        cookieFound = true;
+        cookieLength = rows[0].value.length;
+      }
+    } catch (err) {
+      error = (err as Error).message;
+    }
+
+    res.json({ cookieFound, cookieLength, dbConnected, error });
   });
 
   return router;

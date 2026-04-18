@@ -98,7 +98,11 @@ async function loginToScrumOrg(
 
     if (isLoggedIn) return; // cookies are valid — skip form login
 
-    // Cookies expired or invalid — fall through to form login below
+    // Cookies were present but auth check failed — do not silently fall through
+    const cookieCount = cookies.length;
+    throw new Error(
+      `Session cookies injected but auth verification failed — cookies may be expired. Cookie key count: ${cookieCount}`,
+    );
   }
 
   // --- Form-based auth (fallback) ---
@@ -119,8 +123,17 @@ async function loginToScrumOrg(
     await page.goto('https://www.scrum.org/user/login', { waitUntil: 'networkidle' });
   }
 
-  // Wait for the login form to be ready (guards against slow JS rendering)
-  await page.waitForSelector('input[name="name"]', { timeout: 15_000 });
+  // Wait for the login form to be ready (guards against slow JS rendering).
+  // Cloudflare on data-center IPs often blocks this page — if the selector never
+  // appears, surface a clear message rather than a generic timeout.
+  const formStart = Date.now();
+  await page.waitForSelector('input[name="name"]', { timeout: 15_000 }).catch((err) => {
+    const durationS = Math.round((Date.now() - formStart) / 1000);
+    throw new Error(
+      `Cloudflare is blocking the login page (input[name='name'] never appeared). ` +
+      `Session cookies were absent. Duration so far: ~${durationS}s. Original: ${(err as Error).message}`,
+    );
+  });
 
   await page.locator('input[name="name"]').fill(username);
   await page.locator('input[name="pass"]').fill(password);
