@@ -13,19 +13,26 @@ export class PlaywrightRunner implements IPlaywrightRunnerPort {
     // Use system Chromium if PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH is set (e.g. in Docker).
     // Also pass --no-sandbox which is required when running as root in a container.
     const executablePath = process.env['PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH'] || undefined;
-    const launchArgs = executablePath ? ['--no-sandbox', '--disable-setuid-sandbox'] : [];
+    // --disable-blink-features=AutomationControlled removes navigator.webdriver=true,
+    // which Cloudflare and similar WAFs use to fingerprint headless/automated browsers.
+    const launchArgs = [
+      '--disable-blink-features=AutomationControlled',
+      ...(executablePath ? ['--no-sandbox', '--disable-setuid-sandbox'] : []),
+    ];
 
     let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
 
     try {
       browser = await chromium.launch({ headless, executablePath, args: launchArgs });
-      // Use a realistic browser context to avoid headless-bot detection.
-      // Some sites (including Scrum.org) redirect or deny headless Chrome based on
-      // user-agent and other fingerprints, causing silent auth failures.
+      // Realistic browser context so user-agent and viewport don't reveal automation.
       const context = await browser.newContext({
         userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
         viewport: { width: 1280, height: 800 },
         locale: 'en-GB',
+      });
+      // Also remove the webdriver property via an init script (belt-and-suspenders).
+      await context.addInitScript(() => {
+        Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
       });
       const page = await context.newPage();
       const scriptModule = await import(
