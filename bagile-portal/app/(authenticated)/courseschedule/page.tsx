@@ -687,34 +687,18 @@ function SidePanel({ event, onClose, onPublish, onCancel, onEdit }: SidePanelPro
           );
         })()}
 
-        {/* External links */}
-        <div>
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Links</p>
-          <div className="space-y-1">
-            {event.gateways.filter((g) => g.published && g.url).map((g) => (
-              <a
-                key={g.type}
-                href={g.url!}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-brand-600 hover:text-brand-700"
-              >
-                <ExternalLink className="w-3.5 h-3.5" />
-                {getGatewayLabel(g.type)} listing
-              </a>
-            ))}
-            {/* Course management link — schedule-based courses (both public and private) */}
-            {event.id.startsWith("schedule-") && (
-              <a
-                href={`/courses/${event.id.replace("schedule-", "")}`}
-                className="flex items-center gap-2 text-sm text-brand-600 hover:text-brand-700"
-              >
-                <Users className="w-3.5 h-3.5" />
-                {event.isPrivate ? "Manage course →" : "View attendees"}
-              </a>
-            )}
+        {/* Course management link — schedule-based courses only */}
+        {event.id.startsWith("schedule-") && (
+          <div>
+            <a
+              href={`/courses/${event.id.replace("schedule-", "")}`}
+              className="flex items-center gap-2 text-sm text-brand-600 hover:text-brand-700"
+            >
+              <Users className="w-3.5 h-3.5" />
+              {event.isPrivate ? "Manage course →" : "View attendees"}
+            </a>
           </div>
-        </div>
+        )}
 
         {/* Cancel button */}
         {!isCancelled && (
