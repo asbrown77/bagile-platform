@@ -221,6 +221,36 @@ export function getApplicableGateways(courseType: string, isPrivate: boolean): s
   return gateways;
 }
 
+/**
+ * Returns "ecommerce" for public courses, null for private.
+ * Private courses are pre-confirmed B2B bookings — no shop product needed.
+ */
+export function getShopGateway(isPrivate: boolean): string | null {
+  return isPrivate ? null : "ecommerce";
+}
+
+/**
+ * Returns the external listing gateway for a course ("scrumorg" | "icagile" | null).
+ * Derived from courseType — private courses have no external gateway.
+ */
+export function getExternalGateway(courseType: string, isPrivate: boolean): string | null {
+  if (isPrivate) return null;
+  const key = courseType.toUpperCase().replace(/[-_\s]/g, "");
+  if (SCRUMORG_TYPES.has(key)) return "scrumorg";
+  if (isIcpCourseType(courseType)) return "icagile";
+  return null;
+}
+
+/** Human-readable label for a gateway type. */
+export function getGatewayLabel(gwType: string): string {
+  switch (gwType) {
+    case "ecommerce": return "Shop";
+    case "scrumorg":  return "Scrum.org";
+    case "icagile":   return "IC Agile";
+    default:          return gwType;
+  }
+}
+
 // All recognised course type codes — used to find the type within a SKU
 const KNOWN_COURSE_TYPES = new Set([
   "PSM", "PSMO", "PSMAI", "PSMA", "PSPO", "PSPOAI", "PSPOA",

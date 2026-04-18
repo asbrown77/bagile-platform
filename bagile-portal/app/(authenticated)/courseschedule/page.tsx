@@ -23,7 +23,7 @@ import { AlertBanner } from "@/components/ui/AlertBanner";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { SlideOver } from "@/components/ui/SlideOver";
-import { Plus, Calendar as CalendarIcon, Lock, AlertCircle, AlertTriangle, ExternalLink, Users, X, Loader2, LayoutList, Upload, Download } from "lucide-react";
+import { Plus, Calendar as CalendarIcon, Lock, AlertCircle, AlertTriangle, ExternalLink, Users, X, Loader2, LayoutList, Upload, Download, ShoppingCart } from "lucide-react";
 import {
   getBadgeSrc,
   getCourseCodeDisplay,
@@ -34,6 +34,9 @@ import {
   isDeadlineUrgent,
   isLowEnrolment,
   getApplicableGateways,
+  getShopGateway,
+  getExternalGateway,
+  getGatewayLabel,
   COURSE_TYPE_OPTIONS,
 } from "@/lib/calendarHelpers";
 import { getTrainerColour, trainerInitials } from "@/lib/courseColours";
@@ -494,15 +497,6 @@ function SidePanel({ event, onClose, onPublish, onCancel, onEdit }: SidePanelPro
     }
   }
 
-  const gatewayLabel = (type: string) => {
-    switch (type) {
-      case "ecommerce": return "E-commerce";
-      case "scrumorg": return "Scrum.org";
-      case "icagile": return "IC Agile";
-      default: return type;
-    }
-  };
-
   const headerActions = event.status === "planned" && event.id.startsWith("planned-") && onEdit ? (
     <Button variant="secondary" size="sm" onClick={() => onEdit(event.id)}>
       Edit
@@ -580,78 +574,118 @@ function SidePanel({ event, onClose, onPublish, onCancel, onEdit }: SidePanelPro
           </div>
         )}
 
-        {/* Gateway checklist — hidden for private courses (no public gateways) */}
-        {applicableGateways.length > 0 && (
-        <div>
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Gateway Checklist</p>
-          <div className="space-y-2">
-            {applicableGateways.map((gwType) => {
-              const gwStatus = event.gateways.find((g) => g.type === gwType);
-              const isPublished = gwStatus?.published || false;
-              const url = gwStatus?.url;
-              const isIcAgile = gwType === "icagile";
-              const ecommercePublished = event.gateways.find((g) => g.type === "ecommerce")?.published || false;
-              const needsEcommerce = gwType === "scrumorg" && !ecommercePublished;
-
-              const rowContent = (
-                <>
-                  <div className="flex items-center gap-2">
-                    {isPublished ? (
-                      <span className="w-5 h-5 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xs font-bold">
-                        &#10003;
-                      </span>
+        {/* Shop — hidden for private courses */}
+        {(() => {
+          const shopGw = getShopGateway(event.isPrivate);
+          if (!shopGw) return null;
+          const gwStatus = event.gateways.find((g) => g.type === shopGw);
+          const isCreated = gwStatus?.published || false;
+          const url = gwStatus?.url;
+          const row = (
+            <>
+              <div className="flex items-center gap-2">
+                {isCreated ? (
+                  <span className="w-5 h-5 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xs font-bold">&#10003;</span>
+                ) : (
+                  <span className="w-5 h-5 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center text-xs">&mdash;</span>
+                )}
+                <span className="text-sm font-medium text-gray-700">bagile.co.uk</span>
+              </div>
+              <span className="flex items-center gap-1">
+                {isCreated && url ? (
+                  <span className="text-xs text-brand-600 flex items-center gap-1 font-medium">View <ExternalLink className="w-3 h-3" /></span>
+                ) : !isCancelled ? (
+                  <Button
+                    size="sm"
+                    onClick={(e) => { e.preventDefault(); handlePublish(shopGw); }}
+                    disabled={publishing === shopGw}
+                  >
+                    {publishing === shopGw ? (
+                      <><Loader2 className="w-3 h-3 animate-spin" /> Creating...</>
                     ) : (
-                      <span className="w-5 h-5 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center text-xs">
-                        &mdash;
-                      </span>
+                      "Create in shop →"
                     )}
-                    <span className="text-sm font-medium text-gray-700">{gatewayLabel(gwType)}</span>
-                  </div>
-                  <span className="flex items-center gap-1">
-                    {isIcAgile ? (
-                      <span className="text-xs text-gray-400 italic">Coming soon</span>
-                    ) : isPublished && url ? (
-                      <span className="text-xs text-brand-600 flex items-center gap-1 font-medium">
-                        View <ExternalLink className="w-3 h-3" />
-                      </span>
-                    ) : needsEcommerce ? (
-                      <span className="text-xs text-gray-400 italic">E-commerce first</span>
-                    ) : !isPublished && !isCancelled ? (
-                      <Button
-                        size="sm"
-                        onClick={(e) => { e.preventDefault(); handlePublish(gwType); }}
-                        disabled={publishing === gwType}
-                      >
-                        {publishing === gwType ? (
-                          <><Loader2 className="w-3 h-3 animate-spin" /> Publishing...</>
-                        ) : (
-                          "Publish →"
-                        )}
-                      </Button>
-                    ) : null}
-                  </span>
-                </>
-              );
+                  </Button>
+                ) : null}
+              </span>
+            </>
+          );
+          return (
+            <div>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Shop</p>
+              <div className="space-y-2">
+                {isCreated && url ? (
+                  <a href={url} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100 hover:bg-green-50 hover:border-green-200 transition-colors cursor-pointer">
+                    {row}
+                  </a>
+                ) : (
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">{row}</div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
-              return isPublished && url ? (
-                <a
-                  key={gwType}
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100 hover:bg-green-50 hover:border-green-200 transition-colors cursor-pointer"
-                >
-                  {rowContent}
-                </a>
-              ) : (
-                <div key={gwType} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
-                  {rowContent}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-        )}
+        {/* Gateway — Scrum.org or IC Agile, auto-derived from course type */}
+        {(() => {
+          const extGw = getExternalGateway(event.courseType, event.isPrivate);
+          if (!extGw) return null;
+          const gwStatus = event.gateways.find((g) => g.type === extGw);
+          const isPublished = gwStatus?.published || false;
+          const url = gwStatus?.url;
+          const shopCreated = event.gateways.find((g) => g.type === "ecommerce")?.published || false;
+          const needsShop = !shopCreated;
+          const isIcAgile = extGw === "icagile";
+          const row = (
+            <>
+              <div className="flex items-center gap-2">
+                {isPublished ? (
+                  <span className="w-5 h-5 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xs font-bold">&#10003;</span>
+                ) : (
+                  <span className="w-5 h-5 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center text-xs">&mdash;</span>
+                )}
+                <span className="text-sm font-medium text-gray-700">{getGatewayLabel(extGw)}</span>
+              </div>
+              <span className="flex items-center gap-1">
+                {isIcAgile ? (
+                  <span className="text-xs text-gray-400 italic">Coming soon</span>
+                ) : isPublished && url ? (
+                  <span className="text-xs text-brand-600 flex items-center gap-1 font-medium">View <ExternalLink className="w-3 h-3" /></span>
+                ) : needsShop ? (
+                  <span className="text-xs text-gray-400 italic">Shop first</span>
+                ) : !isCancelled ? (
+                  <Button
+                    size="sm"
+                    onClick={(e) => { e.preventDefault(); handlePublish(extGw); }}
+                    disabled={publishing === extGw}
+                  >
+                    {publishing === extGw ? (
+                      <><Loader2 className="w-3 h-3 animate-spin" /> Publishing...</>
+                    ) : (
+                      "Publish →"
+                    )}
+                  </Button>
+                ) : null}
+              </span>
+            </>
+          );
+          return (
+            <div>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Gateway · {getGatewayLabel(extGw)}</p>
+              <div className="space-y-2">
+                {isPublished && url ? (
+                  <a href={url} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100 hover:bg-green-50 hover:border-green-200 transition-colors cursor-pointer">
+                    {row}
+                  </a>
+                ) : (
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">{row}</div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* External links */}
         <div>
@@ -666,7 +700,7 @@ function SidePanel({ event, onClose, onPublish, onCancel, onEdit }: SidePanelPro
                 className="flex items-center gap-2 text-sm text-brand-600 hover:text-brand-700"
               >
                 <ExternalLink className="w-3.5 h-3.5" />
-                {gatewayLabel(g.type)} listing
+                {getGatewayLabel(g.type)} listing
               </a>
             ))}
             {/* Course management link — schedule-based courses (both public and private) */}
@@ -757,10 +791,13 @@ function CourseListRow({ event, onClick, riskConfig }: { event: CalendarEvent; o
       </td>
       {/* Course code */}
       <td className="px-3 py-3 min-w-[80px]">
-        <div className="flex items-center gap-1.5">
-          <span className="text-sm font-semibold text-gray-800">{codeDisplay}</span>
-          {event.isPrivate && <Lock className="w-3 h-3 text-amber-500" />}
-        </div>
+        <span className="text-sm font-semibold text-gray-800">{codeDisplay}</span>
+      </td>
+      {/* Public / Private */}
+      <td className="px-3 py-3 w-16 hidden sm:table-cell">
+        <span className={`text-xs font-medium ${event.isPrivate ? "text-amber-600" : "text-gray-400"}`}>
+          {event.isPrivate ? "Private" : "Public"}
+        </span>
       </td>
       {/* Trainer avatar */}
       <td className="px-3 py-3 w-12 hidden sm:table-cell">
@@ -799,11 +836,15 @@ function CourseListRow({ event, onClick, riskConfig }: { event: CalendarEvent; o
           {applicableGateways.map((gw) => {
             const gwStatus = event.gateways?.find((g) => g.type === gw);
             const published = gwStatus?.published ?? false;
-            const label = gw === "ecommerce" ? "E" : gw === "scrumorg" ? "S" : "I";
-            return (
-              <span key={gw} className="flex items-center gap-0.5" title={`${gw}: ${published ? "published" : "not published"}`}>
+            const title = `${getGatewayLabel(gw)}: ${published ? "in shop" : "not created"}`;
+            return gw === "ecommerce" ? (
+              <span key={gw} className="flex items-center gap-0.5" title={title}>
+                <ShoppingCart className={`w-3 h-3 ${published ? "text-green-500" : "text-gray-300"}`} />
+              </span>
+            ) : (
+              <span key={gw} className="flex items-center gap-0.5" title={`${getGatewayLabel(gw)}: ${published ? "published" : "not published"}`}>
                 <span className={`w-2 h-2 rounded-full ${published ? "bg-green-500" : "bg-gray-300"}`} />
-                <span className="text-[10px] text-gray-400">{label}</span>
+                <span className="text-[10px] text-gray-400">{gw === "scrumorg" ? "S" : "I"}</span>
               </span>
             );
           })}
@@ -865,6 +906,7 @@ function CourseListView({
           <tr className="border-b border-gray-200 bg-gray-50">
             <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
             <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider" colSpan={2}>Course</th>
+            <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">Type</th>
             <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">Trainer</th>
             <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
             <th className="px-3 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Enrols</th>
