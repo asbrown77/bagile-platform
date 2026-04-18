@@ -431,9 +431,14 @@ public class WooCommercePublishService : IWooCommercePublishService
         TrainerWooUserIds.TryGetValue(request.TrainerName, out var trainerWooUserId);
         var location = request.IsVirtual ? "Live virtual training" : (request.Venue ?? "");
 
-        var mailchimpTags = request.CourseType.Equals("PSMA", StringComparison.OrdinalIgnoreCase)
-            ? "Public, Student, PSM-A"
-            : $"Public, Student, {request.CourseType.ToUpperInvariant()}";
+        // Use display-friendly names for MailChimp tags (matches segment filters)
+        var mailchimpDisplayType = request.CourseType.ToUpperInvariant() switch
+        {
+            "PSMA"  => "PSM-A",
+            "PSPOA" => "PSPO-A",
+            var ct  => ct,
+        };
+        var mailchimpTags = $"Public, Student, {mailchimpDisplayType}";
 
         return new Dictionary<string, object>
         {
@@ -451,8 +456,9 @@ public class WooCommercePublishService : IWooCommercePublishService
             ["WooCommerceEventsDateMySQLFormat"] = startMysql,
             ["WooCommerceEventsEndDateMySQLFormat"] = endMysql,
             ["WooCommerceEventsNumDays"] = numDays.ToString(),
-            ["WooCommerceEventsExpire"] = request.StartDate.ToString("yyyy-MM-dd") + " 00:00",
-            ["WooCommerceEventsExpireTimestamp"] = startTimestamp,
+            // Expire on end date (not start date) so multi-day courses don't close sales on Day 1
+            ["WooCommerceEventsExpire"] = request.EndDate.ToString("yyyy-MM-dd") + " 00:00",
+            ["WooCommerceEventsExpireTimestamp"] = endTimestamp,
 
             // Location
             ["WooCommerceEventsLocation"] = location,
