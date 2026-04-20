@@ -250,8 +250,26 @@ async function saveAndSchedule(page: Page): Promise<string> {
   await page.waitForLoadState('networkidle');
 
   // Schedule Class Confirmation page — click to go live
-  await page.getByRole('button', { name: 'Schedule Class' }).click();
-  await page.waitForLoadState('networkidle');
+  const scheduleBtn = page.getByRole('button', { name: 'Schedule Class' });
+  await scheduleBtn.waitFor({ state: 'visible', timeout: 15_000 }).catch(() => {
+    throw new Error(
+      `'Schedule Class' button not found after 'Save and Schedule'. ` +
+      `Current URL: ${page.url()}. Page may have validation errors or a different flow for this course type.`
+    );
+  });
+  await scheduleBtn.click();
+
+  // Wait for the canonical /courses/ URL — successful scheduling always redirects here.
+  // A /node/ URL means the course was saved as a draft but not scheduled.
+  await page.waitForURL(
+    (url) => url.toString().includes('/courses/'),
+    { timeout: 20_000 }
+  ).catch(() => {
+    throw new Error(
+      `Course was not scheduled — expected redirect to /courses/ but URL is: ${page.url()}. ` +
+      `The course may exist as an unscheduled draft on scrum.org.`
+    );
+  });
 
   return page.url();
 }
