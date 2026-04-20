@@ -49,6 +49,9 @@ public static class DependencyInjection
         services.AddScoped<IWooCommercePublishService, WooCommercePublishService>();
         services.AddScoped<IScrumOrgPublishService, ScrumOrgPublishService>();
 
+        // PA credential service — trainer Scrum.org credential management
+        services.AddScoped<IPaCredentialService, PaCredentialService>();
+
         // Email service (SMTP — see Smtp:* in appsettings)
         services.AddScoped<IEmailService, SmtpEmailService>();
 

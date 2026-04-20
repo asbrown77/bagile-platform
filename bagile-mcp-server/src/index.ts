@@ -482,6 +482,26 @@ server.tool(
 );
 
 // ============================================================
+// PUBLISH TO SCRUM.ORG
+// ============================================================
+
+server.tool(
+  "publish_to_scrumorg",
+  "Publish a planned course to Scrum.org via Playwright browser automation. The course must already be published to E-commerce (WooCommerce). The trainer must have Scrum.org credentials stored in Settings > Trainers. Returns the Scrum.org listing URL. Pass externalUrl to skip automation and record a URL directly.",
+  {
+    plannedCourseId: z.number().describe("Planned course ID to publish"),
+    externalUrl: z.string().optional().describe("Skip automation — record this URL directly as the Scrum.org listing"),
+  },
+  async ({ plannedCourseId, externalUrl }) => {
+    const result = await apiPost(
+      `/api/planned-courses/${plannedCourseId}/publish/scrumorg`,
+      externalUrl ? { externalUrl } : {}
+    );
+    return { content: [{ type: "text" as const, text: formatResult(result) }] };
+  }
+);
+
+// ============================================================
 // HEALTH CHECK
 // ============================================================
 

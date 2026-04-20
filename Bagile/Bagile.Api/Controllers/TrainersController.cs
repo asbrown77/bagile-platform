@@ -1,5 +1,7 @@
+using Bagile.Application.Common.Interfaces;
 using Bagile.Application.Trainers.Commands;
 using Bagile.Application.Trainers.Queries;
+using Bagile.Domain.Repositories;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,8 +12,18 @@ namespace Bagile.Api.Controllers;
 public class TrainersController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly ITrainerRepository _trainerRepo;
+    private readonly IPaCredentialService _paCredentials;
 
-    public TrainersController(IMediator mediator) => _mediator = mediator;
+    public TrainersController(
+        IMediator mediator,
+        ITrainerRepository trainerRepo,
+        IPaCredentialService paCredentials)
+    {
+        _mediator = mediator;
+        _trainerRepo = trainerRepo;
+        _paCredentials = paCredentials;
+    }
 
     /// <summary>List all active trainers.</summary>
     [HttpGet]
@@ -85,13 +97,75 @@ public class TrainersController : ControllerBase
 
         return NoContent();
     }
+
+    // ── Scrum.org credentials ────────────────────────────────
+
+    /// <summary>Get a trainer's Scrum.org credential status.</summary>
+    [HttpGet("{id:int}/scrumorg-credentials")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetScrumOrgCredentials(int id, CancellationToken ct)
+    {
+        var trainer = await _trainerRepo.GetByIdAsync(id, ct);
+        if (trainer is null)
+            return NotFound(new { error = $"Trainer {id} not found" });
+
+        var status = await _paCredentials.GetTrainerScrumOrgStatusAsync(id, ct);
+        return Ok(status);
+    }
+
+    /// <summary>Set a trainer's Scrum.org username and/or password.</summary>
+    [HttpPut("{id:int}/scrumorg-credentials")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SetScrumOrgCredentials(
+        int id,
+        [FromBody] ScrumOrgCredentialRequest body,
+        CancellationToken ct)
+    {
+        var trainer = await _trainerRepo.GetByIdAsync(id, ct);
+        if (trainer is null)
+            return NotFound(new { error = $"Trainer {id} not found" });
+
+        if (string.IsNullOrWhiteSpace(body.Username) && string.IsNullOrWhiteSpace(body.Password))
+            return BadRequest(new { error = "Provide at least one of username or password" });
+
+        if (!string.IsNullOrWhiteSpace(body.Username))
+            await _paCredentials.SetTrainerScrumOrgCredentialAsync(id, "scrumorg_username", body.Username.Trim(), ct);
+
+        if (!string.IsNullOrWhiteSpace(body.Password))
+            await _paCredentials.SetTrainerScrumOrgCredentialAsync(id, "scrumorg_password", body.Password, ct);
+
+        return NoContent();
+    }
+
+    /// <summary>Refresh a trainer's Scrum.org session via Playwright login.</summary>
+    [HttpPost("{id:int}/scrumorg-credentials/refresh-session")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RefreshScrumOrgSession(int id, CancellationToken ct)
+    {
+        var trainer = await _trainerRepo.GetByIdAsync(id, ct);
+        if (trainer is null)
+            return NotFound(new { error = $"Trainer {id} not found" });
+
+        var result = await _paCredentials.RefreshTrainerSessionAsync(id, ct);
+        return Ok(new { result.Success, result.ErrorMessage });
+    }
 }
 
-// ── Request model ────────────────────────────────────────────
+// ── Request models ───────────────────────────────────────────
 
 public record TrainerRequest
 {
     public string Name { get; init; } = "";
     public string Email { get; init; } = "";
     public string? Phone { get; init; }
+}
+
+public record ScrumOrgCredentialRequest
+{
+    public string? Username { get; init; }
+    public string? Password { get; init; }
 }

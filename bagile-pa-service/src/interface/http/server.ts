@@ -6,6 +6,7 @@ import { createTasksRouter } from './routes/tasks.js';
 import { createCredentialsRouter } from './routes/credentials.js';
 import { createCompanySettingsRouter } from './routes/company-settings.js';
 import { createPlaywrightRouter } from './routes/playwright.js';
+import { createTrainerCredentialsRouter } from './routes/trainer-credentials.js';
 import { apiKeyAuth, parseApiKeys } from './middleware/apiKeyAuth.js';
 
 const DEFAULT_RATE_LIMIT = 60; // requests per minute per IP
@@ -33,7 +34,7 @@ export function createHttpServer(pool: Pool, opts: HttpServerOptions): express.A
         callback(new Error('Not allowed by CORS'));
       }
     },
-    methods: ['GET', 'PATCH', 'POST'],
+    methods: ['GET', 'PATCH', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Authorization', 'Content-Type'],
   }));
 
@@ -64,6 +65,9 @@ export function createHttpServer(pool: Pool, opts: HttpServerOptions): express.A
 
   // PLAYWRIGHT routes — server-to-server browser automation (admin key required)
   app.use('/playwright', createPlaywrightRouter(pool));
+
+  // TRAINER CREDENTIALS routes — manage per-trainer PA credentials (admin key required)
+  app.use('/trainer-credentials', createTrainerCredentialsRouter(pool));
 
   return app;
 }

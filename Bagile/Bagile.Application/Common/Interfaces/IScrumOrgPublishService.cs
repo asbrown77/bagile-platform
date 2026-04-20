@@ -30,6 +30,9 @@ public record ScrumOrgPublishRequest
 
     /// <summary>WooCommerce product URL for the registration link</summary>
     public string RegistrationUrl { get; init; } = "";
+
+    /// <summary>PA service userId for credential lookup, e.g. "trainer-1"</summary>
+    public string TrainerUserId { get; init; } = "";
 }
 
 public record ScrumOrgPublishResult

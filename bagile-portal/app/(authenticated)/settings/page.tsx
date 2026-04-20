@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ApiKey, CreateKeyResponse, PortalAuthError, loginWithGoogle, listKeys, createKey, revokeKey, PostCourseTemplate, listPostCourseTemplates, upsertPostCourseTemplate, PreCourseTemplate, getPreCourseTemplates, updatePreCourseTemplate, Trainer, getTrainers, createTrainer, updateTrainer, deleteTrainer, getServiceConfig, setServiceConfig } from "@/lib/api";
+import { ApiKey, CreateKeyResponse, PortalAuthError, loginWithGoogle, listKeys, createKey, revokeKey, PostCourseTemplate, listPostCourseTemplates, upsertPostCourseTemplate, PreCourseTemplate, getPreCourseTemplates, updatePreCourseTemplate, Trainer, getTrainers, createTrainer, updateTrainer, deleteTrainer, getServiceConfig, setServiceConfig, TrainerScrumOrgStatus, getTrainerScrumOrgStatus, setTrainerScrumOrgCredentials, refreshTrainerScrumOrgSession } from "@/lib/api";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { AlertBanner } from "@/components/ui/AlertBanner";
@@ -1212,6 +1212,14 @@ function TrainersEditor() {
   const [editForm, setEditForm] = useState<TrainerFormState>(emptyTrainerForm());
   const [saving, setSaving] = useState(false);
 
+  // Scrum.org credentials panel
+  const [credsPanelId, setCredsPanelId] = useState<number | null>(null);
+  const [credsStatus, setCredsStatus] = useState<Record<number, TrainerScrumOrgStatus>>({});
+  const [credsForm, setCredsForm] = useState<{ username: string; password: string }>({ username: "", password: "" });
+  const [credsSaving, setCredsSaving] = useState(false);
+  const [credsTesting, setCredsTesting] = useState(false);
+  const [credsMsg, setCredsMsg] = useState<Record<number, { type: "ok" | "err"; text: string }>>({});
+
   useEffect(() => {
     setApiKey(localStorage.getItem("bagile_api_key") ?? "");
   }, []);
@@ -1293,6 +1301,65 @@ function TrainersEditor() {
       await loadTrainers();
     } catch {
       setError("Failed to remove trainer");
+    }
+  }
+
+  async function openCredsPanel(id: number) {
+    if (credsPanelId === id) {
+      setCredsPanelId(null);
+      return;
+    }
+    setCredsPanelId(id);
+    setCredsForm({ username: "", password: "" });
+    setCredsMsg((m) => ({ ...m, [id]: undefined as unknown as { type: "ok" | "err"; text: string } }));
+    try {
+      const status = await getTrainerScrumOrgStatus(apiKey, id);
+      setCredsStatus((s) => ({ ...s, [id]: status }));
+      setCredsForm((f) => ({ ...f, username: status.username ?? "" }));
+    } catch {
+      setCredsMsg((m) => ({ ...m, [id]: { type: "err", text: "Failed to load credential status" } }));
+    }
+  }
+
+  async function handleCredsSave(id: number) {
+    const payload: { username?: string; password?: string } = {};
+    if (credsForm.username.trim()) payload.username = credsForm.username.trim();
+    if (credsForm.password) payload.password = credsForm.password;
+    if (!payload.username && !payload.password) {
+      setCredsMsg((m) => ({ ...m, [id]: { type: "err", text: "Enter username and/or password to save" } }));
+      return;
+    }
+    setCredsSaving(true);
+    setCredsMsg((m) => ({ ...m, [id]: undefined as unknown as { type: "ok" | "err"; text: string } }));
+    try {
+      await setTrainerScrumOrgCredentials(apiKey, id, payload);
+      const status = await getTrainerScrumOrgStatus(apiKey, id);
+      setCredsStatus((s) => ({ ...s, [id]: status }));
+      setCredsForm((f) => ({ ...f, password: "" }));
+      setCredsMsg((m) => ({ ...m, [id]: { type: "ok", text: "Credentials saved" } }));
+    } catch {
+      setCredsMsg((m) => ({ ...m, [id]: { type: "err", text: "Failed to save credentials" } }));
+    } finally {
+      setCredsSaving(false);
+    }
+  }
+
+  async function handleCredsRefresh(id: number) {
+    setCredsTesting(true);
+    setCredsMsg((m) => ({ ...m, [id]: undefined as unknown as { type: "ok" | "err"; text: string } }));
+    try {
+      const result = await refreshTrainerScrumOrgSession(apiKey, id);
+      if (result.success) {
+        const status = await getTrainerScrumOrgStatus(apiKey, id);
+        setCredsStatus((s) => ({ ...s, [id]: status }));
+        setCredsMsg((m) => ({ ...m, [id]: { type: "ok", text: "Session refreshed — cookies stored" } }));
+      } else {
+        setCredsMsg((m) => ({ ...m, [id]: { type: "err", text: result.errorMessage ?? "Login failed" } }));
+      }
+    } catch {
+      setCredsMsg((m) => ({ ...m, [id]: { type: "err", text: "Failed to connect to PA service" } }));
+    } finally {
+      setCredsTesting(false);
     }
   }
 
@@ -1387,29 +1454,95 @@ function TrainersEditor() {
                   </td>
                 </tr>
               ) : (
-                <tr key={t.id} className="border-t border-gray-100 hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium">{t.name}</td>
-                  <td className="px-4 py-3 text-gray-600">{t.email}</td>
-                  <td className="px-4 py-3 text-gray-400 hidden md:table-cell">{t.phone ?? "—"}</td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-3">
-                      <button
-                        onClick={() => startEdit(t)}
-                        title="Edit"
-                        className="text-gray-400 hover:text-brand-600"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(t.id, t.name)}
-                        title="Remove"
-                        className="text-gray-400 hover:text-red-500"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                <>
+                  <tr key={t.id} className="border-t border-gray-100 hover:bg-gray-50">
+                    <td className="px-4 py-3 font-medium">{t.name}</td>
+                    <td className="px-4 py-3 text-gray-600">{t.email}</td>
+                    <td className="px-4 py-3 text-gray-400 hidden md:table-cell">{t.phone ?? "—"}</td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-3">
+                        <button
+                          onClick={() => openCredsPanel(t.id)}
+                          title="Scrum.org credentials"
+                          className={credsPanelId === t.id ? "text-brand-600" : "text-gray-400 hover:text-brand-600"}
+                        >
+                          <Globe className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => startEdit(t)}
+                          title="Edit"
+                          className="text-gray-400 hover:text-brand-600"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(t.id, t.name)}
+                          title="Remove"
+                          className="text-gray-400 hover:text-red-500"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  {credsPanelId === t.id && (
+                    <tr key={`creds-${t.id}`} className="border-t border-blue-100 bg-blue-50">
+                      <td colSpan={4} className="px-5 py-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-sm font-semibold text-gray-800">Scrum.org Credentials</span>
+                          <button onClick={() => setCredsPanelId(null)} className="text-gray-400 hover:text-gray-600">
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Username</label>
+                            <input
+                              className={inputCls + " w-full"}
+                              type="text"
+                              value={credsForm.username}
+                              onChange={(e) => setCredsForm((f) => ({ ...f, username: e.target.value }))}
+                              placeholder="scrumorg username / email"
+                              autoComplete="off"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Password</label>
+                            <input
+                              className={inputCls + " w-full"}
+                              type="password"
+                              value={credsForm.password}
+                              onChange={(e) => setCredsForm((f) => ({ ...f, password: e.target.value }))}
+                              placeholder="leave blank to keep existing"
+                              autoComplete="new-password"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 mb-3">
+                          <Button size="sm" onClick={() => handleCredsSave(t.id)} disabled={credsSaving || credsTesting}>
+                            {credsSaving ? "Saving..." : "Save credentials"}
+                          </Button>
+                          <div className="text-xs text-gray-500">
+                            Password: {credsStatus[t.id]?.hasPassword ? <span className="text-green-600 font-medium">stored</span> : <span className="text-gray-400">not set</span>}
+                            {" · "}
+                            Session cookies: {credsStatus[t.id]?.hasCookies ? <span className="text-green-600 font-medium">stored</span> : <span className="text-gray-400">not set</span>}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Button size="sm" variant="secondary" onClick={() => handleCredsRefresh(t.id)} disabled={credsSaving || credsTesting}>
+                            {credsTesting ? "Logging in... (~60s)" : "Refresh session"}
+                          </Button>
+                          <span className="text-xs text-gray-400">Runs Playwright login — takes up to 2 min</span>
+                        </div>
+                        {credsMsg[t.id] && (
+                          <p className={`mt-2 text-xs font-medium ${credsMsg[t.id].type === "ok" ? "text-green-600" : "text-red-600"}`}>
+                            {credsMsg[t.id].text}
+                          </p>
+                        )}
+                      </td>
+                    </tr>
+                  )}
+                </>
               )
             )}
 

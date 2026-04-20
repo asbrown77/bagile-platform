@@ -1044,6 +1044,40 @@ export async function deleteTrainer(apiKey: string, id: number): Promise<void> {
   if (!res.ok) throw new Error(`API error: ${res.status}`);
 }
 
+export interface TrainerScrumOrgStatus {
+  username: string | null;
+  hasPassword: boolean;
+  hasCookies: boolean;
+}
+
+export async function getTrainerScrumOrgStatus(
+  apiKey: string,
+  id: number,
+): Promise<TrainerScrumOrgStatus> {
+  return apiRequest(`/api/trainers/${id}/scrumorg-credentials`, apiKey);
+}
+
+export async function setTrainerScrumOrgCredentials(
+  apiKey: string,
+  id: number,
+  payload: { username?: string; password?: string },
+): Promise<void> {
+  return apiRequest(`/api/trainers/${id}/scrumorg-credentials`, apiKey, {
+    method: "PUT",
+    body: payload,
+  });
+}
+
+export async function refreshTrainerScrumOrgSession(
+  apiKey: string,
+  id: number,
+): Promise<{ success: boolean; errorMessage?: string }> {
+  return apiRequest(`/api/trainers/${id}/scrumorg-credentials/refresh-session`, apiKey, {
+    method: "POST",
+    timeoutMs: 120000,
+  });
+}
+
 // ── Pre-Course Templates ──────────────────────────────────
 
 export interface PreCourseTemplate {

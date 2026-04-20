@@ -47,6 +47,7 @@ public class ScrumOrgPublishService : IScrumOrgPublishService
             startDate = request.StartDate.ToString("yyyy-MM-dd"),
             endDate = request.EndDate.ToString("yyyy-MM-dd"),
             registrationUrl = request.RegistrationUrl,
+            trainerId = request.TrainerUserId,
         };
 
         var json = JsonSerializer.Serialize(payload);
