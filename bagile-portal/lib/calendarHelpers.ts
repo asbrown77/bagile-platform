@@ -199,7 +199,7 @@ export function isLowEnrolment(
 /** Scrum.org course types that need the scrum.org gateway. */
 const SCRUMORG_TYPES = new Set([
   "PSM", "PSPO", "PSK", "PALE", "PALEBM", "EBM", "APSSD", "APS",
-  "PSMA", "PSPOA", "PSMAI", "PSPOAI",
+  "PSMA", "PSPOA", "PSMAI", "PSPOAI", "PSFS",
 ]);
 
 /** ICP course types that need ICAgile gateway. */
