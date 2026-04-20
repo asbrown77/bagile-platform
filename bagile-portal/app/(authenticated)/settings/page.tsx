@@ -9,16 +9,14 @@ import { AlertBanner } from "@/components/ui/AlertBanner";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Key, Plus, Settings2, FileText, ChevronLeft, Save, Eye, Code, Users, Pencil, Trash2, X, Check, Bot, Shield, Zap, Globe } from "lucide-react";
 import { loadConfig, saveConfig, type PortalConfig } from "@/lib/config";
-import { CourseDefsEditor } from "@/components/courses/CourseDefsEditor";
 
 // ── Tab definitions ───────────────────────────────────────
 
-type Tab = "general" | "integrations" | "courses" | "trainers" | "pre-course" | "post-course" | "claude-pa";
+type Tab = "general" | "integrations" | "trainers" | "pre-course" | "post-course" | "claude-pa";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "general",      label: "General" },
   { id: "integrations", label: "Integrations" },
-  { id: "courses",      label: "Courses" },
   { id: "trainers",     label: "Trainers" },
   { id: "pre-course",   label: "Pre-Course" },
   { id: "post-course",  label: "Post-Course" },
@@ -351,14 +349,6 @@ function SettingsContent() {
       {/* Integrations tab */}
       {activeTab === "integrations" && <IntegrationsEditor />}
 
-      {/* Courses tab */}
-      {activeTab === "courses" && (
-        <>
-          <CourseDefsEditor />
-          <CourseThresholds />
-        </>
-      )}
-
       {/* Trainers tab */}
       {activeTab === "trainers" && <TrainersEditor />}
 
@@ -371,82 +361,6 @@ function SettingsContent() {
       {/* AI PA tab */}
       {activeTab === "claude-pa" && <ClaudePaDocs />}
     </>
-  );
-}
-
-function CourseThresholds() {
-  const [config, setConfig] = useState<PortalConfig | null>(null);
-  const [saved, setSaved] = useState(false);
-
-  useEffect(() => { setConfig(loadConfig()); }, []);
-
-  function handleSave() {
-    if (!config) return;
-    saveConfig(config);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  }
-
-  if (!config) return null;
-
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mt-6">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="p-2 bg-amber-50 rounded-lg">
-          <Settings2 className="w-5 h-5 text-amber-600" />
-        </div>
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900">Course Risk Thresholds</h2>
-          <p className="text-sm text-gray-500">Configure when courses are flagged as "at risk" or "cancel"</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            At-risk threshold (days before start)
-          </label>
-          <input
-            type="number"
-            min={0}
-            max={30}
-            value={config.atRiskDays}
-            onChange={(e) => setConfig({ ...config, atRiskDays: parseInt(e.target.value) || 0 })}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
-          />
-          <p className="text-xs text-gray-400 mt-1">
-            Courses with low enrolment within this many days of start date are flagged "at risk". Set to 0 to disable.
-          </p>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Minimum enrolments (for "guaranteed")
-          </label>
-          <input
-            type="number"
-            min={1}
-            max={50}
-            value={config.minEnrolments}
-            onChange={(e) => setConfig({ ...config, minEnrolments: parseInt(e.target.value) || 1 })}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
-          />
-          <p className="text-xs text-gray-400 mt-1">
-            Courses below this enrolment count are considered "low enrolment" for risk assessment.
-          </p>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-3 mt-4">
-        <Button onClick={handleSave}>Save thresholds</Button>
-        {saved && <span className="text-sm text-green-600 font-medium">Saved!</span>}
-      </div>
-
-      <div className="mt-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-500">
-        <strong>How it works:</strong> Courses at <strong>0 days</strong> with low enrolment → "Cancel".
-        Courses within <strong>{config.atRiskDays} day{config.atRiskDays !== 1 ? "s" : ""}</strong> with
-        fewer than <strong>{config.minEnrolments}</strong> enrolments → "At Risk".
-      </div>
-    </div>
   );
 }
 
