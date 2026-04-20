@@ -176,17 +176,18 @@ public class PlannedCoursesController : ControllerBase
     /// Publish a planned course to Scrum.org.
     /// Requires E-commerce gateway to be published first (needs the WooCommerce product URL).
     /// Creates a course listing via Playwright browser automation.
+    /// If body contains { externalUrl } the automation is skipped and the URL is recorded directly.
     /// </summary>
     [HttpPost("{id}/publish/scrumorg")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> PublishScrumOrg(int id)
+    public async Task<IActionResult> PublishScrumOrg(int id, [FromBody] PublishScrumOrgRequest? body = null)
     {
         try
         {
-            var result = await _mediator.Send(new PublishScrumOrgCommand(id));
+            var result = await _mediator.Send(new PublishScrumOrgCommand(id, body?.ExternalUrl));
             return Ok(result);
         }
         catch (KeyNotFoundException ex)
@@ -203,3 +204,5 @@ public class PlannedCoursesController : ControllerBase
         }
     }
 }
+
+public record PublishScrumOrgRequest(string? ExternalUrl = null);

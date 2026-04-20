@@ -52,31 +52,39 @@ public class PublishScrumOrgCommandHandler
         if (existingScrumOrg != null)
             throw new ConflictException("Scrum.org gateway already published for this course");
 
-        var trainer = await _trainerRepo.GetByIdAsync(course.TrainerId, ct)
-            ?? throw new KeyNotFoundException($"Trainer {course.TrainerId} not found");
-
-        var result = await _scrumOrgPublish.CreateListingAsync(new ScrumOrgPublishRequest
+        string listingUrl;
+        if (request.ExternalUrl is { Length: > 0 })
         {
-            CourseType = course.CourseType,
-            StartDate = course.StartDate,
-            EndDate = course.EndDate,
-            TrainerName = trainer.Name,
-            RegistrationUrl = ecommercePub.ExternalUrl ?? ""
-        }, ct);
-
-        if (result == null)
-            throw new InvalidOperationException("Failed to create Scrum.org listing. Check logs for details.");
-
-        // Update the WooCommerce product with the Scrum.org listing URL
-        if (ecommercePub.WoocommerceProductId.HasValue)
+            // Pre-created listing — skip automation, just record
+            listingUrl = request.ExternalUrl;
+        }
+        else
         {
-            await _wooPublish.UpdateProductMetaAsync(
-                ecommercePub.WoocommerceProductId.Value,
-                new Dictionary<string, string>
-                {
-                    ["scrumorg_listing_url"] = result.ListingUrl
-                },
-                ct);
+            var trainer = await _trainerRepo.GetByIdAsync(course.TrainerId, ct)
+                ?? throw new KeyNotFoundException($"Trainer {course.TrainerId} not found");
+
+            var result = await _scrumOrgPublish.CreateListingAsync(new ScrumOrgPublishRequest
+            {
+                CourseType = course.CourseType,
+                StartDate = course.StartDate,
+                EndDate = course.EndDate,
+                TrainerName = trainer.Name,
+                RegistrationUrl = ecommercePub.ExternalUrl ?? ""
+            }, ct);
+
+            if (result == null)
+                throw new InvalidOperationException("Failed to create Scrum.org listing. Check logs for details.");
+
+            listingUrl = result.ListingUrl;
+
+            // Update the WooCommerce product with the Scrum.org listing URL
+            if (ecommercePub.WoocommerceProductId.HasValue)
+            {
+                await _wooPublish.UpdateProductMetaAsync(
+                    ecommercePub.WoocommerceProductId.Value,
+                    new Dictionary<string, string> { ["scrumorg_listing_url"] = listingUrl },
+                    ct);
+            }
         }
 
         await _pubRepo.InsertAsync(new CoursePublication
@@ -84,12 +92,12 @@ public class PublishScrumOrgCommandHandler
             PlannedCourseId = request.PlannedCourseId,
             Gateway = "scrumorg",
             PublishedAt = DateTime.UtcNow,
-            ExternalUrl = result.ListingUrl
+            ExternalUrl = listingUrl
         }, ct);
 
         return new ScrumOrgPublishResultDto
         {
-            ListingUrl = result.ListingUrl,
+            ListingUrl = listingUrl,
             Status = "created"
         };
     }

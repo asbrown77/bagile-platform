@@ -3,4 +3,7 @@ using MediatR;
 
 namespace Bagile.Application.PlannedCourses.Commands.PublishScrumOrg;
 
-public record PublishScrumOrgCommand(int PlannedCourseId) : IRequest<ScrumOrgPublishResultDto>;
+/// <param name="ExternalUrl">
+/// When supplied, skip the Playwright automation and record this pre-created listing URL directly.
+/// </param>
+public record PublishScrumOrgCommand(int PlannedCourseId, string? ExternalUrl = null) : IRequest<ScrumOrgPublishResultDto>;
