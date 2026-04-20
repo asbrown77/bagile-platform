@@ -610,9 +610,10 @@ function SidePanel({ event, onClose, onPublish, onCancel, onEdit, shopTemplateSk
                         "Create in shop →"
                       )}
                     </Button>
-                    {shopTemplateSku && (
-                      <span className="text-xs text-gray-400">copies {shopTemplateSku}</span>
-                    )}
+                    {/* Reserve fixed height to prevent layout shift when SKU loads */}
+                    <span className="text-xs text-gray-400 min-h-[1rem]">
+                      {shopTemplateSku ? `copies ${shopTemplateSku}` : ""}
+                    </span>
                   </div>
                 ) : null}
               </span>
