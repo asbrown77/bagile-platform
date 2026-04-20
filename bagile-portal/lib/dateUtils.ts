@@ -29,9 +29,10 @@ export function getWeekStart(d: Date): Date {
   return monday;
 }
 
-/** Advance a YYYY-MM-DD string by one day. Used by FullCalendar (dayGrid end is exclusive). */
+/** Advance a YYYY-MM-DD string by one day. Used by FullCalendar (dayGrid end is exclusive).
+ *  Must construct the Date in LOCAL time — new Date("YYYY-MM-DD") parses as UTC midnight,
+ *  which in BST (UTC+1) gives the prior day locally, causing getDate() to return the wrong value. */
 export function addOneDayStr(dateStr: string): string {
-  const d = new Date(dateStr);
-  d.setDate(d.getDate() + 1);
-  return toDateStr(d);
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return toDateStr(new Date(y, m - 1, d + 1));
 }
