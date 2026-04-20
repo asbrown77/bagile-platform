@@ -45,12 +45,18 @@ public class PublishScrumOrgCommandHandler
             request.PlannedCourseId, "ecommerce", ct)
             ?? throw new InvalidOperationException("Must publish to E-commerce first");
 
-        // Check scrumorg not already published
+        // Check scrumorg not already published.
+        // Rows with no ExternalUrl are unpublished placeholders — allow re-attempt.
+        // Only block if the row has a real URL (meaning it was successfully published).
         var existingScrumOrg = await _pubRepo.GetByPlannedCourseAndGatewayAsync(
             request.PlannedCourseId, "scrumorg", ct);
 
-        if (existingScrumOrg != null)
+        if (existingScrumOrg?.ExternalUrl != null)
             throw new ConflictException("Scrum.org gateway already published for this course");
+
+        // Remove the placeholder so we can insert a fresh row with the real URL below
+        if (existingScrumOrg != null)
+            await _pubRepo.DeleteByPlannedCourseAndGatewayAsync(request.PlannedCourseId, "scrumorg", ct);
 
         string listingUrl;
         if (request.ExternalUrl is { Length: > 0 })
