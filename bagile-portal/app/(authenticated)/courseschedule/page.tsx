@@ -993,8 +993,8 @@ function CalendarContent() {
   }, [apiKey]);
 
   // Load list events when switching to list view or date range changes
-  useEffect(() => {
-    if (viewMode !== "list" || !apiKey) return;
+  const loadListEvents = useCallback(async () => {
+    if (!apiKey) return;
     setListLoading(true);
     const today = new Date().toISOString().split("T")[0];
     let from: string;
@@ -1006,7 +1006,6 @@ function CalendarContent() {
       from = "2020-01-01";
       to = "2030-12-31";
     } else {
-      // It's a year string e.g. "2025"
       from = `${listDateRange}-01-01`;
       to = `${listDateRange}-12-31`;
     }
@@ -1015,7 +1014,12 @@ function CalendarContent() {
       .then(setListEvents)
       .catch((err) => setListError(err instanceof Error ? err.message : "Failed to load courses"))
       .finally(() => setListLoading(false));
-  }, [viewMode, apiKey, listDateRange]);
+  }, [apiKey, listDateRange]);
+
+  useEffect(() => {
+    if (viewMode !== "list") return;
+    loadListEvents();
+  }, [viewMode, loadListEvents]);
 
   // Load calendar events when range changes
   const loadEvents = useCallback(async () => {
@@ -1181,12 +1185,7 @@ function CalendarContent() {
     try {
       await publishGateway(apiKey, eventId, gateway);
       setToast({ message: `Published to ${gateway}`, type: "success" });
-      await loadEvents();
-      // Refresh selected event if it's the same one
-      if (selectedEvent?.id === eventId) {
-        const refreshed = events.find((e) => e.id === eventId);
-        if (refreshed) setSelectedEvent(refreshed);
-      }
+      await Promise.all([loadEvents(), loadListEvents()]);
     } catch (err) {
       setToast({ message: err instanceof Error ? err.message : "Publish failed", type: "error" });
     }
@@ -1202,7 +1201,7 @@ function CalendarContent() {
         await updatePlannedCourse(apiKey, numericId, { status: "cancelled" });
       }
       setToast({ message: "Course cancelled", type: "success" });
-      await loadEvents();
+      await Promise.all([loadEvents(), loadListEvents()]);
     } catch (err) {
       setToast({ message: err instanceof Error ? err.message : "Cancel failed", type: "error" });
     }
@@ -1215,14 +1214,21 @@ function CalendarContent() {
     setCurrentRange({ from, to });
   }
 
-  // After loadEvents completes, sync selectedEvent with latest data
+  // After any reload, sync selectedEvent with latest data from either source.
+  // Also handles the ecommerce ID change: planned-123 becomes schedule-* after shop publish.
   useEffect(() => {
-    if (selectedEvent) {
-      const updated = events.find((e) => e.id === selectedEvent.id);
-      if (updated) setSelectedEvent(updated);
-    }
+    if (!selectedEvent) return;
+    const all = [...events, ...listEvents];
+    const byId = all.find((e) => e.id === selectedEvent.id);
+    if (byId) { setSelectedEvent(byId); return; }
+    // ID changed (ecommerce publish: planned-* → schedule-*)
+    const byDetails = all.find(
+      (e) => e.courseType === selectedEvent.courseType &&
+             e.startDate.split("T")[0] === selectedEvent.startDate.split("T")[0]
+    );
+    if (byDetails) setSelectedEvent(byDetails);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [events]);
+  }, [events, listEvents]);
 
   // Fetch shop template SKU when a planned course panel opens (not yet in shop)
   useEffect(() => {
