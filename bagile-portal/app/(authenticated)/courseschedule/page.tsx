@@ -16,6 +16,7 @@ import {
   createPrivateCourse,
   publishGateway,
   updatePlannedCourse,
+  cancelCourseSchedule,
   formatDate,
   getShopTemplate,
 } from "@/lib/api";
@@ -1193,9 +1194,13 @@ function CalendarContent() {
 
   async function handleCancel(eventId: string) {
     if (!apiKey) return;
-    const numericId = eventId.replace(/\D/g, "");
+    const numericId = Number(eventId.replace(/\D/g, ""));
     try {
-      await updatePlannedCourse(apiKey, Number(numericId), { status: "cancelled" });
+      if (eventId.startsWith("schedule-")) {
+        await cancelCourseSchedule(apiKey, numericId);
+      } else {
+        await updatePlannedCourse(apiKey, numericId, { status: "cancelled" });
+      }
       setToast({ message: "Course cancelled", type: "success" });
       await loadEvents();
     } catch (err) {

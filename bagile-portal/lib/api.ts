@@ -1214,6 +1214,13 @@ export async function updatePlannedCourse(
   return apiRequest(`/api/planned-courses/${id}`, apiKey, { method: "PATCH", body: data });
 }
 
+export async function cancelCourseSchedule(
+  apiKey: string,
+  id: number,
+): Promise<unknown> {
+  return apiRequest(`/api/course-schedules/${id}/cancel`, apiKey, { method: "POST", body: {} });
+}
+
 export async function deletePlannedCourse(
   apiKey: string,
   id: number,

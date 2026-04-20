@@ -15,4 +15,5 @@ public record UpdatePlannedCourseCommand : IRequest<PlannedCourseDto?>
     public string? Notes { get; init; }
     public DateTime? DecisionDeadline { get; init; }
     public bool? IsPrivate { get; init; }
+    public string? Status { get; init; }
 }

@@ -37,6 +37,7 @@ public class UpdatePlannedCourseCommandHandler
         existing.Notes = request.Notes ?? existing.Notes;
         existing.DecisionDeadline = request.DecisionDeadline ?? existing.DecisionDeadline;
         existing.IsPrivate = request.IsPrivate ?? existing.IsPrivate;
+        existing.Status = request.Status ?? existing.Status;
 
         await _repo.UpdateAsync(request.Id, existing);
         return await _queries.GetByIdAsync(request.Id, ct);
