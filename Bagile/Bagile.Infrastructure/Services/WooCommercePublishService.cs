@@ -349,7 +349,7 @@ public class WooCommercePublishService : IWooCommercePublishService
             ["status"] = "draft",
             ["menu_order"] = int.Parse(request.StartDate.ToString("yyyyMMdd")),
             ["catalog_visibility"] = "visible",
-            ["description"] = GetStringProp(root, "description"),
+            ["description"] = UpdateDescriptionHeading(GetStringProp(root, "description"), productName),
             ["short_description"] = GetStringProp(root, "short_description"),
             ["regular_price"] = price,
             ["manage_stock"] = false,
@@ -640,6 +640,22 @@ public class WooCommercePublishService : IWooCommercePublishService
         }
 
         return new List<object>();
+    }
+
+    /// <summary>
+    /// Replaces the first &lt;h4&gt; in the description (which contains the template course's
+    /// name + stale date) with the correct heading for the new product.
+    /// </summary>
+    private static string UpdateDescriptionHeading(string description, string productName)
+    {
+        if (string.IsNullOrEmpty(description)) return description;
+
+        var match = Regex.Match(description, @"<h4>[^<]*</h4>", RegexOptions.IgnoreCase);
+        if (!match.Success) return description;
+
+        return description[..match.Index]
+            + $"<h4>{productName}</h4>"
+            + description[(match.Index + match.Length)..];
     }
 
     private static string GetStringProp(JsonElement element, string propertyName)

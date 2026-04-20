@@ -35,9 +35,10 @@ const COURSE_TYPE_NAMES: Record<string, string> = {
   PSFS:   'Professional Scrum Facilitation Skills',
   APS:    'Applying Professional Scrum',
   PSU:    'Professional Scrum with User Experience',
-  // AI Essentials courses — added Apr 2026
-  PSMAI:  'Professional Scrum Master with AI Essentials',
-  PSPOAI: 'Professional Scrum Product Owner with AI Essentials',
+  // AI Essentials courses — added Apr 2026.
+  // Scrum.org admin table title uses a dash: "Professional Scrum Master - AI Essentials"
+  PSMAI:  'Professional Scrum Master - AI Essentials',
+  PSPOAI: 'Professional Scrum Product Owner - AI Essentials',
 };
 
 export async function runScrumorgCreateCourse(
@@ -157,45 +158,63 @@ async function findAndCopyLatestCourse(
 ): Promise<void> {
   const fullCourseName = COURSE_TYPE_NAMES[courseType.toUpperCase()] ?? courseType;
 
-  // The admin table may be paginated — keep clicking "next" until we find a match or exhaust all pages
-  let pageNum = 1;
-  while (true) {
-    const rows = page.locator('table tbody tr');
-    const count = await rows.count();
+  // Two-pass search:
+  //   Pass 1: prefer the trainer's own most-recent course (best template for dates/settings).
+  //   Pass 2: fall back to any trainer's course of that type — used the first time a trainer
+  //           runs a new course type and has no personal history to copy from.
+  const passes: Array<{ label: string; match: (rowText: string) => boolean }> = [
+    {
+      label: `${fullCourseName} + ${trainerName}`,
+      match: (t) => t.includes(fullCourseName) && t.includes(trainerName),
+    },
+    {
+      label: `${fullCourseName} (any trainer)`,
+      match: (t) => t.includes(fullCourseName),
+    },
+  ];
 
-    for (let i = 0; i < count; i++) {
-      const row = rows.nth(i);
-      const rowText = await row.innerText();
+  for (const pass of passes) {
+    // Navigate back to page 1 of the admin table for each pass
+    await page.goto('https://www.scrum.org/admin/courses/manage', { waitUntil: 'networkidle' });
+    await page.waitForSelector('table tbody tr', { timeout: 15_000 });
 
-      if (rowText.includes(fullCourseName) && rowText.includes(trainerName)) {
-        // Navigate directly to the replicate URL — more reliable than toggling the dropdown
-        const replicateHref = await row.locator('a[href*="replicate"]').getAttribute('href').catch(() => null);
-        if (!replicateHref) throw new Error(`No replicate link found for row: ${rowText.substring(0, 100)}`);
+    let pageNum = 1;
+    while (true) {
+      const rows = page.locator('table tbody tr');
+      const count = await rows.count();
 
-        await page.goto(`https://www.scrum.org${replicateHref}`, { waitUntil: 'networkidle' });
+      for (let i = 0; i < count; i++) {
+        const row = rows.nth(i);
+        const rowText = await row.innerText();
 
-        // Confirmation page: "Are you sure you want to replicate Course...?"
-        const confirmBtn = page.locator('input[type="submit"][value="Copy"], button:has-text("Copy")').first();
-        await confirmBtn.waitFor({ state: 'visible', timeout: 10_000 });
-        await confirmBtn.click();
-        await page.waitForLoadState('networkidle');
-        return;
+        if (pass.match(rowText)) {
+          const replicateHref = await row.locator('a[href*="replicate"]').getAttribute('href').catch(() => null);
+          if (!replicateHref) throw new Error(`No replicate link for row: ${rowText.substring(0, 100)}`);
+
+          await page.goto(`https://www.scrum.org${replicateHref}`, { waitUntil: 'networkidle' });
+
+          const confirmBtn = page.locator('input[type="submit"][value="Copy"], button:has-text("Copy")').first();
+          await confirmBtn.waitFor({ state: 'visible', timeout: 10_000 });
+          await confirmBtn.click();
+          await page.waitForLoadState('networkidle');
+          return;
+        }
       }
+
+      const nextLink = page.locator('a[title="Go to next page"], a.pager__link--next, li.pager__item--next a').first();
+      const nextVisible = await nextLink.isVisible().catch(() => false);
+      if (!nextVisible) break;
+
+      pageNum++;
+      await nextLink.click();
+      await page.waitForLoadState('networkidle');
+
+      if (pageNum > 20) break; // safety limit
     }
-
-    // Try to go to the next page
-    const nextLink = page.locator('a[title="Go to next page"], a.pager__link--next, li.pager__item--next a').first();
-    const nextVisible = await nextLink.isVisible().catch(() => false);
-    if (!nextVisible) break;
-
-    pageNum++;
-    await nextLink.click();
-    await page.waitForLoadState('networkidle');
-
-    if (pageNum > 20) break; // safety limit
+    // Pass 1 exhausted — try pass 2
   }
 
-  throw new Error(`No course found for type "${courseType}" (${fullCourseName}) and trainer "${trainerName}"`);
+  throw new Error(`No course found for type "${courseType}" (${fullCourseName}) — tried trainer-specific and any-trainer search`);
 }
 
 async function editCopiedCourse(
