@@ -477,8 +477,9 @@ public class WooCommercePublishService : IWooCommercePublishService
             // MailChimp
             ["WooCommerceEventsMailchimpTags"] = mailchimpTags,
 
-            // Trainer selector (WooCommerce user ID for the trainer ACF field)
-            ["select_a_trainer"] = trainerWooUserId != null ? $"[\"{trainerWooUserId}\"]" : "",
+            // Trainer selector — ACF expects PHP array notation with single quotes, e.g. ['383']
+            // NOT JSON double-quote format ["383"] — ACF reads the raw stored string and won't match it
+            ["select_a_trainer"] = trainerWooUserId != null ? $"['{trainerWooUserId}']" : "[]",
         };
     }
 
