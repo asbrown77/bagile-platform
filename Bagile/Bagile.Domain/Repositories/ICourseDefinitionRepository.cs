@@ -14,6 +14,8 @@ namespace Bagile.Domain.Repositories
         Task UpdateBadgeUrlAsync(string code, string? badgeUrl);
         Task UpdateDurationAsync(string code, int durationDays);
         Task UpdateNameAsync(string code, string name);
+        Task UpdateProviderAsync(string code, string? provider);
+        Task<Dictionary<string, string?>> GetProviderMapAsync();
         Task<CourseDefinition> CreateAsync(string code, string name, int durationDays);
         Task<IEnumerable<string>> GetAliasesAsync(string code);
         Task AddAliasAsync(string code, string alias);

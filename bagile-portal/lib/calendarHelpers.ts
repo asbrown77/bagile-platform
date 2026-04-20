@@ -196,28 +196,41 @@ export function isLowEnrolment(
   return workingDaysUntil(event.startDate) <= thresholds.workingDays;
 }
 
-/** Scrum.org course types that need the scrum.org gateway. */
-const SCRUMORG_TYPES = new Set([
-  "PSM", "PSPO", "PSK", "PALE", "PALEBM", "EBM", "APSSD", "APS",
-  "PSMA", "PSPOA", "PSMAI", "PSPOAI", "PSFS",
-]);
+/** Normalise a course type code: uppercase, strip hyphens/underscores/spaces. */
+function normaliseCourseType(code: string): string {
+  return code.toUpperCase().replace(/[-_\s]/g, "");
+}
 
-/** ICP course types that need ICAgile gateway. */
-function isIcpCourseType(courseType: string): boolean {
-  return courseType.toUpperCase().startsWith("ICP");
+/**
+ * Look up the provider for a courseType from the course definitions list.
+ * Returns null if courseDefs not supplied or no match found.
+ */
+function resolveProvider(
+  courseType: string,
+  courseDefs?: { code: string; provider?: string | null }[]
+): string | null {
+  if (!courseDefs || courseDefs.length === 0) return null;
+  const key = normaliseCourseType(courseType);
+  const def = courseDefs.find((d) => normaliseCourseType(d.code) === key);
+  return def?.provider ?? null;
 }
 
 /**
  * Returns the applicable gateway types for a course.
  * Private courses have no public gateways (they are pre-confirmed B2B bookings).
- * Public courses: ecommerce always; scrum.org for Scrum.org course types; icagile for ICP.
+ * Public courses: ecommerce always; scrumorg/icagile when provider matches.
+ * Pass courseDefs to use DB-stored provider; falls back to ecommerce-only when omitted.
  */
-export function getApplicableGateways(courseType: string, isPrivate: boolean): string[] {
+export function getApplicableGateways(
+  courseType: string,
+  isPrivate: boolean,
+  courseDefs?: { code: string; provider?: string | null }[]
+): string[] {
   if (isPrivate) return [];
-  const key = courseType.toUpperCase().replace(/[-_\s]/g, "");
   const gateways = ["ecommerce"];
-  if (SCRUMORG_TYPES.has(key)) gateways.push("scrumorg");
-  if (isIcpCourseType(courseType)) gateways.push("icagile");
+  const provider = resolveProvider(courseType, courseDefs);
+  if (provider === "scrumorg") gateways.push("scrumorg");
+  if (provider === "icagile") gateways.push("icagile");
   return gateways;
 }
 
@@ -231,13 +244,18 @@ export function getShopGateway(isPrivate: boolean): string | null {
 
 /**
  * Returns the external listing gateway for a course ("scrumorg" | "icagile" | null).
- * Derived from courseType — private courses have no external gateway.
+ * Pass courseDefs to use DB-stored provider. Returns null when courseDefs not supplied
+ * or the course has no external gateway.
  */
-export function getExternalGateway(courseType: string, isPrivate: boolean): string | null {
+export function getExternalGateway(
+  courseType: string,
+  isPrivate: boolean,
+  courseDefs?: { code: string; provider?: string | null }[]
+): string | null {
   if (isPrivate) return null;
-  const key = courseType.toUpperCase().replace(/[-_\s]/g, "");
-  if (SCRUMORG_TYPES.has(key)) return "scrumorg";
-  if (isIcpCourseType(courseType)) return "icagile";
+  const provider = resolveProvider(courseType, courseDefs);
+  if (provider === "scrumorg") return "scrumorg";
+  if (provider === "icagile") return "icagile";
   return null;
 }
 

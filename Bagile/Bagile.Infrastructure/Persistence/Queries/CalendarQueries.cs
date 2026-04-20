@@ -25,8 +25,11 @@ public class CalendarQueries : ICalendarQueries
     {
         await using var conn = new NpgsqlConnection(_connectionString);
 
-        var planned = await GetPlannedCoursesAsync(conn, from, to, trainerId);
-        var live = await GetLiveCoursesAsync(conn, from, to, trainerId, _wooSiteUrl);
+        // Load provider map once for all course types (normalised key: uppercased, no hyphens/underscores).
+        var providers = await GetProviderMapAsync(conn);
+
+        var planned = await GetPlannedCoursesAsync(conn, from, to, trainerId, providers);
+        var live = await GetLiveCoursesAsync(conn, from, to, trainerId, _wooSiteUrl, providers);
 
         return planned.Concat(live).OrderBy(e => e.StartDate).ThenBy(e => e.CourseType);
     }
@@ -35,7 +38,8 @@ public class CalendarQueries : ICalendarQueries
         NpgsqlConnection conn,
         DateTime from,
         DateTime to,
-        int? trainerId)
+        int? trainerId,
+        Dictionary<string, string?> providers)
     {
         // Fetch planned courses with trainer info and publication status
         var sql = @"
@@ -75,7 +79,9 @@ public class CalendarQueries : ICalendarQueries
 
         return courses.Select(c =>
         {
-            var applicableGateways = GatewayConfig.GetGatewaysForCourseType(c.CourseType, c.IsPrivate);
+            var providerKey = c.CourseType.ToUpperInvariant().Replace("-", "").Replace("_", "");
+            var provider = providers.GetValueOrDefault(providerKey);
+            var applicableGateways = GatewayConfig.GetGatewaysForProvider(provider, c.IsPrivate);
             var coursePubs = pubs[c.Id].ToList();
 
             var gateways = applicableGateways.Select(g =>
@@ -118,7 +124,8 @@ public class CalendarQueries : ICalendarQueries
         DateTime from,
         DateTime to,
         int? trainerId,
-        string wooSiteUrl)
+        string wooSiteUrl,
+        Dictionary<string, string?> providers)
     {
         // For live courses, trainer is stored as free text (trainer_name).
         // We need to join to trainers table if trainerId filter is specified.
@@ -170,7 +177,9 @@ public class CalendarQueries : ICalendarQueries
         return courses.Select(c =>
         {
             var courseType = ExtractCourseType(c.Sku);
-            var applicableGateways = GatewayConfig.GetGatewaysForCourseType(courseType, isPrivate: !c.IsPublic);
+            var providerKey = courseType.ToUpperInvariant().Replace("-", "").Replace("_", "");
+            var provider = providers.GetValueOrDefault(providerKey);
+            var applicableGateways = GatewayConfig.GetGatewaysForProvider(provider, isPrivate: !c.IsPublic);
             var coursePubs = pubs[c.Id].ToList();
 
             // Legacy WooCommerce courses pre-date the publication tracking system.
@@ -216,6 +225,20 @@ public class CalendarQueries : ICalendarQueries
                 Gateways = gateways
             };
         });
+    }
+
+    /// <summary>
+    /// Load a normalised code → provider lookup from course_definitions.
+    /// Keys are uppercased with hyphens/underscores stripped to match SKU-extracted types.
+    /// </summary>
+    private static async Task<Dictionary<string, string?>> GetProviderMapAsync(NpgsqlConnection conn)
+    {
+        var rows = await conn.QueryAsync<(string Code, string? Provider)>(
+            "SELECT code, provider FROM bagile.course_definitions WHERE active = true;");
+        return rows.ToDictionary(
+            r => r.Code.ToUpperInvariant().Replace("-", "").Replace("_", ""),
+            r => r.Provider,
+            StringComparer.OrdinalIgnoreCase);
     }
 
     /// <summary>

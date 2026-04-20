@@ -18,7 +18,7 @@ public class CourseDefinitionsController : ControllerBase
     {
         var defs = await _repo.GetAllAsync();
         var result = defs.Select(d => new CourseDefResponse(
-            d.Id, d.Code, d.Name, d.DurationDays, d.Active, d.BadgeUrl));
+            d.Id, d.Code, d.Name, d.DurationDays, d.Active, d.BadgeUrl, d.Provider));
         return Ok(result);
     }
 
@@ -72,6 +72,25 @@ public class CourseDefinitionsController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>Update the provider for a course definition.</summary>
+    [HttpPatch("{code}/provider")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateProvider(string code, [FromBody] UpdateProviderRequest request, CancellationToken ct)
+    {
+        var validProviders = new[] { "scrumorg", "icagile", "bagile" };
+        if (request.Provider != null && !validProviders.Contains(request.Provider))
+            return BadRequest(new { error = $"provider must be one of: {string.Join(", ", validProviders)}, or null" });
+
+        var existing = await _repo.GetByCodeAsync(code);
+        if (existing is null)
+            return NotFound(new { error = $"Course definition '{code}' not found" });
+
+        await _repo.UpdateProviderAsync(code, request.Provider);
+        return NoContent();
+    }
+
     /// <summary>Create a new course definition.</summary>
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created)]
@@ -90,7 +109,7 @@ public class CourseDefinitionsController : ControllerBase
             return Conflict(new { error = $"Course definition '{request.Code}' already exists" });
 
         var created = await _repo.CreateAsync(request.Code.Trim().ToUpperInvariant(), request.Name.Trim(), request.DurationDays);
-        var response = new CourseDefResponse(created.Id, created.Code, created.Name, created.DurationDays, created.Active, created.BadgeUrl);
+        var response = new CourseDefResponse(created.Id, created.Code, created.Name, created.DurationDays, created.Active, created.BadgeUrl, created.Provider);
         return CreatedAtAction(nameof(GetAll), response);
     }
 
@@ -145,7 +164,7 @@ public class CourseDefinitionsController : ControllerBase
 
 // ── DTOs ─────────────────────────────────────────────────────
 
-public record CourseDefResponse(int Id, string Code, string Name, int DurationDays, bool Active, string? BadgeUrl);
+public record CourseDefResponse(int Id, string Code, string Name, int DurationDays, bool Active, string? BadgeUrl, string? Provider);
 
 public record UpdateBadgeRequest
 {
@@ -172,4 +191,9 @@ public record CreateCourseDefRequest
 public record AddAliasRequest
 {
     public string Alias { get; init; } = "";
+}
+
+public record UpdateProviderRequest
+{
+    public string? Provider { get; init; }
 }

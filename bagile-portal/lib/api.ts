@@ -1320,14 +1320,6 @@ export async function setServiceConfig(
   });
 }
 
-// ── Gateway Applicability ─────────────────────────────────
-
-/** Course types that are listed on scrum.org. PSMAI and PSPOAI are b-agile's own AI variants
- *  and are NOT scrum.org certified courses. All others in this set are. */
-export const SCRUMORG_APPLICABLE_COURSE_TYPES = new Set([
-  'PSM', 'PSMO', 'PSPO', 'PSK', 'PALE', 'EBM', 'PSPOA', 'PSMA', 'PSFS', 'APS', 'APSSD', 'PSU',
-]);
-
 // ── Course Definitions ────────────────────────────────────
 
 export interface CourseDef {
@@ -1337,8 +1329,15 @@ export interface CourseDef {
   durationDays: number;
   active: boolean;
   badgeUrl: string | null;
+  /** "scrumorg" | "icagile" | "bagile" | null. Drives gateway visibility. */
+  provider?: string | null;
   aliases?: string[];
 }
+
+/** @deprecated Use courseDefs[].provider instead. Kept for pages not yet migrated. */
+export const SCRUMORG_APPLICABLE_COURSE_TYPES = new Set([
+  'PSM', 'PSMO', 'PSPO', 'PSK', 'PALE', 'EBM', 'PSPOA', 'PSMA', 'PSFS', 'APS', 'APSSD', 'PSU',
+]);
 
 export async function getCourseDefinitions(apiKey: string): Promise<CourseDef[]> {
   return apiRequest<CourseDef[]>("/api/course-definitions", apiKey);
@@ -1362,6 +1361,13 @@ export async function updateCourseName(apiKey: string, code: string, name: strin
   await apiRequest<void>(`/api/course-definitions/${encodeURIComponent(code)}/name`, apiKey, {
     method: "PATCH",
     body: { name },
+  });
+}
+
+export async function updateCourseProvider(apiKey: string, code: string, provider: string | null): Promise<void> {
+  await apiRequest<void>(`/api/course-definitions/${encodeURIComponent(code)}/provider`, apiKey, {
+    method: "PATCH",
+    body: { provider },
   });
 }
 

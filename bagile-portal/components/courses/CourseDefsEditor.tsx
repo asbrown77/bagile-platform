@@ -2,7 +2,8 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   CourseDef, getCourseDefinitions, updateCourseBadgeUrl, updateCourseDuration,
-  updateCourseName, getCourseAliases, addCourseAlias, deleteCourseAlias, createCourseDefinition,
+  updateCourseName, updateCourseProvider, getCourseAliases, addCourseAlias, deleteCourseAlias,
+  createCourseDefinition,
 } from "@/lib/api";
 import { getBadgeSrc, extractCourseTypeFromSku } from "@/lib/calendarHelpers";
 import { Button } from "@/components/ui/Button";
@@ -93,6 +94,7 @@ export function CourseDefsEditor() {
               <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase w-24">Code</th>
               <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Name / Aliases</th>
               <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase w-24">Days</th>
+              <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase w-28">Provider</th>
               <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase w-20">Status</th>
             </tr>
           </thead>
@@ -157,6 +159,9 @@ function CourseDefRow({ def, apiKey, onRefresh }: { def: CourseDef; apiKey: stri
   const [nameSaving, setNameSaving] = useState(false);
   const [nameSaved, setNameSaved] = useState(false);
 
+  const [provider, setProvider] = useState<string | null>(def.provider ?? null);
+  const [providerSaving, setProviderSaving] = useState(false);
+
   const [aliases, setAliases] = useState<string[]>(def.aliases ?? []);
   const [addingAlias, setAddingAlias] = useState(false);
   const [newAlias, setNewAlias] = useState("");
@@ -200,6 +205,17 @@ function CourseDefRow({ def, apiKey, onRefresh }: { def: CourseDef; apiKey: stri
       setEditingName(false);
     } catch { setNameVal(def.name); setEditingName(false); }
     finally { setNameSaving(false); }
+  }
+
+  async function handleProviderChange(val: string) {
+    const newProvider = val === "" ? null : val;
+    setProviderSaving(true);
+    try {
+      await updateCourseProvider(apiKey, def.code, newProvider);
+      setProvider(newProvider);
+    } finally {
+      setProviderSaving(false);
+    }
   }
 
   async function handleAddAlias() {
@@ -297,6 +313,21 @@ function CourseDefRow({ def, apiKey, onRefresh }: { def: CourseDef; apiKey: stri
             {durationSaved ? <span className="text-green-600">✓ {duration}d</span> : `${duration}d`}
           </button>
         )}
+      </td>
+      {/* Provider */}
+      <td className="px-4 py-3 align-top pt-3">
+        <select
+          value={provider ?? ""}
+          onChange={(e) => handleProviderChange(e.target.value)}
+          disabled={providerSaving}
+          className="w-full border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:border-brand-400 disabled:opacity-50"
+          title="External certification provider"
+        >
+          <option value="">—</option>
+          <option value="scrumorg">scrumorg</option>
+          <option value="icagile">icagile</option>
+          <option value="bagile">bagile</option>
+        </select>
       </td>
       {/* Status */}
       <td className="px-4 py-3 align-top pt-4">

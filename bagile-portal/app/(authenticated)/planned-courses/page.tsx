@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { ClipboardList, CheckCircle2 } from "lucide-react";
 import { useApiKey } from "@/lib/hooks/useApiKey";
-import { PlannedCourse, CoursePublication, listPlannedCourses, formatDate, SCRUMORG_APPLICABLE_COURSE_TYPES } from "@/lib/api";
+import { PlannedCourse, CoursePublication, CourseDef, listPlannedCourses, getCourseDefinitions, formatDate } from "@/lib/api";
 import { getBadgeSrc, getCourseCodeDisplay, getCourseDisplayName, getStatusLabel, getStatusBadgeVariant } from "@/lib/calendarHelpers";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/Badge";
@@ -37,7 +37,7 @@ function GatewayBadge({ label, pub }: { label: string; pub: CoursePublication | 
   );
 }
 
-function PlannedCourseRow({ course }: { course: PlannedCourse }) {
+function PlannedCourseRow({ course, courseDefs }: { course: PlannedCourse; courseDefs: CourseDef[] }) {
   const courseType = course.courseType;
   const badgeSrc = getBadgeSrc(courseType);
   const codeDisplay = getCourseCodeDisplay(courseType);
@@ -46,7 +46,9 @@ function PlannedCourseRow({ course }: { course: PlannedCourse }) {
 
   const ecommercePub = course.publications?.find((p) => p.gateway === "ecommerce");
   const scrumorgPub = course.publications?.find((p) => p.gateway === "scrumorg");
-  const scrumorgApplicable = SCRUMORG_APPLICABLE_COURSE_TYPES.has(courseType.toUpperCase());
+  const key = courseType.toUpperCase().replace(/[-_\s]/g, "");
+  const def = courseDefs.find((d) => d.code.toUpperCase().replace(/[-_\s]/g, "") === key);
+  const scrumorgApplicable = def?.provider === "scrumorg";
 
   return (
     <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
@@ -107,6 +109,7 @@ function PlannedCourseRow({ course }: { course: PlannedCourse }) {
 export default function PlannedCoursesPage() {
   const apiKey = useApiKey() ?? "";
   const [courses, setCourses] = useState<PlannedCourse[]>([]);
+  const [courseDefs, setCourseDefs] = useState<CourseDef[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -114,8 +117,8 @@ export default function PlannedCoursesPage() {
     if (!apiKey) return;
     setLoading(true);
     setError("");
-    listPlannedCourses(apiKey)
-      .then(setCourses)
+    Promise.all([listPlannedCourses(apiKey), getCourseDefinitions(apiKey)])
+      .then(([c, defs]) => { setCourses(c); setCourseDefs(defs); })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }, [apiKey]);
@@ -164,7 +167,7 @@ export default function PlannedCoursesPage() {
                   </td>
                 </tr>
               )}
-              {!loading && courses.map((c) => <PlannedCourseRow key={c.id} course={c} />)}
+              {!loading && courses.map((c) => <PlannedCourseRow key={c.id} course={c} courseDefs={courseDefs} />)}
             </tbody>
           </table>
         </div>

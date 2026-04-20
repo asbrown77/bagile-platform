@@ -455,9 +455,10 @@ interface SidePanelProps {
   onCancel: (eventId: string) => Promise<void>;
   onEdit?: (eventId: string) => void;
   shopTemplateSku?: string | null;
+  courseDefs?: CourseDef[];
 }
 
-function SidePanel({ event, onClose, onPublish, onCancel, onEdit, shopTemplateSku }: SidePanelProps) {
+function SidePanel({ event, onClose, onPublish, onCancel, onEdit, shopTemplateSku, courseDefs }: SidePanelProps) {
   const [publishing, setPublishing] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -467,7 +468,7 @@ function SidePanel({ event, onClose, onPublish, onCancel, onEdit, shopTemplateSk
   const badgeSrc = getBadgeSrc(event.courseType);
   const displayName = getCourseDisplayName(event.courseType);
   const codeDisplay = getCourseCodeDisplay(event.courseType);
-  const applicableGateways = getApplicableGateways(event.courseType, event.isPrivate);
+  const applicableGateways = getApplicableGateways(event.courseType, event.isPrivate, courseDefs);
   const isCancelled = event.status === "cancelled";
 
   // Date range display
@@ -638,7 +639,7 @@ function SidePanel({ event, onClose, onPublish, onCancel, onEdit, shopTemplateSk
 
         {/* Gateway — Scrum.org or IC Agile, auto-derived from course type */}
         {(() => {
-          const extGw = getExternalGateway(event.courseType, event.isPrivate);
+          const extGw = getExternalGateway(event.courseType, event.isPrivate, courseDefs);
           if (!extGw) return null;
           const gwStatus = event.gateways.find((g) => g.type === extGw);
           const isPublished = gwStatus?.published || false;
@@ -740,14 +741,14 @@ function SidePanel({ event, onClose, onPublish, onCancel, onEdit, shopTemplateSk
 
 // ── Course List View ────────────────────────────────────────
 
-function CourseListRow({ event, onClick, riskConfig }: { event: CalendarEvent; onClick: () => void; riskConfig?: RiskConfig }) {
+function CourseListRow({ event, onClick, riskConfig, courseDefs }: { event: CalendarEvent; onClick: () => void; riskConfig?: RiskConfig; courseDefs?: CourseDef[] }) {
   const badgeSrc = getBadgeSrc(event.courseType);
   const codeDisplay = getCourseCodeDisplay(event.courseType);
   const initials = event.trainerInitials || trainerInitials(event.trainerName);
   const avatarColour = getTrainerColour(initials);
   const deadlineUrgent = isDeadlineUrgent(event.decisionDeadline);
   const isCancelled = event.status === "cancelled";
-  const applicableGateways = getApplicableGateways(event.courseType, event.isPrivate);
+  const applicableGateways = getApplicableGateways(event.courseType, event.isPrivate, courseDefs);
 
   const fmt = (d: string) =>
     new Date(d).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
@@ -852,11 +853,13 @@ function CourseListView({
   loading,
   onSelect,
   riskConfig,
+  courseDefs,
 }: {
   events: CalendarEvent[];
   loading: boolean;
   onSelect: (e: CalendarEvent) => void;
   riskConfig?: RiskConfig;
+  courseDefs?: CourseDef[];
 }) {
   if (loading) {
     return (
@@ -918,6 +921,7 @@ function CourseListView({
                 key={e.id}
                 event={e}
                 riskConfig={riskConfig}
+                courseDefs={courseDefs}
                 onClick={() => {
                   if (e.isPrivate && e.id.startsWith("schedule-")) {
                     window.location.href = `/courses/${e.id.replace("schedule-", "")}`;
@@ -1449,6 +1453,7 @@ function CalendarContent() {
             loading={listLoading}
             onSelect={setSelectedEvent}
             riskConfig={riskConfig}
+            courseDefs={courseDefs}
           />
         </>
       )}
@@ -1461,6 +1466,7 @@ function CalendarContent() {
         onCancel={handleCancel}
         onEdit={handleOpenEdit}
         shopTemplateSku={shopTemplateSku}
+        courseDefs={courseDefs}
       />
 
       {/* Add / Edit course modal */}

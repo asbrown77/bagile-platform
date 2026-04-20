@@ -14,18 +14,21 @@ public class CourseDefinitionRepository : ICourseDefinitionRepository
         _connStr = connStr;
     }
 
+    private const string SelectColumns =
+        "id, code, name, description, duration_days AS DurationDays, active, badge_url AS BadgeUrl, provider AS Provider";
+
     public async Task<IEnumerable<CourseDefinition>> GetAllAsync()
     {
         await using var conn = new NpgsqlConnection(_connStr);
         return await conn.QueryAsync<CourseDefinition>(
-            "SELECT id, code, name, description, duration_days AS DurationDays, active, badge_url AS BadgeUrl FROM bagile.course_definitions ORDER BY code;");
+            $"SELECT {SelectColumns} FROM bagile.course_definitions ORDER BY code;");
     }
 
     public async Task<CourseDefinition?> GetByCodeAsync(string code)
     {
         await using var conn = new NpgsqlConnection(_connStr);
         return await conn.QueryFirstOrDefaultAsync<CourseDefinition>(
-            "SELECT id, code, name, description, duration_days AS DurationDays, active, badge_url AS BadgeUrl FROM bagile.course_definitions WHERE code = @code;",
+            $"SELECT {SelectColumns} FROM bagile.course_definitions WHERE code = @code;",
             new { code });
     }
 
@@ -53,13 +56,36 @@ public class CourseDefinitionRepository : ICourseDefinitionRepository
             new { code, name });
     }
 
+    public async Task UpdateProviderAsync(string code, string? provider)
+    {
+        await using var conn = new NpgsqlConnection(_connStr);
+        await conn.ExecuteAsync(
+            "UPDATE bagile.course_definitions SET provider = @provider WHERE code = @code;",
+            new { code, provider });
+    }
+
+    /// <summary>
+    /// Returns a dictionary of normalised code → provider for all active definitions.
+    /// Keys are uppercased with hyphens/underscores stripped to match SKU-extracted types.
+    /// </summary>
+    public async Task<Dictionary<string, string?>> GetProviderMapAsync()
+    {
+        await using var conn = new NpgsqlConnection(_connStr);
+        var rows = await conn.QueryAsync<(string Code, string? Provider)>(
+            "SELECT code, provider FROM bagile.course_definitions WHERE active = true;");
+        return rows.ToDictionary(
+            r => r.Code.ToUpperInvariant().Replace("-", "").Replace("_", ""),
+            r => r.Provider,
+            StringComparer.OrdinalIgnoreCase);
+    }
+
     public async Task<CourseDefinition> CreateAsync(string code, string name, int durationDays)
     {
         await using var conn = new NpgsqlConnection(_connStr);
         return await conn.QuerySingleAsync<CourseDefinition>(
-            @"INSERT INTO bagile.course_definitions (code, name, duration_days, active)
-              VALUES (@code, @name, @durationDays, true)
-              RETURNING id, code, name, description, duration_days AS DurationDays, active, badge_url AS BadgeUrl;",
+            $@"INSERT INTO bagile.course_definitions (code, name, duration_days, active)
+               VALUES (@code, @name, @durationDays, true)
+               RETURNING {SelectColumns};",
             new { code, name, durationDays });
     }
 

@@ -16,6 +16,11 @@ namespace Bagile.Domain.Entities
         public decimal? BasePrice { get; set; }
         public bool Active { get; set; } = true;
         public string? BadgeUrl { get; set; }
+        /// <summary>
+        /// External certification provider. "scrumorg" | "icagile" | "bagile" | null.
+        /// Drives gateway visibility in the calendar — replaces hardcoded type sets.
+        /// </summary>
+        public string? Provider { get; set; }
     }
 
 }
