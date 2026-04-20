@@ -968,6 +968,7 @@ function CalendarContent() {
   const [decisionFilter, setDecisionFilter] = useState(false);
   const [listDateRange, setListDateRange] = useState("upcoming");
   const [showImportModal, setShowImportModal] = useState(false);
+  const [calendarRefreshKey, setCalendarRefreshKey] = useState(0);
   const [courseDefs, setCourseDefs] = useState<CourseDef[]>([]);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
 
@@ -1096,7 +1097,7 @@ function CalendarContent() {
     // FullCalendar dayGrid end is exclusive, so add 1 day
     end: addOneDayStr(e.endDate.split("T")[0]),
     allDay: true,
-    extendedProps: { calendarEvent: e } as FCEventExtended,
+    extendedProps: { calendarEvent: e, _v: calendarRefreshKey } as FCEventExtended,
     display: "block" as const,
     backgroundColor: "transparent",
     borderColor: "transparent",
@@ -1186,6 +1187,7 @@ function CalendarContent() {
       await publishGateway(apiKey, eventId, gateway);
       setToast({ message: `Published to ${gateway}`, type: "success" });
       await Promise.all([loadEvents(), loadListEvents()]);
+      setCalendarRefreshKey((k) => k + 1);
     } catch (err) {
       setToast({ message: err instanceof Error ? err.message : "Publish failed", type: "error" });
     }
@@ -1202,6 +1204,7 @@ function CalendarContent() {
       }
       setToast({ message: "Course cancelled", type: "success" });
       await Promise.all([loadEvents(), loadListEvents()]);
+      setCalendarRefreshKey((k) => k + 1);
     } catch (err) {
       setToast({ message: err instanceof Error ? err.message : "Cancel failed", type: "error" });
     }
