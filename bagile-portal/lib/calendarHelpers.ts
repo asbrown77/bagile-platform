@@ -202,17 +202,42 @@ function normaliseCourseType(code: string): string {
 }
 
 /**
+ * WooCommerce SKU shorthands → normalised canonical course_definitions code.
+ * These mirror the entries in BADGE_MAP / COURSE_NAMES so alias resolution stays
+ * in sync without extra API calls.
+ */
+const WOOCOMMERCE_ALIAS_MAP: Record<string, string> = {
+  EBM:  "PALEBM", // PAL-EBM on WooCommerce is listed as EBM
+  PAL:  "PALE",   // PAL-E shorthand
+  PSMO: "PSM",    // occasional WooCommerce PSM variant
+};
+
+/**
  * Look up the provider for a courseType from the course definitions list.
+ * Tries: 1) direct normalised code match, 2) static WooCommerce alias map,
+ * 3) aliases array on each CourseDef (populated in CourseDefsEditor context).
  * Returns null if courseDefs not supplied or no match found.
  */
 function resolveProvider(
   courseType: string,
-  courseDefs?: { code: string; provider?: string | null }[]
+  courseDefs?: { code: string; provider?: string | null; aliases?: string[] }[]
 ): string | null {
   if (!courseDefs || courseDefs.length === 0) return null;
   const key = normaliseCourseType(courseType);
-  const def = courseDefs.find((d) => normaliseCourseType(d.code) === key);
-  return def?.provider ?? null;
+  // 1. Direct match
+  const direct = courseDefs.find((d) => normaliseCourseType(d.code) === key);
+  if (direct) return direct.provider ?? null;
+  // 2. Static WooCommerce alias map
+  const canonical = WOOCOMMERCE_ALIAS_MAP[key];
+  if (canonical) {
+    const aliased = courseDefs.find((d) => normaliseCourseType(d.code) === canonical);
+    if (aliased) return aliased.provider ?? null;
+  }
+  // 3. aliases[] on each def (present when loaded via CourseDefsEditor)
+  const byAlias = courseDefs.find((d) =>
+    d.aliases?.some((a) => normaliseCourseType(a) === key)
+  );
+  return byAlias?.provider ?? null;
 }
 
 /**
