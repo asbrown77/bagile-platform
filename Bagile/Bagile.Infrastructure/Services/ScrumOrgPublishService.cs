@@ -15,7 +15,9 @@ namespace Bagile.Infrastructure.Services;
 /// </summary>
 public class ScrumOrgPublishService : IScrumOrgPublishService
 {
-    private static readonly HttpClient _httpClient = new();
+    // Playwright automation can take several minutes for complex course pages.
+    // Default HttpClient timeout is 100 s which is too short — use 10 minutes.
+    private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromMinutes(10) };
 
     private readonly ILogger<ScrumOrgPublishService> _logger;
     private readonly string _baseUrl;
