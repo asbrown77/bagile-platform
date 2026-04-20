@@ -23,18 +23,21 @@ export interface ScrumOrgCreateCourseOutput {
 
 // Maps portal course type codes → full names used in scrum.org course management table
 const COURSE_TYPE_NAMES: Record<string, string> = {
-  APSSD: 'Applying Professional Scrum for Software Development',
-  PSM:   'Professional Scrum Master',
-  PSMO:  'Professional Scrum Master',
-  PSPO:  'Professional Scrum Product Owner',
-  PSK:   'Professional Scrum with Kanban',
-  PALE:  'Professional Agile Leadership - Essentials',
-  EBM:   'Professional Agile Leadership - Evidence Based Management',
-  PSPOA: 'Professional Scrum Product Owner - Advanced',
-  PSMA:  'Professional Scrum Master - Advanced',
-  PSFS:  'Professional Scrum Facilitation Skills',
-  APS:   'Applying Professional Scrum',
-  PSU:   'Professional Scrum with User Experience',
+  APSSD:  'Applying Professional Scrum for Software Development',
+  PSM:    'Professional Scrum Master',
+  PSMO:   'Professional Scrum Master',
+  PSPO:   'Professional Scrum Product Owner',
+  PSK:    'Professional Scrum with Kanban',
+  PALE:   'Professional Agile Leadership - Essentials',
+  EBM:    'Professional Agile Leadership - Evidence Based Management',
+  PSPOA:  'Professional Scrum Product Owner - Advanced',
+  PSMA:   'Professional Scrum Master - Advanced',
+  PSFS:   'Professional Scrum Facilitation Skills',
+  APS:    'Applying Professional Scrum',
+  PSU:    'Professional Scrum with User Experience',
+  // AI Essentials courses — added Apr 2026
+  PSMAI:  'Professional Scrum Master with AI Essentials',
+  PSPOAI: 'Professional Scrum Product Owner with AI Essentials',
 };
 
 export async function runScrumorgCreateCourse(
