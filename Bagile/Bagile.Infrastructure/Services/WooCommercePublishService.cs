@@ -477,9 +477,10 @@ public class WooCommercePublishService : IWooCommercePublishService
             // MailChimp
             ["WooCommerceEventsMailchimpTags"] = mailchimpTags,
 
-            // Trainer selector — ACF expects PHP array notation with single quotes, e.g. ['383']
-            // NOT JSON double-quote format ["383"] — ACF reads the raw stored string and won't match it
-            ["select_a_trainer"] = trainerWooUserId != null ? $"['{trainerWooUserId}']" : "[]",
+            // Trainer selector — ACF requires a PHP-serialized array (a:1:{i:0;s:3:"383";}).
+            // WooCommerce REST API serializes a JSON array value as PHP array automatically.
+            // Must be a real C# array (not a string) so JsonSerializer emits ["383"], not "['383']".
+            ["select_a_trainer"] = (object)(trainerWooUserId != null ? new[] { trainerWooUserId } : Array.Empty<string>()),
         };
     }
 
