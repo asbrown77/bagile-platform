@@ -2,28 +2,20 @@
 
 ## Known Bugs — Pick Up Next Sprint (logged 17 Apr 2026)
 
-### BUG-1: Multi-ticket sync — Maxwell Gravelle missing
-- **Order:** NobleProg #12874, qty: 2, attendees: Olorundurotimi Ojomo + Maxwell Gravelle
-- **Symptom:** Platform shows Ojomo but NOT Gravelle. Should show 8 attendees, shows 7.
-- **FooEvents:** Ticket #12899728328 exists for Gravelle — just not synced to platform.
-- **Root cause (suspected):** Multi-ticket orders (qty > 1) only sync the first attendee.
-- **Fix needed:** Enrolment sync logic — iterate all tickets on a multi-qty order, not just ticket[0].
+### ~~BUG-1: Multi-ticket sync — Maxwell Gravelle missing~~ FIXED etl-v1.12.3
+- Replaced Math.Min truncation in WooOrderParser with full-iteration logic. Should self-correct on next ETL cycle.
+- **Verify:** Check Maxwell Gravelle appears on NobleProg PSM course after next ETL run.
 
-### BUG-2: Multi-ticket sync — PSPO-AI 31 Mar missing attendees
-- **Order:** #12902, qty: 5, 5 attendees in FooEvents but only 2 show on platform.
-- **Same root cause as BUG-1** — multi-ticket sync drops attendees 3–5.
-- Fix BUG-1 and retest this order.
+### ~~BUG-2: Multi-ticket sync — PSPO-AI 31 Mar missing attendees~~ FIXED etl-v1.12.3
+- Same fix as BUG-1. Verify order #12902 shows all 5 attendees after next ETL run.
 
-### BUG-3: cancel_course endpoint returns 500
-- **Endpoint:** `DELETE` or cancel action, schedule ID 90 (PSFS 4 May course)
-- **Symptom:** Returns 500 — no useful error surfaced to caller.
-- **Workaround used:** Set WooCommerce product to `outofstock` directly via REST API.
-- **Fix needed:** Investigate server logs for schedule ID 90 cancellation, fix underlying error, add proper error response.
+### ~~BUG-3: cancel_course endpoint returns 500~~ FIXED api-v4.5.4
+- Controller now has try/catch returning Problem() with exception message. Handler null-checks before UpdateStatusAsync.
+- **Note:** Root cause for schedule ID 90 specifically not yet confirmed — fix ensures error is now surfaced rather than silent 500.
 
-### BUG-4: GET /planned-courses endpoint + portal UI missing
-- **Context:** `planned_courses` table exists, APSSD-080626-AB added (id: 1) via POST endpoint.
-- **Missing:** `GET /api/planned-courses` list endpoint + portal page to view/manage planned courses.
-- **Note:** POST (create) works. Read and UI are the gap.
+### ~~BUG-4: GET /planned-courses endpoint + portal UI missing~~ FIXED api-v4.5.4 + portal-v6.5.22
+- GET /api/planned-courses live, ordered by start_date with trainer name via LEFT JOIN.
+- Portal: Planned Courses page added to sidebar under Operate.
 
 ### INFRA-1: GHCR PAT expired on Hetzner server
 - **Symptom:** Docker pulls from `ghcr.io` fail — PAT has expired.
@@ -32,6 +24,40 @@
   ssh root@142.132.227.7
   echo 'NEW_PAT_HERE' | docker login ghcr.io -u asbrown77 --password-stdin
   ```
+
+---
+
+## Session 20 Apr 2026 — Course Schedule Polish + Bug Fixes
+
+**Status:** Complete — deployed portal-v1.3.0, api-v4.5.25
+
+### What was built
+
+**Decision due filter pill**
+- Promoted "Decision due" from a static legend dot to a clickable toggle pill
+- When active: filters to courses where `decisionDeadline` is set and is today or in the future
+- Matches style of existing status pills (red-outlined when active)
+- Added `decisionFilter` state + filter logic in `applyFilters`
+
+**List view: Public/Private column**
+- Removed padlock icon from course code cell in list view (still kept on calendar blocks)
+- Added dedicated "Type" column after course code: shows "Private" (amber) or "Public" (grey)
+- Hidden on mobile (`hidden sm:table-cell`)
+
+**Cancel button broken for live courses (Bug Fix)**
+- Root cause: `handleCancel` extracted numeric ID and always called `PATCH /api/planned-courses/{id}` — but live courses have `schedule-*` IDs from `course_schedules`, not `planned_courses`
+- Fix: branch on ID prefix — `schedule-*` → `POST /api/course-schedules/{id}/cancel`, `planned-*` → `PATCH /api/planned-courses/{id}`
+- Second root cause: `UpdatePlannedCourseCommand` had no `Status` field, so planned-course cancels were silently ignored — added `Status?` to command and handler
+
+**Gateway status doesn't refresh after publish (Bug Fix)**
+- Root cause 1: stale closure — `handlePublish` manually searched `events` immediately after `await loadEvents()`, but React hadn't applied the `setEvents(data)` update yet
+- Root cause 2: `listEvents` never reloaded after publish — only `loadEvents` (calendar) was called
+- Root cause 3: ecommerce publish changes event ID (`planned-123` → `schedule-*`), so sync-by-ID fails
+- Fix: extracted `loadListEvents` as a reusable callback; `handlePublish` and `handleCancel` both call `Promise.all([loadEvents(), loadListEvents()])`; sync `useEffect` now searches `[...events, ...listEvents]` and falls back to courseType+startDate match if ID not found
+
+### Lessons learned
+
+**Portal deploy requires a `portal-v*` tag** — the CI workflow only runs the SSH deploy step on `portal-v*` tags or `workflow_dispatch`. Pushes to `main` build the Docker image but never restart the server. Always push a `portal-v*` tag after portal changes, not just `main`.
 
 ---
 
