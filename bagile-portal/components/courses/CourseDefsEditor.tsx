@@ -94,7 +94,7 @@ export function CourseDefsEditor() {
               <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase w-24">Code</th>
               <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Name / Aliases</th>
               <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase w-24">Days</th>
-              <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase w-32">Provider / Gateway</th>
+              <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase w-28">Provider</th>
               <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase w-20">Status</th>
             </tr>
           </thead>
@@ -161,6 +161,7 @@ function CourseDefRow({ def, apiKey, onRefresh }: { def: CourseDef; apiKey: stri
 
   const [provider, setProvider] = useState<string | null>(def.provider ?? null);
   const [providerSaving, setProviderSaving] = useState(false);
+  const [editingProvider, setEditingProvider] = useState(false);
 
   const [aliases, setAliases] = useState<string[]>(def.aliases ?? []);
   const [addingAlias, setAddingAlias] = useState(false);
@@ -210,6 +211,7 @@ function CourseDefRow({ def, apiKey, onRefresh }: { def: CourseDef; apiKey: stri
   async function handleProviderChange(val: string) {
     const newProvider = val === "" ? null : val;
     setProviderSaving(true);
+    setEditingProvider(false);
     try {
       await updateCourseProvider(apiKey, def.code, newProvider);
       setProvider(newProvider);
@@ -217,6 +219,12 @@ function CourseDefRow({ def, apiKey, onRefresh }: { def: CourseDef; apiKey: stri
       setProviderSaving(false);
     }
   }
+
+  const PROVIDER_LABELS: Record<string, { label: string; colour: string }> = {
+    scrumorg: { label: "Scrum.org", colour: "bg-blue-50 text-blue-700" },
+    icagile:  { label: "IC Agile",  colour: "bg-purple-50 text-purple-700" },
+    bagile:   { label: "BAgile",    colour: "bg-orange-50 text-orange-700" },
+  };
 
   async function handleAddAlias() {
     const trimmed = newAlias.trim();
@@ -315,19 +323,39 @@ function CourseDefRow({ def, apiKey, onRefresh }: { def: CourseDef; apiKey: stri
         )}
       </td>
       {/* Provider */}
-      <td className="px-4 py-3 align-top pt-3">
-        <select
-          value={provider ?? ""}
-          onChange={(e) => handleProviderChange(e.target.value)}
-          disabled={providerSaving}
-          className="w-full border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:border-brand-400 disabled:opacity-50"
-          title="External certification provider — determines which gateway is shown on the course schedule"
-        >
-          <option value="">— None</option>
-          <option value="scrumorg">Scrum.org</option>
-          <option value="icagile">IC Agile</option>
-          <option value="bagile">BAgile</option>
-        </select>
+      <td className="px-4 py-3 align-top pt-4">
+        {editingProvider ? (
+          <select
+            autoFocus
+            value={provider ?? ""}
+            onChange={(e) => handleProviderChange(e.target.value)}
+            onBlur={() => setEditingProvider(false)}
+            disabled={providerSaving}
+            className="border border-brand-400 rounded px-2 py-1 text-xs focus:outline-none disabled:opacity-50"
+          >
+            <option value="">— None</option>
+            <option value="scrumorg">Scrum.org</option>
+            <option value="icagile">IC Agile</option>
+            <option value="bagile">BAgile</option>
+          </select>
+        ) : (
+          <button
+            onClick={() => setEditingProvider(true)}
+            disabled={providerSaving}
+            title="Click to change provider"
+            className="disabled:opacity-50"
+          >
+            {providerSaving ? (
+              <span className="text-xs text-gray-400">Saving…</span>
+            ) : provider && PROVIDER_LABELS[provider] ? (
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${PROVIDER_LABELS[provider].colour} hover:opacity-80`}>
+                {PROVIDER_LABELS[provider].label}
+              </span>
+            ) : (
+              <span className="text-xs text-gray-400 hover:text-brand-600">— set provider</span>
+            )}
+          </button>
+        )}
       </td>
       {/* Status */}
       <td className="px-4 py-3 align-top pt-4">
