@@ -8,6 +8,7 @@ using Bagile.Application.PlannedCourses.Commands.DeletePlannedCourse;
 using Bagile.Application.PlannedCourses.Commands.PublishEcommerce;
 using Bagile.Application.PlannedCourses.Commands.PublishScrumOrg;
 using Bagile.Application.PlannedCourses.Queries.GetPlannedCourses;
+using Bagile.Domain.Repositories;
 
 namespace Bagile.Api.Controllers;
 
@@ -18,15 +19,18 @@ public class PlannedCoursesController : ControllerBase
     private readonly IMediator _mediator;
     private readonly IWooCommercePublishService _woo;
     private readonly IPlannedCourseQueries _plannedCourseQueries;
+    private readonly ICoursePublicationRepository _pubRepo;
 
     public PlannedCoursesController(
         IMediator mediator,
         IWooCommercePublishService woo,
-        IPlannedCourseQueries plannedCourseQueries)
+        IPlannedCourseQueries plannedCourseQueries,
+        ICoursePublicationRepository pubRepo)
     {
         _mediator = mediator;
         _woo = woo;
         _plannedCourseQueries = plannedCourseQueries;
+        _pubRepo = pubRepo;
     }
 
     /// <summary>
@@ -202,6 +206,19 @@ public class PlannedCoursesController : ControllerBase
         {
             return BadRequest(new { error = ex.Message });
         }
+    }
+
+    /// <summary>
+    /// Delete a gateway publication record for a planned course.
+    /// Use to remove incorrect/placeholder records before re-publishing.
+    /// </summary>
+    [HttpDelete("{id}/publications/{gateway}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeletePublication(int id, string gateway)
+    {
+        var deleted = await _pubRepo.DeleteByPlannedCourseAndGatewayAsync(id, gateway);
+        return deleted > 0 ? NoContent() : NotFound(new { error = $"No {gateway} publication found for course {id}" });
     }
 }
 

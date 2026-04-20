@@ -68,4 +68,16 @@ public class CoursePublicationRepository : ICoursePublicationRepository
         await using var conn = new NpgsqlConnection(_connStr);
         return await conn.ExecuteScalarAsync<int>(sql, publication);
     }
+
+    public async Task<int> DeleteByPlannedCourseAndGatewayAsync(
+        int plannedCourseId, string gateway, CancellationToken ct = default)
+    {
+        const string sql = @"
+            DELETE FROM bagile.course_publications
+            WHERE planned_course_id = @plannedCourseId
+              AND gateway = @gateway;";
+
+        await using var conn = new NpgsqlConnection(_connStr);
+        return await conn.ExecuteAsync(sql, new { plannedCourseId, gateway });
+    }
 }

@@ -268,20 +268,51 @@ async function main() {
         }
 
         // 9. Save the course
-        // For scratch-created courses use "Save and Schedule"; for replicated use "Save"
+        const beforeSaveUrl = page.url();
         const saveSelector = createdFromScratch
             ? '#edit-saveandschedule, input[value="Save and Schedule"]'
             : '#edit-submit, input[value="Save"]';
-        const saveButton = await page.$(saveSelector);
-        if (saveButton) {
-            await saveButton.click();
-            await page.waitForLoadState('networkidle');
-            console.error(`Course ${createdFromScratch ? 'created and scheduled' : 'saved'}`);
-        } else {
-            // Fallback: try any submit
-            const anySubmit = await page.$('input[type="submit"]');
-            if (anySubmit) { await anySubmit.click(); await page.waitForLoadState('networkidle'); }
-            else throw new Error('Could not find Save button on the edit form');
+        let saveButton = await page.$(saveSelector);
+        if (!saveButton) saveButton = await page.$('#edit-submit, input[type="submit"][value="Save"]');
+        if (!saveButton) throw new Error('Could not find Save button on the edit form');
+
+        // Click save and wait for either a URL change or networkidle
+        await Promise.all([
+            page.waitForURL(url => url !== beforeSaveUrl, { timeout: 15000 }).catch(() => {}),
+            saveButton.click(),
+        ]);
+        await page.waitForLoadState('networkidle');
+        console.error(`After save, URL: ${page.url()}`);
+
+        // If URL didn't change (AJAX save or validation error), check page content
+        if (page.url() === beforeSaveUrl || page.url().includes('/node/add/')) {
+            // Check for error messages
+            const errors = await page.$$eval(
+                '.messages--error, .alert-danger, [class*="error"]',
+                els => els.map(e => e.textContent.replace(/\s+/g, ' ').trim()).filter(Boolean)
+            );
+            if (errors.length) {
+                throw new Error(`Form save failed with errors: ${errors.slice(0, 3).join('; ')}`);
+            }
+            // No errors visible — try to find the new course in admin (last created for this type/trainer)
+            console.error('URL unchanged after save — searching admin for newly created course...');
+            await page.goto('https://www.scrum.org/admin/courses/manage');
+            await page.waitForSelector('table');
+            const rows = await page.$$('table tbody tr');
+            for (const row of rows) {
+                const cells = await row.$$('td');
+                if (cells.length < 3) continue;
+                const titleText = (await cells[1].textContent()).replace(/\s+/g, ' ').trim();
+                const trainerText = await cells[2].textContent();
+                if (titleText !== courseName || !trainerText.includes(trainerName)) continue;
+                const editLink = await cells[cells.length - 1].$('a[href*="/node/"]');
+                if (editLink) {
+                    const href = await editLink.getAttribute('href');
+                    const m = href.match(/\/node\/(\d+)\//);
+                    if (m) { newNodeId = m[1]; break; }
+                }
+            }
+            if (!newNodeId) throw new Error('Save appeared to succeed but could not find new course in admin table');
         }
 
         // 10. Get the listing URL
