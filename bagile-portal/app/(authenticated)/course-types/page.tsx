@@ -6,7 +6,7 @@ import { CourseDefsEditor } from "@/components/courses/CourseDefsEditor";
 export default function CourseTypesPage() {
   return (
     <div className="p-6 max-w-5xl mx-auto">
-      <PageHeader title="Course Types" />
+      <PageHeader title="Courses" />
       <CourseDefsEditor />
     </div>
   );

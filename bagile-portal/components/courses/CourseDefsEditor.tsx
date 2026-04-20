@@ -94,7 +94,7 @@ export function CourseDefsEditor() {
               <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase w-24">Code</th>
               <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Name / Aliases</th>
               <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase w-24">Days</th>
-              <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase w-28">Provider</th>
+              <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase w-32">Provider / Gateway</th>
               <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase w-20">Status</th>
             </tr>
           </thead>
@@ -321,12 +321,12 @@ function CourseDefRow({ def, apiKey, onRefresh }: { def: CourseDef; apiKey: stri
           onChange={(e) => handleProviderChange(e.target.value)}
           disabled={providerSaving}
           className="w-full border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:border-brand-400 disabled:opacity-50"
-          title="External certification provider"
+          title="External certification provider — determines which gateway is shown on the course schedule"
         >
-          <option value="">—</option>
-          <option value="scrumorg">scrumorg</option>
-          <option value="icagile">icagile</option>
-          <option value="bagile">bagile</option>
+          <option value="">— None</option>
+          <option value="scrumorg">Scrum.org</option>
+          <option value="icagile">IC Agile</option>
+          <option value="bagile">BAgile</option>
         </select>
       </td>
       {/* Status */}
