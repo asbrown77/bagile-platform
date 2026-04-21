@@ -1133,6 +1133,7 @@ function TrainersEditor() {
   const [credsSaving, setCredsSaving] = useState(false);
   const [credsTesting, setCredsTesting] = useState(false);
   const [credsVerifying, setCredsVerifying] = useState(false);
+  const [credsChangingPassword, setCredsChangingPassword] = useState<Record<number, boolean>>({});
   const [credsMsg, setCredsMsg] = useState<Record<number, { type: "ok" | "err"; text: string }>>({});
 
   useEffect(() => {
@@ -1222,10 +1223,12 @@ function TrainersEditor() {
   async function openCredsPanel(id: number) {
     if (credsPanelId === id) {
       setCredsPanelId(null);
+      setCredsChangingPassword((s) => ({ ...s, [id]: false }));
       return;
     }
     setCredsPanelId(id);
     setCredsForm({ username: "", password: "" });
+    setCredsChangingPassword((s) => ({ ...s, [id]: false }));
     setCredsMsg((m) => ({ ...m, [id]: undefined as unknown as { type: "ok" | "err"; text: string } }));
     try {
       const status = await getTrainerScrumOrgStatus(apiKey, id);
@@ -1251,6 +1254,7 @@ function TrainersEditor() {
       const status = await getTrainerScrumOrgStatus(apiKey, id);
       setCredsStatus((s) => ({ ...s, [id]: status }));
       setCredsForm((f) => ({ ...f, password: "" }));
+      setCredsChangingPassword((s) => ({ ...s, [id]: false }));
       setCredsMsg((m) => ({ ...m, [id]: { type: "ok", text: "Credentials saved" } }));
     } catch {
       setCredsMsg((m) => ({ ...m, [id]: { type: "err", text: "Failed to save credentials" } }));
@@ -1441,14 +1445,29 @@ function TrainersEditor() {
                           </div>
                           <div>
                             <label className="block text-xs text-gray-500 mb-1">Password</label>
-                            <input
-                              className={inputCls + " w-full"}
-                              type="password"
-                              value={credsForm.password}
-                              onChange={(e) => setCredsForm((f) => ({ ...f, password: e.target.value }))}
-                              placeholder="leave blank to keep existing"
-                              autoComplete="new-password"
-                            />
+                            {credsStatus[t.id]?.hasPassword && !credsChangingPassword[t.id] ? (
+                              <div className="flex items-center gap-2 h-[34px]">
+                                <span className="text-sm text-gray-500 tracking-widest">••••••••</span>
+                                <button
+                                  type="button"
+                                  onClick={() => setCredsChangingPassword((s) => ({ ...s, [t.id]: true }))}
+                                  className="text-xs text-brand-600 hover:underline"
+                                >
+                                  Change
+                                </button>
+                              </div>
+                            ) : (
+                              <input
+                                className={inputCls + " w-full"}
+                                type="password"
+                                value={credsForm.password}
+                                onChange={(e) => setCredsForm((f) => ({ ...f, password: e.target.value }))}
+                                placeholder={credsStatus[t.id]?.hasPassword ? "enter new password" : "enter password"}
+                                autoComplete="new-password"
+                                // eslint-disable-next-line jsx-a11y/no-autofocus
+                                autoFocus={credsChangingPassword[t.id]}
+                              />
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-3 mb-3">
@@ -1456,8 +1475,6 @@ function TrainersEditor() {
                             {credsSaving ? "Saving..." : "Save credentials"}
                           </Button>
                           <div className="text-xs text-gray-500">
-                            Password: {credsStatus[t.id]?.hasPassword ? <span className="text-green-600 font-medium">stored</span> : <span className="text-gray-400">not set</span>}
-                            {" · "}
                             Session cookies: {credsStatus[t.id]?.hasCookies ? <span className="text-green-600 font-medium">stored</span> : <span className="text-gray-400">not set</span>}
                           </div>
                         </div>
