@@ -231,33 +231,49 @@ public class CalendarQueries : ICalendarQueries
     }
 
     /// <summary>
-    /// Load a normalised code → provider lookup from course_definitions.
+    /// Load a normalised code → provider lookup from course_definitions, including aliases.
     /// Keys are uppercased with hyphens/underscores stripped to match SKU-extracted types.
+    /// Aliases are included so e.g. "EBM" (WooCommerce SKU prefix) resolves to the "PAL-EBM"
+    /// provider ('scrumorg') even though course_definitions only has code "PAL-EBM".
     /// </summary>
     private static async Task<Dictionary<string, string?>> GetProviderMapAsync(NpgsqlConnection conn)
     {
-        var rows = await conn.QueryAsync<(string Code, string? Provider)>(
-            "SELECT code, provider FROM bagile.course_definitions WHERE active = true;");
-        return rows.ToDictionary(
-            r => r.Code.ToUpperInvariant().Replace("-", "").Replace("_", ""),
-            r => r.Provider,
-            StringComparer.OrdinalIgnoreCase);
+        var rows = await conn.QueryAsync<(string Code, string? Provider)>(@"
+            SELECT cd.code, cd.provider
+            FROM bagile.course_definitions cd
+            WHERE cd.active = true
+            UNION ALL
+            SELECT ca.alias AS code, cd.provider
+            FROM bagile.course_code_aliases ca
+            JOIN bagile.course_definitions cd ON cd.code = ca.canonical_code
+            WHERE cd.active = true;");
+        return rows
+            .GroupBy(r => r.Code.ToUpperInvariant().Replace("-", "").Replace("_", ""),
+                StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First().Provider,
+                StringComparer.OrdinalIgnoreCase);
     }
 
     /// <summary>
-    /// Load a course-type → duration_days lookup from course_definitions,
-    /// normalising codes to uppercase-no-hyphens to match SKU-extracted types.
-    /// Aliases are resolved so e.g. "APS-SD" is stored as "APSSD" → 3.
+    /// Load a course-type → duration_days lookup from course_definitions, including aliases.
+    /// Normalises codes to uppercase-no-hyphens to match SKU-extracted types.
     /// </summary>
     private static async Task<Dictionary<string, int>> GetCourseDurationsAsync(NpgsqlConnection conn)
     {
-        var rows = await conn.QueryAsync<(string Code, int Days)>(
-            "SELECT code, duration_days AS Days FROM bagile.course_definitions WHERE active = true;");
-
-        return rows.ToDictionary(
-            r => r.Code.ToUpperInvariant().Replace("-", "").Replace("_", ""),
-            r => r.Days,
-            StringComparer.OrdinalIgnoreCase);
+        var rows = await conn.QueryAsync<(string Code, int Days)>(@"
+            SELECT cd.code, cd.duration_days AS Days
+            FROM bagile.course_definitions cd
+            WHERE cd.active = true
+            UNION ALL
+            SELECT ca.alias AS code, cd.duration_days AS Days
+            FROM bagile.course_code_aliases ca
+            JOIN bagile.course_definitions cd ON cd.code = ca.canonical_code
+            WHERE cd.active = true;");
+        return rows
+            .GroupBy(r => r.Code.ToUpperInvariant().Replace("-", "").Replace("_", ""),
+                StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First().Days,
+                StringComparer.OrdinalIgnoreCase);
     }
 
     /// <summary>
