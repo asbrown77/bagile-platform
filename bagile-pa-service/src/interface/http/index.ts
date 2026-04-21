@@ -23,6 +23,6 @@ const app = createHttpServer(pool, {
   corsOrigins,
 });
 
-app.listen(port, () => {
-  console.log(`PA HTTP server listening on port ${port}`);
+app.listen(port, '0.0.0.0', () => {
+  console.log(`PA HTTP server listening on 0.0.0.0:${port}`);
 });
