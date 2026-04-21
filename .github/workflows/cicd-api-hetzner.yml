@@ -143,10 +143,13 @@ jobs:
             docker compose -f docker-compose.prod.yml up -d bagile-api
 
             echo "Diagnosing bagile-pa network reachability..."
-            docker exec bagile-api wget -qO- http://bagile-pa:3001/health 2>&1 || echo "wget failed — trying nc"
-            docker exec bagile-api sh -c "nc -zv bagile-pa 3001 2>&1" || echo "nc failed"
-            docker inspect bagile-api --format '{{json .NetworkSettings.Networks}}' | python3 -m json.tool 2>/dev/null || true
-            docker inspect bagile-pa --format '{{json .NetworkSettings.Networks}}' | python3 -m json.tool 2>/dev/null || true
+            PA_IP=$(docker inspect bagile-pa --format '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' | awk '{print $1}')
+            echo "bagile-pa IPs: $(docker inspect bagile-pa --format '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}')"
+            echo "bagile-api IPs: $(docker inspect bagile-api --format '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}')"
+            echo "Testing direct IP connection from host to PA service..."
+            curl -s --max-time 3 http://${PA_IP}:3001/health 2>&1 || echo "Host direct IP curl failed"
+            echo "Testing from API container..."
+            docker exec bagile-api /bin/sh -c "cat /etc/resolv.conf; getent hosts bagile-pa 2>/dev/null || echo 'getent not found'; nslookup bagile-pa 2>/dev/null || echo 'nslookup not found'" 2>&1 || true
 
             echo "Cleaning unused images..."
             docker system prune -f
