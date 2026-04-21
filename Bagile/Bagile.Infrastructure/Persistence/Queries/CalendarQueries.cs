@@ -203,8 +203,11 @@ public class CalendarQueries : ICalendarQueries
                 ? "cancelled"
                 : DeriveStatus("planned", gateways);
 
-            // When end_date is missing from WooCommerce, derive from course_definitions duration.
-            var endDate = c.EndDate ?? DeriveFallbackEndDate(c.StartDate, courseType, durations);
+            // Derive end_date from course_definitions when WooCommerce has no end_date,
+            // or when end_date == start_date (ETL synced a course with no explicit end date set).
+            var endDate = (c.EndDate == null || c.EndDate.Value.Date == c.StartDate.Date)
+                ? DeriveFallbackEndDate(c.StartDate, courseType, durations)
+                : c.EndDate.Value;
 
             return new CalendarEventDto
             {
