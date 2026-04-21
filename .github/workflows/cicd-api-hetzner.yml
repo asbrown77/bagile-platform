@@ -121,7 +121,7 @@ jobs:
             WooCommerce__ConsumerSecret=${WOOCOMMERCE_CONSUMER_SECRET}
 
             PA_ENCRYPTION_KEY=${PA_ENCRYPTION_KEY}
-            PaService__BaseUrl=http://${HETZNER_HOST}:3001
+            PaService__BaseUrl=http://bagile-pa:3001
             PaService__ApiKey=${PA_INTERNAL_KEY}
 
             Xero__WebhookSecret=${XERO_WEBHOOK_SECRET}

@@ -13,8 +13,12 @@ namespace Bagile.Infrastructure.Services;
 /// </summary>
 public class PaCredentialService : IPaCredentialService
 {
-    // Playwright login can take up to 2 minutes — use a 10-minute timeout for headroom.
-    private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromMinutes(10) };
+    // Playwright login can take up to 2 minutes; 5-second connect timeout for fast failure on everything else.
+    private static readonly HttpClient _httpClient = new(new SocketsHttpHandler
+    {
+        ConnectTimeout = TimeSpan.FromSeconds(5),
+    })
+    { Timeout = TimeSpan.FromMinutes(10) };
 
     private readonly ILogger<PaCredentialService> _logger;
     private readonly string _baseUrl;
