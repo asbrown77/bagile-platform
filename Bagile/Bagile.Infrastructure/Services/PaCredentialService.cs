@@ -1,6 +1,4 @@
-using System.Net;
 using System.Net.Http.Headers;
-using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using Bagile.Application.Common.Interfaces;
@@ -15,27 +13,11 @@ namespace Bagile.Infrastructure.Services;
 /// </summary>
 public class PaCredentialService : IPaCredentialService
 {
-    // Playwright login can take up to 2 minutes; 5-second connect timeout for fast failure on everything else.
-    // ConnectCallback forces IPv4 resolution — Docker DNS can return IPv6 for container hostnames and .NET's
-    // Happy Eyeballs algorithm tries IPv6 first, which fails when the PA service binds to 0.0.0.0 only.
-    // Also handles when BaseUrl is already a direct IP address (no PTR lookup needed).
+    // Playwright login can take up to 2 minutes on first attempt; 5-second connect timeout
+    // gives fast failure when the PA service is unreachable for any other operation.
     private static readonly HttpClient _httpClient = new(new SocketsHttpHandler
     {
         ConnectTimeout = TimeSpan.FromSeconds(5),
-        ConnectCallback = async (ctx, ct) =>
-        {
-            IPAddress address;
-            if (!IPAddress.TryParse(ctx.DnsEndPoint.Host, out address!))
-            {
-                var entry = await Dns.GetHostEntryAsync(ctx.DnsEndPoint.Host, AddressFamily.InterNetwork, ct);
-                address = entry.AddressList[0];
-            }
-            var ep = new IPEndPoint(address, ctx.DnsEndPoint.Port);
-            var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
-                { NoDelay = true };
-            await socket.ConnectAsync(ep, ct);
-            return new NetworkStream(socket, ownsSocket: true);
-        },
     })
     { Timeout = TimeSpan.FromMinutes(10) };
 
