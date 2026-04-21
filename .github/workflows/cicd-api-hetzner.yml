@@ -110,7 +110,6 @@ jobs:
             echo "Writing API env file from GitHub secrets..."
             # Extract the raw key (first segment before ':') from PA_API_KEYS
             PA_INTERNAL_KEY=$(echo "${PA_API_KEYS}" | cut -d',' -f1 | cut -d':' -f1)
-            # Use the bagile-net bridge gateway so connections go via docker-proxy (direct container-to-container fails)
             BAGILE_NET_GW=$(docker network inspect bagile-net --format '{{(index .IPAM.Config 0).Gateway}}')
             echo "Resolved bagile-net gateway: ${BAGILE_NET_GW}"
             cat > config/api.env <<EOF
@@ -124,7 +123,7 @@ jobs:
             WooCommerce__ConsumerSecret=${WOOCOMMERCE_CONSUMER_SECRET}
 
             PA_ENCRYPTION_KEY=${PA_ENCRYPTION_KEY}
-            PaService__BaseUrl=http://${BAGILE_NET_GW}:3001
+            PaService__BaseUrl=http://bagile-pa:3001
             PaService__ApiKey=${PA_INTERNAL_KEY}
 
             Xero__WebhookSecret=${XERO_WEBHOOK_SECRET}
