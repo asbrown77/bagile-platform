@@ -143,5 +143,28 @@ jobs:
             echo "Recreating API container..."
             docker compose -f docker-compose.prod.yml up -d bagile-api
 
+            echo "=== PA CONNECTIVITY DIAGNOSTICS ==="
+            sleep 3
+
+            echo "-- Docker networks --"
+            docker inspect bagile-pa --format '{{json .NetworkSettings.Networks}}' | python3 -m json.tool 2>/dev/null || docker inspect bagile-pa --format '{{.NetworkSettings.Networks}}'
+
+            echo "-- PA container listening ports --"
+            docker exec bagile-pa ss -tlnp 2>/dev/null || docker exec bagile-pa netstat -tlnp 2>/dev/null || echo "ss/netstat not available"
+
+            echo "-- From API container: reach bagile-pa:3001 --"
+            docker exec bagile-api wget -qO- --timeout=5 http://bagile-pa:3001/health 2>&1 || echo "wget failed: exit=$?"
+
+            echo "-- From API container: reach 172.18.0.1:3001 (bridge gw) --"
+            docker exec bagile-api wget -qO- --timeout=5 http://172.18.0.1:3001/health 2>&1 || echo "wget failed: exit=$?"
+
+            echo "-- Host userland proxy status --"
+            ps aux | grep docker-proxy | grep -v grep || echo "No docker-proxy processes"
+
+            echo "-- Host iptables DOCKER chain (port 3001) --"
+            iptables -L DOCKER -n 2>/dev/null | grep 3001 || echo "No DOCKER rules for 3001"
+
+            echo "=== END DIAGNOSTICS ==="
+
             echo "Cleaning unused images..."
             docker system prune -f
