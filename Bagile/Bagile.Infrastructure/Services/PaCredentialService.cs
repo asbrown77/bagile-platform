@@ -18,13 +18,19 @@ public class PaCredentialService : IPaCredentialService
     // Playwright login can take up to 2 minutes; 5-second connect timeout for fast failure on everything else.
     // ConnectCallback forces IPv4 resolution — Docker DNS can return IPv6 for container hostnames and .NET's
     // Happy Eyeballs algorithm tries IPv6 first, which fails when the PA service binds to 0.0.0.0 only.
+    // Also handles when BaseUrl is already a direct IP address (no PTR lookup needed).
     private static readonly HttpClient _httpClient = new(new SocketsHttpHandler
     {
         ConnectTimeout = TimeSpan.FromSeconds(5),
         ConnectCallback = async (ctx, ct) =>
         {
-            var entry = await Dns.GetHostEntryAsync(ctx.DnsEndPoint.Host, AddressFamily.InterNetwork, ct);
-            var ep = new IPEndPoint(entry.AddressList[0], ctx.DnsEndPoint.Port);
+            IPAddress address;
+            if (!IPAddress.TryParse(ctx.DnsEndPoint.Host, out address!))
+            {
+                var entry = await Dns.GetHostEntryAsync(ctx.DnsEndPoint.Host, AddressFamily.InterNetwork, ct);
+                address = entry.AddressList[0];
+            }
+            var ep = new IPEndPoint(address, ctx.DnsEndPoint.Port);
             var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
                 { NoDelay = true };
             await socket.ConnectAsync(ep, ct);

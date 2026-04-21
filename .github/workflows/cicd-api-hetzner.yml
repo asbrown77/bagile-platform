@@ -110,8 +110,17 @@ jobs:
             echo "Writing API env file from GitHub secrets..."
             # Extract the raw key (first segment before ':') from PA_API_KEYS
             PA_INTERNAL_KEY=$(echo "${PA_API_KEYS}" | cut -d',' -f1 | cut -d':' -f1)
-            BAGILE_NET_GW=$(docker network inspect bagile-net --format '{{(index .IPAM.Config 0).Gateway}}')
-            echo "Resolved bagile-net gateway: ${BAGILE_NET_GW}"
+            # Use PA's IP on bagile_default (the default compose bridge) — confirmed working
+            # in iptables DOCKER-FORWARD. bagile-net bridge is present but its FORWARD rules
+            # don't accumulate packet counts, causing .NET TCP to get ECONNREFUSED.
+            PA_DEFAULT_IP=$(docker inspect bagile-pa --format '{{(index .NetworkSettings.Networks "bagile_default").IPAddress}}' 2>/dev/null)
+            if [ -z "${PA_DEFAULT_IP}" ]; then
+              echo "WARNING: Could not get bagile-pa bagile_default IP, falling back to hostname"
+              PA_BASE_URL="http://bagile-pa:3001"
+            else
+              echo "Resolved bagile-pa bagile_default IP: ${PA_DEFAULT_IP}"
+              PA_BASE_URL="http://${PA_DEFAULT_IP}:3001"
+            fi
             cat > config/api.env <<EOF
             ASPNETCORE_ENVIRONMENT=Production
             ConnectionStrings__DefaultConnection=${DB_CONNECTION_STRING}
@@ -123,7 +132,7 @@ jobs:
             WooCommerce__ConsumerSecret=${WOOCOMMERCE_CONSUMER_SECRET}
 
             PA_ENCRYPTION_KEY=${PA_ENCRYPTION_KEY}
-            PaService__BaseUrl=http://bagile-pa:3001
+            PaService__BaseUrl=${PA_BASE_URL}
             PaService__ApiKey=${PA_INTERNAL_KEY}
 
             Xero__WebhookSecret=${XERO_WEBHOOK_SECRET}
@@ -154,8 +163,11 @@ jobs:
             echo "-- bagile-api network IPs --"
             docker inspect bagile-api --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}={{$v.IPAddress}} {{end}}'
 
-            PA_IP=$(docker inspect bagile-pa --format '{{(index .NetworkSettings.Networks "bagile-net").IPAddress}}')
-            echo "PA bagile-net IP: ${PA_IP}"
+            echo "-- PaService__BaseUrl in api.env --"
+            grep PaService__BaseUrl config/api.env
+
+            PA_IP=$(docker inspect bagile-pa --format '{{(index .NetworkSettings.Networks "bagile_default").IPAddress}}')
+            echo "PA bagile_default IP (used as BaseUrl): ${PA_IP}"
 
             echo "-- PA container listening ports (3001=0BB9 in hex) --"
             docker exec bagile-pa sh -c "cat /proc/net/tcp | awk 'NR==1 || /0BB9/'" 2>&1 || echo "/proc/net/tcp unavailable"
@@ -164,23 +176,14 @@ jobs:
             echo "-- bagile-net network options (check ICC) --"
             docker network inspect bagile-net --format '{{json .Options}}' 2>&1
 
-            echo "-- From HOST: curl to PA container IP directly --"
+            echo "-- From HOST: curl to PA bagile_default IP directly --"
             curl -s --max-time 5 http://${PA_IP}:3001/health 2>&1 || echo "HOST->container IP failed: $?"
 
-            echo "-- From HOST: curl to bridge gateway ${BAGILE_NET_GW}:3001 --"
-            curl -s --max-time 5 http://${BAGILE_NET_GW}:3001/health 2>&1 || echo "HOST->bridge-gw failed: $?"
-
-            echo "-- DNS resolution for bagile-pa from API container --"
+            echo "-- DNS resolution for bagile-pa from API container (shows which IP .NET would get) --"
             docker exec bagile-api bash -c "getent ahosts bagile-pa 2>&1 || cat /etc/resolv.conf"
 
-            echo "-- From API container: TCP test to bagile-pa:3001 (bash /dev/tcp) --"
-            docker exec bagile-api bash -c "timeout 3 bash -c 'exec 3>/dev/tcp/bagile-pa/3001' 2>&1 && echo TCP_TO_BAGILE_PA_OK || echo TCP_TO_BAGILE_PA_FAIL"
-
-            echo "-- From API container: TCP test to ${PA_IP}:3001 --"
-            docker exec bagile-api bash -c "timeout 3 bash -c 'exec 3>/dev/tcp/${PA_IP}/3001' 2>&1 && echo TCP_TO_PA_IP_OK || echo TCP_TO_PA_IP_FAIL"
-
-            echo "-- From API container: TCP test to ${BAGILE_NET_GW}:3001 (bridge gw / docker-proxy) --"
-            docker exec bagile-api bash -c "timeout 3 bash -c 'exec 3>/dev/tcp/${BAGILE_NET_GW}/3001' 2>&1 && echo TCP_TO_GW_OK || echo TCP_TO_GW_FAIL"
+            echo "-- From API container: TCP test to bagile_default IP ${PA_IP}:3001 (the configured BaseUrl) --"
+            docker exec bagile-api bash -c "timeout 3 bash -c 'exec 3>/dev/tcp/${PA_IP}/3001' 2>&1 && echo TCP_TO_PA_DEFAULT_IP_OK || echo TCP_TO_PA_DEFAULT_IP_FAIL"
 
             echo "-- Host userland proxy status --"
             ps aux | grep docker-proxy | grep -v grep || echo "No docker-proxy processes"
