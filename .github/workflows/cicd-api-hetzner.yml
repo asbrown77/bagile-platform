@@ -142,14 +142,17 @@ jobs:
             echo "Recreating API container..."
             docker compose -f docker-compose.prod.yml up -d bagile-api
 
-            echo "Ensuring inter-container traffic is allowed on shared Docker networks..."
+            echo "Fixing inter-container networking..."
+            echo "DOCKER-USER chain: $(iptables -L DOCKER-USER 2>&1 | head -3)"
             for NET_ID in $(docker network ls --format '{{.ID}}'); do
               BR="br-${NET_ID}"
               if ip link show "${BR}" > /dev/null 2>&1; then
-                iptables -C DOCKER-USER -i "${BR}" -o "${BR}" -j ACCEPT 2>/dev/null \
-                  || iptables -I DOCKER-USER -i "${BR}" -o "${BR}" -j ACCEPT 2>/dev/null || true
+                echo "  Fixing bridge: ${BR}"
+                iptables -I DOCKER-USER -i "${BR}" -o "${BR}" -j ACCEPT 2>/dev/null && echo "    DOCKER-USER OK" || echo "    DOCKER-USER failed — trying FORWARD"
+                iptables -I FORWARD -i "${BR}" -o "${BR}" -j ACCEPT 2>/dev/null && echo "    FORWARD OK" || echo "    FORWARD failed"
               fi
             done
+            echo "FORWARD chain (first 5): $(iptables -L FORWARD --line-numbers 2>&1 | head -8)"
 
             echo "Cleaning unused images..."
             docker system prune -f
