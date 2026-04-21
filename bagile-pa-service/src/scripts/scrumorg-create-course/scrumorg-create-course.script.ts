@@ -117,7 +117,7 @@ async function loginToScrumOrg(
 
   await page.locator('#loginId').fill(username);
   await page.locator('#password').fill(password);
-  await page.locator('button[type="submit"], input[type="submit"]').first().click();
+  await page.locator('#password').press('Enter');
 
   // Wait for the OAuth callback to complete and land back on www.scrum.org
   await page.waitForURL(

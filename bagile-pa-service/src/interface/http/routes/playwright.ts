@@ -103,7 +103,7 @@ export function createPlaywrightRouter(pool: Pool): Router {
       await page.waitForSelector('#loginId', { timeout: 30_000 });
       await page.fill('#loginId', username);
       await page.fill('#password', password);
-      await page.locator('button[type="submit"], input[type="submit"]').first().click();
+      await page.locator('#password').press('Enter');
       // Wait for the OAuth callback to complete and land back on www.scrum.org
       await page.waitForURL(
         (url) => url.toString().includes('www.scrum.org') && !url.toString().includes('accounts.scrum.org'),
