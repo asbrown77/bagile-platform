@@ -120,7 +120,7 @@ jobs:
             WooCommerce__ConsumerSecret=${WOOCOMMERCE_CONSUMER_SECRET}
 
             PA_ENCRYPTION_KEY=${PA_ENCRYPTION_KEY}
-            PaService__BaseUrl=http://bagile-pa:3001
+            PaService__BaseUrl=http://host.docker.internal:3001
             PaService__ApiKey=${PA_INTERNAL_KEY}
 
             Xero__WebhookSecret=${XERO_WEBHOOK_SECRET}
@@ -141,16 +141,6 @@ jobs:
 
             echo "Recreating API container..."
             docker compose -f docker-compose.prod.yml up -d bagile-api
-
-            echo "Diagnosing bagile-pa network reachability..."
-            PA_IP=$(docker inspect bagile-pa --format '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' | awk '{print $1}')
-            echo "bagile-pa IPs: $(docker inspect bagile-pa --format '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}')"
-            echo "bagile-api IPs: $(docker inspect bagile-api --format '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}')"
-            echo "Host→PA direct IP: $(curl -s --max-time 3 http://${PA_IP}:3001/health 2>&1)"
-            echo "Container→PA by name TCP test:"
-            docker exec bagile-api sh -c "(echo '' > /dev/tcp/bagile-pa/3001) 2>&1 && echo 'TCP-NAME-OK' || echo 'TCP-NAME-FAIL'"
-            echo "Container→PA by IP TCP test:"
-            docker exec bagile-api sh -c "(echo '' > /dev/tcp/${PA_IP}/3001) 2>&1 && echo 'TCP-IP-OK' || echo 'TCP-IP-FAIL'"
 
             echo "Cleaning unused images..."
             docker system prune -f
