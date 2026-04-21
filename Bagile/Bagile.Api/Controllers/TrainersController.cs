@@ -4,6 +4,7 @@ using Bagile.Application.Trainers.Queries;
 using Bagile.Domain.Repositories;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace Bagile.Api.Controllers;
 
@@ -14,15 +15,18 @@ public class TrainersController : ControllerBase
     private readonly IMediator _mediator;
     private readonly ITrainerRepository _trainerRepo;
     private readonly IPaCredentialService _paCredentials;
+    private readonly ILogger<TrainersController> _logger;
 
     public TrainersController(
         IMediator mediator,
         ITrainerRepository trainerRepo,
-        IPaCredentialService paCredentials)
+        IPaCredentialService paCredentials,
+        ILogger<TrainersController> logger)
     {
         _mediator = mediator;
         _trainerRepo = trainerRepo;
         _paCredentials = paCredentials;
+        _logger = logger;
     }
 
     /// <summary>List all active trainers.</summary>
@@ -110,8 +114,16 @@ public class TrainersController : ControllerBase
         if (trainer is null)
             return NotFound(new { error = $"Trainer {id} not found" });
 
-        var status = await _paCredentials.GetTrainerScrumOrgStatusAsync(id, ct);
-        return Ok(status);
+        try
+        {
+            var status = await _paCredentials.GetTrainerScrumOrgStatusAsync(id, ct);
+            return Ok(status);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "PA service error for trainer {TrainerId} credential GET", id);
+            return StatusCode(502, new { error = "PA service unavailable", detail = ex.Message });
+        }
     }
 
     /// <summary>Set a trainer's Scrum.org username and/or password.</summary>
@@ -131,11 +143,19 @@ public class TrainersController : ControllerBase
         if (string.IsNullOrWhiteSpace(body.Username) && string.IsNullOrWhiteSpace(body.Password))
             return BadRequest(new { error = "Provide at least one of username or password" });
 
-        if (!string.IsNullOrWhiteSpace(body.Username))
-            await _paCredentials.SetTrainerScrumOrgCredentialAsync(id, "scrumorg_username", body.Username.Trim(), ct);
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(body.Username))
+                await _paCredentials.SetTrainerScrumOrgCredentialAsync(id, "scrumorg_username", body.Username.Trim(), ct);
 
-        if (!string.IsNullOrWhiteSpace(body.Password))
-            await _paCredentials.SetTrainerScrumOrgCredentialAsync(id, "scrumorg_password", body.Password, ct);
+            if (!string.IsNullOrWhiteSpace(body.Password))
+                await _paCredentials.SetTrainerScrumOrgCredentialAsync(id, "scrumorg_password", body.Password, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "PA service error for trainer {TrainerId} credential PUT", id);
+            return StatusCode(502, new { error = "PA service unavailable", detail = ex.Message });
+        }
 
         return NoContent();
     }
