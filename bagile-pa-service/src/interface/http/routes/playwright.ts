@@ -97,11 +97,18 @@ export function createPlaywrightRouter(pool: Pool): Router {
       });
       const page = await context.newPage();
 
+      // Scrum.org migrated to FusionAuth OAuth: /user/login now redirects to
+      // accounts.scrum.org. Fields are #loginId / #password, not name/pass.
       await page.goto('https://www.scrum.org/user/login', { waitUntil: 'networkidle' });
-      await page.fill('input[name="name"]', username);
-      await page.fill('input[name="pass"]', password);
-      await page.click('input[type="submit"]');
-      await page.waitForURL((url) => !url.toString().includes('/user/login'), { timeout: 30_000 });
+      await page.waitForSelector('#loginId', { timeout: 30_000 });
+      await page.fill('#loginId', username);
+      await page.fill('#password', password);
+      await page.locator('button[type="submit"], input[type="submit"]').first().click();
+      // Wait for the OAuth callback to complete and land back on www.scrum.org
+      await page.waitForURL(
+        (url) => url.toString().includes('www.scrum.org') && !url.toString().includes('accounts.scrum.org'),
+        { timeout: 30_000 },
+      );
 
       const cookies = await context.cookies();
       const cookiesJson = JSON.stringify(cookies);

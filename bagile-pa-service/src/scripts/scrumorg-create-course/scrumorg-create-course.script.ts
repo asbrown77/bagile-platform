@@ -100,49 +100,37 @@ async function loginToScrumOrg(
   }
 
   // --- Form-based auth (fallback) ---
-  // Use networkidle so any Cloudflare JS challenge completes before we inspect the page.
+  // Scrum.org migrated to FusionAuth OAuth circa 2026: /user/login now redirects to
+  // accounts.scrum.org/oauth2/authorize?...&prompt=login. Fields are #loginId / #password.
   await page.goto('https://www.scrum.org/user/login', { waitUntil: 'networkidle' });
 
-  // Reliably check if already authenticated: look for the Drupal logout link.
-  // Do NOT rely solely on URL — bot-detection redirects can send headless Chrome away from
-  // /user/login even when not logged in, causing a false "already authenticated" signal.
-  const isLoggedIn = await page.locator('a[href*="/user/logout"]').first()
-    .isVisible()
-    .catch(() => false);
-
-  if (isLoggedIn) return;
-
-  // Navigate explicitly to login page if we were redirected elsewhere
-  if (!page.url().includes('/user/login')) {
-    await page.goto('https://www.scrum.org/user/login', { waitUntil: 'networkidle' });
-  }
-
-  // Wait for the login form to be ready (guards against slow JS rendering).
-  // Cloudflare on data-center IPs often blocks this page — if the selector never
-  // appears, surface a clear message rather than a generic timeout.
+  // Wait for the FusionAuth login form — surfaces a clear error if Cloudflare blocks us.
   const formStart = Date.now();
-  await page.waitForSelector('input[name="name"]', { timeout: 15_000 }).catch((err) => {
+  await page.waitForSelector('#loginId', { timeout: 30_000 }).catch((err) => {
     const durationS = Math.round((Date.now() - formStart) / 1000);
     throw new Error(
-      `Cloudflare is blocking the login page (input[name='name'] never appeared). ` +
-      `Session cookies were absent. Duration so far: ~${durationS}s. Original: ${(err as Error).message}`,
+      `FusionAuth login form (#loginId) never appeared on ${page.url()}. ` +
+      `Cloudflare may be blocking the data-centre IP. Session cookies were absent. ` +
+      `Duration: ~${durationS}s. Original: ${(err as Error).message}`,
     );
   });
 
-  await page.locator('input[name="name"]').fill(username);
-  await page.locator('input[name="pass"]').fill(password);
-  await page.locator('input[type="submit"]').click();
-  await page.waitForURL((url) => !url.toString().includes('/user/login'), { timeout: 20_000 });
+  await page.locator('#loginId').fill(username);
+  await page.locator('#password').fill(password);
+  await page.locator('button[type="submit"], input[type="submit"]').first().click();
 
-  // Verify we are actually authenticated after the redirect
-  await page.waitForSelector('a[href*="/user/logout"]', { timeout: 10_000 });
+  // Wait for the OAuth callback to complete and land back on www.scrum.org
+  await page.waitForURL(
+    (url) => url.toString().includes('www.scrum.org') && !url.toString().includes('accounts.scrum.org'),
+    { timeout: 30_000 },
+  );
 }
 
 async function navigateToCourseManagement(page: Page): Promise<void> {
   await page.goto('https://www.scrum.org/admin/courses/manage', { waitUntil: 'networkidle' });
 
-  // Confirm we landed on the manage page, not a redirect to login
-  if (page.url().includes('/user/login') || page.url().includes('/access-denied')) {
+  // Confirm we landed on the manage page, not a redirect to login (FusionAuth or Drupal)
+  if (page.url().includes('/user/login') || page.url().includes('/access-denied') || page.url().includes('accounts.scrum.org')) {
     await page.screenshot({ path: `screenshots/scrumorg-manage-denied-${Date.now()}.png` }).catch(() => undefined);
     throw new Error(`Cannot access course management page — not authenticated (redirected to ${page.url()})`);
   }
