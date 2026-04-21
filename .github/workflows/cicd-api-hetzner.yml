@@ -137,10 +137,10 @@ jobs:
             EOF
 
             echo "Pulling latest API image..."
-            docker compose pull bagile-api
+            docker compose -f docker-compose.prod.yml pull bagile-api
 
             echo "Recreating API container..."
-            docker compose up -d bagile-api
+            docker compose -f docker-compose.prod.yml up -d bagile-api
 
             echo "Cleaning unused images..."
             docker system prune -f
