@@ -120,7 +120,7 @@ jobs:
             WooCommerce__ConsumerSecret=${WOOCOMMERCE_CONSUMER_SECRET}
 
             PA_ENCRYPTION_KEY=${PA_ENCRYPTION_KEY}
-            PaService__BaseUrl=http://host.docker.internal:3001
+            PaService__BaseUrl=http://bagile-pa:3001
             PaService__ApiKey=${PA_INTERNAL_KEY}
 
             Xero__WebhookSecret=${XERO_WEBHOOK_SECRET}
@@ -141,6 +141,15 @@ jobs:
 
             echo "Recreating API container..."
             docker compose -f docker-compose.prod.yml up -d bagile-api
+
+            echo "Ensuring inter-container traffic is allowed on shared Docker networks..."
+            for NET_ID in $(docker network ls --format '{{.ID}}'); do
+              BR="br-${NET_ID}"
+              if ip link show "${BR}" > /dev/null 2>&1; then
+                iptables -C DOCKER-USER -i "${BR}" -o "${BR}" -j ACCEPT 2>/dev/null \
+                  || iptables -I DOCKER-USER -i "${BR}" -o "${BR}" -j ACCEPT 2>/dev/null || true
+              fi
+            done
 
             echo "Cleaning unused images..."
             docker system prune -f
