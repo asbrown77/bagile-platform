@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ApiKey, CreateKeyResponse, PortalAuthError, loginWithGoogle, listKeys, createKey, revokeKey, PostCourseTemplate, listPostCourseTemplates, upsertPostCourseTemplate, PreCourseTemplate, getPreCourseTemplates, updatePreCourseTemplate, Trainer, getTrainers, createTrainer, updateTrainer, deleteTrainer, getServiceConfig, setServiceConfig, TrainerScrumOrgStatus, getTrainerScrumOrgStatus, setTrainerScrumOrgCredentials, refreshTrainerScrumOrgSession } from "@/lib/api";
+import { ApiKey, CreateKeyResponse, PortalAuthError, loginWithGoogle, listKeys, createKey, revokeKey, PostCourseTemplate, listPostCourseTemplates, upsertPostCourseTemplate, PreCourseTemplate, getPreCourseTemplates, updatePreCourseTemplate, Trainer, getTrainers, createTrainer, updateTrainer, deleteTrainer, getServiceConfig, setServiceConfig, TrainerScrumOrgStatus, getTrainerScrumOrgStatus, setTrainerScrumOrgCredentials, refreshTrainerScrumOrgSession, verifyTrainerScrumOrgSession } from "@/lib/api";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { AlertBanner } from "@/components/ui/AlertBanner";
@@ -1132,6 +1132,7 @@ function TrainersEditor() {
   const [credsForm, setCredsForm] = useState<{ username: string; password: string }>({ username: "", password: "" });
   const [credsSaving, setCredsSaving] = useState(false);
   const [credsTesting, setCredsTesting] = useState(false);
+  const [credsVerifying, setCredsVerifying] = useState(false);
   const [credsMsg, setCredsMsg] = useState<Record<number, { type: "ok" | "err"; text: string }>>({});
 
   useEffect(() => {
@@ -1274,6 +1275,24 @@ function TrainersEditor() {
       setCredsMsg((m) => ({ ...m, [id]: { type: "err", text: "Failed to connect to PA service" } }));
     } finally {
       setCredsTesting(false);
+    }
+  }
+
+  async function handleCredsVerify(id: number) {
+    setCredsVerifying(true);
+    setCredsMsg((m) => ({ ...m, [id]: undefined as unknown as { type: "ok" | "err"; text: string } }));
+    try {
+      const result = await verifyTrainerScrumOrgSession(apiKey, id);
+      if (result.accessible) {
+        setCredsMsg((m) => ({ ...m, [id]: { type: "ok", text: `Session valid — course management accessible (${result.durationMs}ms)` } }));
+      } else {
+        const reason = result.errorMessage ?? "Redirected away from course management — session may be expired";
+        setCredsMsg((m) => ({ ...m, [id]: { type: "err", text: `Session invalid: ${reason}` } }));
+      }
+    } catch {
+      setCredsMsg((m) => ({ ...m, [id]: { type: "err", text: "Failed to connect to PA service" } }));
+    } finally {
+      setCredsVerifying(false);
     }
   }
 
@@ -1442,11 +1461,14 @@ function TrainersEditor() {
                             Session cookies: {credsStatus[t.id]?.hasCookies ? <span className="text-green-600 font-medium">stored</span> : <span className="text-gray-400">not set</span>}
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <Button size="sm" variant="secondary" onClick={() => handleCredsRefresh(t.id)} disabled={credsSaving || credsTesting}>
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <Button size="sm" variant="secondary" onClick={() => handleCredsRefresh(t.id)} disabled={credsSaving || credsTesting || credsVerifying}>
                             {credsTesting ? "Logging in... (~60s)" : "Refresh session"}
                           </Button>
-                          <span className="text-xs text-gray-400">Runs Playwright login — takes up to 2 min</span>
+                          <Button size="sm" variant="secondary" onClick={() => handleCredsVerify(t.id)} disabled={credsSaving || credsTesting || credsVerifying || !credsStatus[t.id]?.hasCookies}>
+                            {credsVerifying ? "Checking..." : "Test session"}
+                          </Button>
+                          <span className="text-xs text-gray-400">Refresh: runs Playwright login (up to 2 min) · Test: verifies cookies work on Scrum.org (~10s)</span>
                         </div>
                         {credsMsg[t.id] && (
                           <p className={`mt-2 text-xs font-medium ${credsMsg[t.id].type === "ok" ? "text-green-600" : "text-red-600"}`}>

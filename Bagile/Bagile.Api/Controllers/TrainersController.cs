@@ -173,6 +173,23 @@ public class TrainersController : ControllerBase
         var result = await _paCredentials.RefreshTrainerSessionAsync(id, ct);
         return Ok(new { result.Success, result.ErrorMessage });
     }
+
+    /// <summary>
+    /// Verify a trainer's Scrum.org session by navigating to the course management page
+    /// with their stored cookies. Does not create or modify anything — dry-run only.
+    /// </summary>
+    [HttpPost("{id:int}/scrumorg-credentials/verify-session")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> VerifyScrumOrgSession(int id, CancellationToken ct)
+    {
+        var trainer = await _trainerRepo.GetByIdAsync(id, ct);
+        if (trainer is null)
+            return NotFound(new { error = $"Trainer {id} not found" });
+
+        var result = await _paCredentials.VerifyTrainerSessionAsync(id, ct);
+        return Ok(new { result.Accessible, result.CurrentUrl, result.ErrorMessage, result.DurationMs });
+    }
 }
 
 // ── Request models ───────────────────────────────────────────

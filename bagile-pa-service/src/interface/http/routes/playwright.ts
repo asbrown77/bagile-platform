@@ -129,6 +129,65 @@ export function createPlaywrightRouter(pool: Pool): Router {
   });
 
   /**
+   * POST /playwright/verify-scrumorg-session
+   *
+   * Verifies that stored session cookies for a trainer can access Scrum.org's
+   * course management page without creating a course (dry-run check).
+   * Body: { trainerId: string }
+   * Returns: { accessible, currentUrl?, errorMessage?, durationMs }
+   */
+  router.post('/verify-scrumorg-session', async (req, res) => {
+    const { trainerId } = req.body ?? {};
+    if (typeof trainerId !== 'string' || !trainerId.trim()) {
+      res.status(400).json({ error: 'trainerId is required' });
+      return;
+    }
+
+    const userId = trainerId.trim();
+    const tenantId = process.env['PA_TENANT_ID'] ?? 'bagile';
+    const credentialResolver = buildCredentialResolver(userId, tenantId);
+
+    const cookiesJson = await credentialResolver('scrumorg_session_cookies');
+    if (!cookiesJson) {
+      res.json({ accessible: false, errorMessage: 'No session cookies stored — run refresh-session first', durationMs: 0 });
+      return;
+    }
+
+    const start = Date.now();
+    const executablePath = process.env['PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH'] || undefined;
+    const launchArgs = [
+      '--disable-blink-features=AutomationControlled',
+      ...(executablePath ? ['--no-sandbox', '--disable-setuid-sandbox'] : []),
+    ];
+
+    let browser: Awaited<ReturnType<typeof chromiumExtra.launch>> | undefined;
+    try {
+      browser = await chromiumExtra.launch({ headless: true, executablePath, args: launchArgs });
+      const context = await browser.newContext({
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        viewport: { width: 1280, height: 800 },
+      });
+
+      const cookies = JSON.parse(cookiesJson) as Array<{ name: string; value: string; domain: string; path: string; expires?: number; httpOnly?: boolean; secure?: boolean; sameSite?: 'Strict' | 'Lax' | 'None' }>;
+      await context.addCookies(cookies);
+
+      const page = await context.newPage();
+      await page.goto('https://www.scrum.org/admin/courses/manage', { waitUntil: 'networkidle' });
+
+      const currentUrl = page.url();
+      const accessible = currentUrl.includes('/admin/courses/manage')
+        && !currentUrl.includes('/user/login')
+        && !currentUrl.includes('accounts.scrum.org');
+
+      res.json({ accessible, currentUrl, durationMs: Date.now() - start });
+    } catch (err) {
+      res.status(500).json({ accessible: false, errorMessage: (err as Error).message, durationMs: Date.now() - start });
+    } finally {
+      await browser?.close();
+    }
+  });
+
+  /**
    * GET /playwright/debug
    *
    * Diagnostic endpoint — checks whether the DB is reachable from this container

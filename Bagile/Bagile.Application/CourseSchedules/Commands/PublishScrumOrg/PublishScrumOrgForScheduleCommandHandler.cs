@@ -13,15 +13,18 @@ public class PublishScrumOrgForScheduleCommandHandler
     private readonly ICourseScheduleQueries _scheduleQueries;
     private readonly ICoursePublicationRepository _pubRepo;
     private readonly IScrumOrgPublishService _scrumOrgPublish;
+    private readonly ITrainerRepository _trainerRepo;
 
     public PublishScrumOrgForScheduleCommandHandler(
         ICourseScheduleQueries scheduleQueries,
         ICoursePublicationRepository pubRepo,
-        IScrumOrgPublishService scrumOrgPublish)
+        IScrumOrgPublishService scrumOrgPublish,
+        ITrainerRepository trainerRepo)
     {
         _scheduleQueries = scheduleQueries;
         _pubRepo = pubRepo;
         _scrumOrgPublish = scrumOrgPublish;
+        _trainerRepo = trainerRepo;
     }
 
     public async Task<ScrumOrgPublishResultDto> Handle(
@@ -47,13 +50,19 @@ public class PublishScrumOrgForScheduleCommandHandler
         // Extract course type from SKU (e.g. "APSSD-250526-AB" → "APSSD")
         var courseType = ExtractCourseType(schedule.CourseCode);
 
+        // Resolve trainer credentials: match by name so the publish service uses per-trainer Scrum.org credentials
+        var trainers = await _trainerRepo.GetAllActiveAsync(ct);
+        var trainer = trainers.FirstOrDefault(t =>
+            string.Equals(t.Name, schedule.TrainerName, StringComparison.OrdinalIgnoreCase));
+
         var result = await _scrumOrgPublish.CreateListingAsync(new ScrumOrgPublishRequest
         {
             CourseType = courseType,
             StartDate = schedule.StartDate ?? DateTime.UtcNow,
             EndDate = schedule.EndDate ?? schedule.StartDate ?? DateTime.UtcNow,
             TrainerName = schedule.TrainerName ?? "",
-            RegistrationUrl = registrationUrl
+            RegistrationUrl = registrationUrl,
+            TrainerUserId = trainer != null ? $"trainer-{trainer.Id}" : ""
         }, ct);
 
         if (result == null)

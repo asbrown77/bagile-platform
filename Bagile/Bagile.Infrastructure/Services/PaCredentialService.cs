@@ -116,6 +116,40 @@ public class PaCredentialService : IPaCredentialService
         }
     }
 
+    public async Task<ScrumOrgSessionVerifyResult> VerifyTrainerSessionAsync(
+        int trainerId,
+        CancellationToken ct = default)
+    {
+        _logger.LogInformation("Verifying Scrum.org session for trainer-{TrainerId}", trainerId);
+
+        var url = $"{_baseUrl}/playwright/verify-scrumorg-session";
+        var payload = JsonSerializer.Serialize(new { trainerId = $"trainer-{trainerId}" });
+        using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+        using var request = BuildRequest(HttpMethod.Post, url, content);
+
+        try
+        {
+            var response = await _httpClient.SendAsync(request, ct);
+            var body = await response.Content.ReadAsStringAsync(ct);
+
+            var doc = JsonDocument.Parse(body);
+            var root = doc.RootElement;
+            var accessible = root.TryGetProperty("accessible", out var a) && a.GetBoolean();
+            var currentUrl = root.TryGetProperty("currentUrl", out var u) && u.ValueKind != JsonValueKind.Null
+                ? u.GetString() : null;
+            var errorMessage = root.TryGetProperty("errorMessage", out var e) && e.ValueKind != JsonValueKind.Null
+                ? e.GetString() : null;
+            var durationMs = root.TryGetProperty("durationMs", out var d) ? d.GetInt32() : 0;
+
+            return new ScrumOrgSessionVerifyResult(accessible, currentUrl, errorMessage, durationMs);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error calling PA service for Scrum.org session verify (trainer-{TrainerId})", trainerId);
+            return new ScrumOrgSessionVerifyResult(false, null, $"Failed to reach PA service: {ex.Message}", 0);
+        }
+    }
+
     private HttpRequestMessage BuildRequest(HttpMethod method, string url, HttpContent? content = null)
     {
         var request = new HttpRequestMessage(method, url) { Content = content };

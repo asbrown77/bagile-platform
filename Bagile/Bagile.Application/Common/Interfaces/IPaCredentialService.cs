@@ -23,6 +23,12 @@ public interface IPaCredentialService
     /// stored session cookies. Long-running — Playwright can take up to 2 minutes.
     /// </summary>
     Task<ScrumOrgLoginResult> RefreshTrainerSessionAsync(int trainerId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Verifies that stored session cookies can access /admin/courses/manage on Scrum.org.
+    /// Navigates via Playwright but does not create or modify any data — dry-run check only.
+    /// </summary>
+    Task<ScrumOrgSessionVerifyResult> VerifyTrainerSessionAsync(int trainerId, CancellationToken ct = default);
 }
 
 /// <summary>
@@ -40,4 +46,14 @@ public record TrainerCredentialStatus(
 public record ScrumOrgLoginResult(
     bool Success,
     string? ErrorMessage
+);
+
+/// <summary>
+/// Result of a session verification check against Scrum.org's course management page.
+/// </summary>
+public record ScrumOrgSessionVerifyResult(
+    bool Accessible,
+    string? CurrentUrl,
+    string? ErrorMessage,
+    int DurationMs
 );

@@ -1078,6 +1078,16 @@ export async function refreshTrainerScrumOrgSession(
   });
 }
 
+export async function verifyTrainerScrumOrgSession(
+  apiKey: string,
+  id: number,
+): Promise<{ accessible: boolean; currentUrl?: string; errorMessage?: string; durationMs: number }> {
+  return apiRequest(`/api/trainers/${id}/scrumorg-credentials/verify-session`, apiKey, {
+    method: "POST",
+    timeoutMs: 60000,
+  });
+}
+
 // ── Pre-Course Templates ──────────────────────────────────
 
 export interface PreCourseTemplate {
