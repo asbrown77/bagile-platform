@@ -170,6 +170,9 @@ jobs:
             echo "-- From HOST: curl to bridge gateway ${BAGILE_NET_GW}:3001 --"
             curl -s --max-time 5 http://${BAGILE_NET_GW}:3001/health 2>&1 || echo "HOST->bridge-gw failed: $?"
 
+            echo "-- DNS resolution for bagile-pa from API container --"
+            docker exec bagile-api bash -c "getent ahosts bagile-pa 2>&1 || cat /etc/resolv.conf"
+
             echo "-- From API container: TCP test to bagile-pa:3001 (bash /dev/tcp) --"
             docker exec bagile-api bash -c "timeout 3 bash -c 'exec 3>/dev/tcp/bagile-pa/3001' 2>&1 && echo TCP_TO_BAGILE_PA_OK || echo TCP_TO_BAGILE_PA_FAIL"
 
