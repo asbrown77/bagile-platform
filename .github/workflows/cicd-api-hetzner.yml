@@ -192,22 +192,17 @@ jobs:
             echo "-- API container logs (last 20 lines) --"
             docker logs bagile-api --tail=20 2>&1
 
-            echo "-- tcpdump on bridge during e2e test (captures .NET SYN/RST) --"
-            tcpdump -i br-4b577b8a9740 -n -c 30 "host ${PA_IP} and host 172.24.0.2" &
-            TCPDUMP_PID=$!
-
             echo "-- Live end-to-end test: GET /api/trainers/1/scrumorg-credentials --"
             sleep 5
             curl -s --max-time 15 "http://localhost:8080/api/trainers/1/scrumorg-credentials" \
               -H "X-Api-Key: ${BAGILE_API_KEY}" 2>&1
 
             echo ""
-            sleep 2
-            kill $TCPDUMP_PID 2>/dev/null; wait $TCPDUMP_PID 2>/dev/null
-            echo "-- END tcpdump --"
-
             echo "-- API logs after e2e test (last 20 lines) --"
             docker logs bagile-api --tail=20 2>&1
+
+            echo "-- PA service logs (last 30 lines) --"
+            docker logs bagile-pa --tail=30 2>&1
 
             echo "=== END DIAGNOSTICS ==="
 
