@@ -157,51 +157,37 @@ jobs:
             echo "=== PA CONNECTIVITY DIAGNOSTICS ==="
             sleep 3
 
-            echo "-- bagile-pa network IPs --"
-            docker inspect bagile-pa --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}={{$v.IPAddress}} {{end}}'
-
-            echo "-- bagile-api network IPs --"
-            docker inspect bagile-api --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}={{$v.IPAddress}} {{end}}'
+            echo "-- Container network IPs --"
+            docker inspect bagile-pa --format 'bagile-pa: {{range $k,$v := .NetworkSettings.Networks}}{{$k}}={{$v.IPAddress}} {{end}}'
+            docker inspect bagile-api --format 'bagile-api: {{range $k,$v := .NetworkSettings.Networks}}{{$k}}={{$v.IPAddress}} {{end}}'
 
             echo "-- PaService__BaseUrl in api.env --"
             grep PaService__BaseUrl config/api.env
 
             PA_IP=$(docker inspect bagile-pa --format '{{(index .NetworkSettings.Networks "bagile_default").IPAddress}}')
-            echo "PA bagile_default IP (used as BaseUrl): ${PA_IP}"
+            DEFAULT_GW=$(docker network inspect bagile_default --format '{{(index .IPAM.Config 0).Gateway}}' 2>/dev/null || echo "unknown")
+            echo "PA bagile_default IP: ${PA_IP} | bagile_default gateway: ${DEFAULT_GW}"
 
-            echo "-- PA container listening ports (3001=0BB9 in hex) --"
-            docker exec bagile-pa sh -c "cat /proc/net/tcp | awk 'NR==1 || /0BB9/'" 2>&1 || echo "/proc/net/tcp unavailable"
-            docker exec bagile-pa sh -c "cat /proc/net/tcp6 | awk 'NR==1 || /0BB9/'" 2>&1 || echo "/proc/net/tcp6 unavailable"
+            echo "-- API container user --"
+            docker inspect bagile-api --format 'Config.User={{.Config.User}}'
+            docker exec bagile-api id 2>&1
 
-            echo "-- bagile-net network options (check ICC) --"
-            docker network inspect bagile-net --format '{{json .Options}}' 2>&1
+            echo "-- API container routing table (/proc/net/route) --"
+            docker exec bagile-api bash -c "cat /proc/net/route" 2>&1
 
-            echo "-- From HOST: curl to PA bagile_default IP directly --"
-            curl -s --max-time 5 http://${PA_IP}:3001/health 2>&1 || echo "HOST->container IP failed: $?"
+            echo "-- PA listening on 3001 --"
+            docker exec bagile-pa sh -c "cat /proc/net/tcp | awk 'NR==1 || /0BB9/'" 2>&1
 
-            echo "-- DNS resolution for bagile-pa from API container (shows which IP .NET would get) --"
-            docker exec bagile-api bash -c "getent ahosts bagile-pa 2>&1 || cat /etc/resolv.conf"
+            echo "-- From HOST: curl PA direct --"
+            curl -s --max-time 5 http://${PA_IP}:3001/health 2>&1
 
-            echo "-- From API container: TCP test to bagile_default IP ${PA_IP}:3001 (the configured BaseUrl) --"
-            docker exec bagile-api bash -c "timeout 3 bash -c 'exec 3>/dev/tcp/${PA_IP}/3001' 2>&1 && echo TCP_TO_PA_DEFAULT_IP_OK || echo TCP_TO_PA_DEFAULT_IP_FAIL"
+            echo "-- From API container: bash HTTP GET to PA (proves HTTP works, not just TCP) --"
+            docker exec bagile-api bash -c \
+              "exec 3<>/dev/tcp/${PA_IP}/3001; printf 'GET /health HTTP/1.0\r\nHost: ${PA_IP}\r\n\r\n' >&3; timeout 3 head -3 <&3 2>&1; exec 3>&-" 2>&1 \
+              && echo "BASH_HTTP_OK" || echo "BASH_HTTP_FAIL"
 
-            echo "-- Host userland proxy status --"
-            ps aux | grep docker-proxy | grep -v grep || echo "No docker-proxy processes"
-
-            echo "-- iptables DOCKER chain (port 3001) --"
-            iptables -L DOCKER -n -v 2>/dev/null | grep -E "3001|Chain" || echo "No DOCKER rules for 3001"
-
-            echo "-- iptables FORWARD chain (container subnets) --"
-            iptables -L FORWARD -n -v 2>/dev/null | head -40
-
-            echo "-- iptables DOCKER-USER chain --"
-            iptables -L DOCKER-USER -n -v 2>/dev/null || echo "No DOCKER-USER chain"
-
-            echo "-- iptables DOCKER-FORWARD chain --"
-            iptables -L DOCKER-FORWARD -n -v 2>/dev/null | head -20 || echo "No DOCKER-FORWARD chain"
-
-            echo "-- sysctl bridge nf-call-iptables --"
-            sysctl net.bridge.bridge-nf-call-iptables 2>/dev/null || echo "sysctl not available"
+            echo "-- From API container: TCP test to bagile_default gateway ${DEFAULT_GW}:3001 (docker-proxy path) --"
+            docker exec bagile-api bash -c "timeout 3 bash -c 'exec 3>/dev/tcp/${DEFAULT_GW}/3001' 2>&1 && echo TCP_TO_DEFAULT_GW_OK || echo TCP_TO_DEFAULT_GW_FAIL"
 
             echo "-- API container logs (last 30 lines) --"
             docker logs bagile-api --tail=30 2>&1
@@ -212,8 +198,11 @@ jobs:
               -H "X-Api-Key: ${BAGILE_API_KEY}" 2>&1
 
             echo ""
-            echo "-- API logs after e2e test --"
-            docker logs bagile-api --tail=15 2>&1
+            echo "-- API logs after e2e test (last 30 lines) --"
+            docker logs bagile-api --tail=30 2>&1
+
+            echo "-- PA connections after e2e test --"
+            docker exec bagile-pa sh -c "cat /proc/net/tcp | awk 'NR==1 || /0BB9/'" 2>&1
 
             echo "=== END DIAGNOSTICS ==="
 
