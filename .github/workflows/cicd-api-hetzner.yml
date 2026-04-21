@@ -110,6 +110,9 @@ jobs:
             echo "Writing API env file from GitHub secrets..."
             # Extract the raw key (first segment before ':') from PA_API_KEYS
             PA_INTERNAL_KEY=$(echo "${PA_API_KEYS}" | cut -d',' -f1 | cut -d':' -f1)
+            # Use the bagile-net bridge gateway so connections go via docker-proxy (direct container-to-container fails)
+            BAGILE_NET_GW=$(docker network inspect bagile-net --format '{{(index .IPAM.Config 0).Gateway}}')
+            echo "Resolved bagile-net gateway: ${BAGILE_NET_GW}"
             cat > config/api.env <<EOF
             ASPNETCORE_ENVIRONMENT=Production
             ConnectionStrings__DefaultConnection=${DB_CONNECTION_STRING}
@@ -121,7 +124,7 @@ jobs:
             WooCommerce__ConsumerSecret=${WOOCOMMERCE_CONSUMER_SECRET}
 
             PA_ENCRYPTION_KEY=${PA_ENCRYPTION_KEY}
-            PaService__BaseUrl=http://bagile-pa:3001
+            PaService__BaseUrl=http://${BAGILE_NET_GW}:3001
             PaService__ApiKey=${PA_INTERNAL_KEY}
 
             Xero__WebhookSecret=${XERO_WEBHOOK_SECRET}
@@ -155,23 +158,27 @@ jobs:
             PA_IP=$(docker inspect bagile-pa --format '{{(index .NetworkSettings.Networks "bagile-net").IPAddress}}')
             echo "PA bagile-net IP: ${PA_IP}"
 
-            echo "-- PA container listening ports (via /proc/net/tcp6) --"
-            docker exec bagile-pa sh -c "cat /proc/net/tcp6 | awk 'NR==1 || /0BC1/'" 2>&1 || echo "/proc/net/tcp6 unavailable"
+            echo "-- PA container listening ports (3001=0BB9 in hex) --"
+            docker exec bagile-pa sh -c "cat /proc/net/tcp | awk 'NR==1 || /0BB9/'" 2>&1 || echo "/proc/net/tcp unavailable"
+            docker exec bagile-pa sh -c "cat /proc/net/tcp6 | awk 'NR==1 || /0BB9/'" 2>&1 || echo "/proc/net/tcp6 unavailable"
+
+            echo "-- bagile-net network options (check ICC) --"
+            docker network inspect bagile-net --format '{{json .Options}}' 2>&1
 
             echo "-- From HOST: curl to PA container IP directly --"
             curl -s --max-time 5 http://${PA_IP}:3001/health 2>&1 || echo "HOST->container IP failed: $?"
 
-            echo "-- From HOST: curl to localhost:3001 (docker-proxy) --"
-            curl -s --max-time 5 http://localhost:3001/health 2>&1 || echo "HOST->localhost failed: $?"
+            echo "-- From HOST: curl to bridge gateway ${BAGILE_NET_GW}:3001 --"
+            curl -s --max-time 5 http://${BAGILE_NET_GW}:3001/health 2>&1 || echo "HOST->bridge-gw failed: $?"
 
-            echo "-- From API container: curl to bagile-pa:3001 --"
-            docker exec bagile-api curl -sv --max-time 5 http://bagile-pa:3001/health 2>&1 || echo "API->bagile-pa failed: $?"
+            echo "-- From API container: TCP test to bagile-pa:3001 (bash /dev/tcp) --"
+            docker exec bagile-api bash -c "timeout 3 bash -c 'exec 3>/dev/tcp/bagile-pa/3001' 2>&1 && echo TCP_TO_BAGILE_PA_OK || echo TCP_TO_BAGILE_PA_FAIL"
 
-            echo "-- From API container: curl to PA IP directly (${PA_IP}:3001) --"
-            docker exec bagile-api curl -sv --max-time 5 http://${PA_IP}:3001/health 2>&1 || echo "API->PA_IP failed: $?"
+            echo "-- From API container: TCP test to ${PA_IP}:3001 --"
+            docker exec bagile-api bash -c "timeout 3 bash -c 'exec 3>/dev/tcp/${PA_IP}/3001' 2>&1 && echo TCP_TO_PA_IP_OK || echo TCP_TO_PA_IP_FAIL"
 
-            echo "-- From API container: curl to bridge gw 172.18.0.1:3001 --"
-            docker exec bagile-api curl -sv --max-time 5 http://172.18.0.1:3001/health 2>&1 || echo "API->bridge-gw failed: $?"
+            echo "-- From API container: TCP test to ${BAGILE_NET_GW}:3001 (bridge gw / docker-proxy) --"
+            docker exec bagile-api bash -c "timeout 3 bash -c 'exec 3>/dev/tcp/${BAGILE_NET_GW}/3001' 2>&1 && echo TCP_TO_GW_OK || echo TCP_TO_GW_FAIL"
 
             echo "-- Host userland proxy status --"
             ps aux | grep docker-proxy | grep -v grep || echo "No docker-proxy processes"
@@ -185,8 +192,11 @@ jobs:
             echo "-- iptables DOCKER-USER chain --"
             iptables -L DOCKER-USER -n -v 2>/dev/null || echo "No DOCKER-USER chain"
 
-            echo "-- Docker daemon icc setting --"
-            docker info 2>/dev/null | grep -i "icc\|ICC" || echo "icc not shown in docker info"
+            echo "-- iptables DOCKER-FORWARD chain --"
+            iptables -L DOCKER-FORWARD -n -v 2>/dev/null | head -20 || echo "No DOCKER-FORWARD chain"
+
+            echo "-- sysctl bridge nf-call-iptables --"
+            sysctl net.bridge.bridge-nf-call-iptables 2>/dev/null || echo "sysctl not available"
 
             echo "=== END DIAGNOSTICS ==="
 
