@@ -189,8 +189,12 @@ jobs:
             echo "-- From API container: TCP test to bagile_default gateway ${DEFAULT_GW}:3001 (docker-proxy path) --"
             docker exec bagile-api bash -c "timeout 3 bash -c 'exec 3>/dev/tcp/${DEFAULT_GW}/3001' 2>&1 && echo TCP_TO_DEFAULT_GW_OK || echo TCP_TO_DEFAULT_GW_FAIL"
 
-            echo "-- API container logs (last 30 lines) --"
-            docker logs bagile-api --tail=30 2>&1
+            echo "-- API container logs (last 20 lines) --"
+            docker logs bagile-api --tail=20 2>&1
+
+            echo "-- tcpdump on bridge during e2e test (captures .NET SYN/RST) --"
+            tcpdump -i br-4b577b8a9740 -n -c 30 "host ${PA_IP} and host 172.24.0.2" &
+            TCPDUMP_PID=$!
 
             echo "-- Live end-to-end test: GET /api/trainers/1/scrumorg-credentials --"
             sleep 5
@@ -198,11 +202,12 @@ jobs:
               -H "X-Api-Key: ${BAGILE_API_KEY}" 2>&1
 
             echo ""
-            echo "-- API logs after e2e test (last 30 lines) --"
-            docker logs bagile-api --tail=30 2>&1
+            sleep 2
+            kill $TCPDUMP_PID 2>/dev/null; wait $TCPDUMP_PID 2>/dev/null
+            echo "-- END tcpdump --"
 
-            echo "-- PA connections after e2e test --"
-            docker exec bagile-pa sh -c "cat /proc/net/tcp | awk 'NR==1 || /0BB9/'" 2>&1
+            echo "-- API logs after e2e test (last 20 lines) --"
+            docker logs bagile-api --tail=20 2>&1
 
             echo "=== END DIAGNOSTICS ==="
 
