@@ -146,10 +146,11 @@ jobs:
             PA_IP=$(docker inspect bagile-pa --format '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' | awk '{print $1}')
             echo "bagile-pa IPs: $(docker inspect bagile-pa --format '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}')"
             echo "bagile-api IPs: $(docker inspect bagile-api --format '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}')"
-            echo "Testing direct IP connection from host to PA service..."
-            curl -s --max-time 3 http://${PA_IP}:3001/health 2>&1 || echo "Host direct IP curl failed"
-            echo "Testing from API container..."
-            docker exec bagile-api /bin/sh -c "cat /etc/resolv.conf; getent hosts bagile-pa 2>/dev/null || echo 'getent not found'; nslookup bagile-pa 2>/dev/null || echo 'nslookup not found'" 2>&1 || true
+            echo "Host→PA direct IP: $(curl -s --max-time 3 http://${PA_IP}:3001/health 2>&1)"
+            echo "Container→PA by name TCP test:"
+            docker exec bagile-api sh -c "(echo '' > /dev/tcp/bagile-pa/3001) 2>&1 && echo 'TCP-NAME-OK' || echo 'TCP-NAME-FAIL'"
+            echo "Container→PA by IP TCP test:"
+            docker exec bagile-api sh -c "(echo '' > /dev/tcp/${PA_IP}/3001) 2>&1 && echo 'TCP-IP-OK' || echo 'TCP-IP-FAIL'"
 
             echo "Cleaning unused images..."
             docker system prune -f
