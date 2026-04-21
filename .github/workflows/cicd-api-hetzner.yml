@@ -200,6 +200,18 @@ jobs:
             echo "-- sysctl bridge nf-call-iptables --"
             sysctl net.bridge.bridge-nf-call-iptables 2>/dev/null || echo "sysctl not available"
 
+            echo "-- API container logs (last 30 lines) --"
+            docker logs bagile-api --tail=30 2>&1
+
+            echo "-- Live end-to-end test: GET /api/trainers/1/scrumorg-credentials --"
+            sleep 5
+            curl -s --max-time 15 "http://localhost:8080/api/trainers/1/scrumorg-credentials" \
+              -H "X-Api-Key: ${BAGILE_API_KEY}" 2>&1
+
+            echo ""
+            echo "-- API logs after e2e test --"
+            docker logs bagile-api --tail=15 2>&1
+
             echo "=== END DIAGNOSTICS ==="
 
             echo "Cleaning unused images..."
