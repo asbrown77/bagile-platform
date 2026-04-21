@@ -1098,17 +1098,24 @@ function CalendarContent() {
   }, [listEvents]);
 
   // Convert to FullCalendar events
-  const fcEvents = filteredEvents.map((e) => ({
-    id: e.id,
-    start: e.startDate.split("T")[0],
-    // FullCalendar dayGrid end is exclusive, so add 1 day
-    end: addOneDayStr(e.endDate.split("T")[0]),
-    allDay: true,
-    extendedProps: { calendarEvent: e, _v: calendarRefreshKey } as FCEventExtended,
-    display: "block" as const,
-    backgroundColor: "transparent",
-    borderColor: "transparent",
-  }));
+  const fcEvents = filteredEvents.map((e) => {
+    const startStr = e.startDate.split("T")[0];
+    const endStr = e.endDate.split("T")[0];
+    const isMultiDay = startStr !== endStr;
+    // Multi-day events get a subtle tinted background so the span is visible
+    // across all days. Single-day events stay transparent (card-only look).
+    const statusColour = getStatusColour(e.status);
+    return {
+      id: e.id,
+      start: startStr,
+      end: addOneDayStr(endStr),
+      allDay: true,
+      extendedProps: { calendarEvent: e, _v: calendarRefreshKey } as FCEventExtended,
+      display: "block" as const,
+      backgroundColor: isMultiDay ? `${statusColour}18` : "transparent",
+      borderColor: "transparent",
+    };
+  });
 
   // Handlers
   async function handleAddCourse(data: Parameters<AddCourseModalProps["onSubmit"]>[0]) {
