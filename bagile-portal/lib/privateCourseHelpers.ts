@@ -57,12 +57,16 @@ export function generateInvoiceRef(
   startDate: string,   // ISO date string e.g. "2026-04-27"
 ): string {
   if (!startDate) return "";
-  const d = new Date(startDate);
-  if (isNaN(d.getTime())) return "";
-  const dd = String(d.getDate()).padStart(2, "0");
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const yy = String(d.getFullYear()).slice(2);
-  const datePart = `${dd}${mm}${yy}`;
+  // Parse in local time — new Date("YYYY-MM-DD") parses as UTC midnight,
+  // which in BST gives the wrong local date.
+  const parts = startDate.split("-").map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) return "";
+  const [y, m, d] = parts;
+  const date = new Date(y, m - 1, d);
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm2 = String(date.getMonth() + 1).padStart(2, "0");
+  const yy = String(date.getFullYear()).slice(2);
+  const datePart = `${dd}${mm2}${yy}`;
   if (!orgAcronym) return `${courseCode.toUpperCase()}-${datePart}`;
   return `${orgAcronym.toUpperCase()}-${courseCode.toUpperCase()}-${datePart}`;
 }

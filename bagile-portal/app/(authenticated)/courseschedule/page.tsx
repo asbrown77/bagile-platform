@@ -190,10 +190,12 @@ function AddCourseModal({ open, onClose, onSubmit, trainers, courseDefs, initial
 
   function calcEndDate(start: string, type: string): string {
     if (!start) return start;
-    const d = new Date(start);
-    d.setDate(d.getDate() + getDuration(type) - 1);
-    // Use local date methods, not toISOString() (UTC), to avoid off-by-one in BST
-    return toDateStr(d);
+    // Parse as local time — new Date("YYYY-MM-DD") would parse as UTC midnight,
+    // which in BST (UTC+1) is 11pm the prior day, causing getDate() to be off by 1.
+    const [y, m, d] = start.split("-").map(Number);
+    const date = new Date(y, m - 1, d);
+    date.setDate(date.getDate() + getDuration(type) - 1);
+    return toDateStr(date);
   }
   const [isVirtual, setIsVirtual] = useState(true);
   const [venue, setVenue] = useState("");

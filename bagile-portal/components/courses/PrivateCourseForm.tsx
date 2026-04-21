@@ -21,6 +21,7 @@ import {
 } from "@/lib/api";
 import { generateCourseName, generateInvoiceRef } from "@/lib/privateCourseHelpers";
 import { extractCourseTypeFromSku, getBadgeSrc } from "@/lib/calendarHelpers";
+import { toDateStr } from "@/lib/dateUtils";
 import { RotateCcw, Trash2, UserPlus } from "lucide-react";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -49,9 +50,10 @@ const FALLBACK_DURATIONS: Record<string, number> = {
 };
 
 function addDays(dateStr: string, days: number): string {
-  const d = new Date(dateStr);
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  date.setDate(date.getDate() + days);
+  return toDateStr(date);
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
