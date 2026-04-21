@@ -142,5 +142,11 @@ jobs:
             echo "Recreating API container..."
             docker compose -f docker-compose.prod.yml up -d bagile-api
 
+            echo "Diagnosing bagile-pa network reachability..."
+            docker exec bagile-api wget -qO- http://bagile-pa:3001/health 2>&1 || echo "wget failed — trying nc"
+            docker exec bagile-api sh -c "nc -zv bagile-pa 3001 2>&1" || echo "nc failed"
+            docker inspect bagile-api --format '{{json .NetworkSettings.Networks}}' | python3 -m json.tool 2>/dev/null || true
+            docker inspect bagile-pa --format '{{json .NetworkSettings.Networks}}' | python3 -m json.tool 2>/dev/null || true
+
             echo "Cleaning unused images..."
             docker system prune -f
