@@ -89,10 +89,26 @@ jobs:
 
             echo "Writing PA service env file..."
             mkdir -p config
+
+            # node-postgres requires a postgresql:// URL; DB_CONNECTION_STRING may be
+            # Npgsql key-value format (Host=...;Port=...;Database=...;Username=...;Password=...).
+            # Detect and convert if necessary so the PA service can connect to the database.
+            if echo "${DATABASE_URL}" | grep -qiE '^postgresql://|^postgres://'; then
+              PA_DB_URL="${DATABASE_URL}"
+            else
+              DB_HOST=$(echo "${DATABASE_URL}" | grep -oiP '(?<=Host=)[^;]+' | head -1)
+              DB_PORT=$(echo "${DATABASE_URL}" | grep -oiP '(?<=Port=)[^;]+' | head -1)
+              DB_NAME=$(echo "${DATABASE_URL}" | grep -oiP '(?<=Database=)[^;]+' | head -1)
+              DB_USER=$(echo "${DATABASE_URL}" | grep -oiP '(?<=Username=)[^;]+' | head -1)
+              DB_PASS=$(echo "${DATABASE_URL}" | grep -oiP '(?<=Password=)[^;]+' | head -1)
+              PA_DB_URL="postgresql://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT:-5432}/${DB_NAME}"
+              echo "Converted Npgsql → postgresql URL (host: ${DB_HOST})"
+            fi
+
             # Write each line separately to avoid heredoc special-character expansion issues.
             # SCRUMORG_SESSION_COOKIES is JSON and must be written safely.
             {
-              echo "DATABASE_URL=${DATABASE_URL}"
+              echo "DATABASE_URL=${PA_DB_URL}"
               echo "PA_HTTP_PORT=3001"
               echo "PA_API_KEYS=${PA_API_KEYS}"
               echo "PA_ENCRYPTION_KEY=${PA_ENCRYPTION_KEY}"
@@ -110,6 +126,13 @@ jobs:
 
             echo "Starting PA service container..."
             docker compose -f docker-compose.prod.yml up -d bagile-pa
+
+            echo "Waiting for PA service to start..."
+            sleep 5
+            echo "-- PA service health check --"
+            curl -sf http://localhost:3001/health && echo "PA /health: OK" || echo "PA /health: FAILED"
+            echo "-- PA service logs (last 30 lines) --"
+            docker logs bagile-pa --tail=30 2>&1
 
             echo "Cleaning unused images..."
             docker system prune -f
