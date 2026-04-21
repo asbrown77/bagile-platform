@@ -146,23 +146,47 @@ jobs:
             echo "=== PA CONNECTIVITY DIAGNOSTICS ==="
             sleep 3
 
-            echo "-- Docker networks --"
-            docker inspect bagile-pa --format '{{json .NetworkSettings.Networks}}' | python3 -m json.tool 2>/dev/null || docker inspect bagile-pa --format '{{.NetworkSettings.Networks}}'
+            echo "-- bagile-pa network IPs --"
+            docker inspect bagile-pa --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}={{$v.IPAddress}} {{end}}'
 
-            echo "-- PA container listening ports --"
-            docker exec bagile-pa ss -tlnp 2>/dev/null || docker exec bagile-pa netstat -tlnp 2>/dev/null || echo "ss/netstat not available"
+            echo "-- bagile-api network IPs --"
+            docker inspect bagile-api --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}={{$v.IPAddress}} {{end}}'
 
-            echo "-- From API container: reach bagile-pa:3001 --"
-            docker exec bagile-api wget -qO- --timeout=5 http://bagile-pa:3001/health 2>&1 || echo "wget failed: exit=$?"
+            PA_IP=$(docker inspect bagile-pa --format '{{(index .NetworkSettings.Networks "bagile-net").IPAddress}}')
+            echo "PA bagile-net IP: ${PA_IP}"
 
-            echo "-- From API container: reach 172.18.0.1:3001 (bridge gw) --"
-            docker exec bagile-api wget -qO- --timeout=5 http://172.18.0.1:3001/health 2>&1 || echo "wget failed: exit=$?"
+            echo "-- PA container listening ports (via /proc/net/tcp6) --"
+            docker exec bagile-pa sh -c "cat /proc/net/tcp6 | awk 'NR==1 || /0BC1/'" 2>&1 || echo "/proc/net/tcp6 unavailable"
+
+            echo "-- From HOST: curl to PA container IP directly --"
+            curl -s --max-time 5 http://${PA_IP}:3001/health 2>&1 || echo "HOST->container IP failed: $?"
+
+            echo "-- From HOST: curl to localhost:3001 (docker-proxy) --"
+            curl -s --max-time 5 http://localhost:3001/health 2>&1 || echo "HOST->localhost failed: $?"
+
+            echo "-- From API container: curl to bagile-pa:3001 --"
+            docker exec bagile-api curl -sv --max-time 5 http://bagile-pa:3001/health 2>&1 || echo "API->bagile-pa failed: $?"
+
+            echo "-- From API container: curl to PA IP directly (${PA_IP}:3001) --"
+            docker exec bagile-api curl -sv --max-time 5 http://${PA_IP}:3001/health 2>&1 || echo "API->PA_IP failed: $?"
+
+            echo "-- From API container: curl to bridge gw 172.18.0.1:3001 --"
+            docker exec bagile-api curl -sv --max-time 5 http://172.18.0.1:3001/health 2>&1 || echo "API->bridge-gw failed: $?"
 
             echo "-- Host userland proxy status --"
             ps aux | grep docker-proxy | grep -v grep || echo "No docker-proxy processes"
 
-            echo "-- Host iptables DOCKER chain (port 3001) --"
-            iptables -L DOCKER -n 2>/dev/null | grep 3001 || echo "No DOCKER rules for 3001"
+            echo "-- iptables DOCKER chain (port 3001) --"
+            iptables -L DOCKER -n -v 2>/dev/null | grep -E "3001|Chain" || echo "No DOCKER rules for 3001"
+
+            echo "-- iptables FORWARD chain (container subnets) --"
+            iptables -L FORWARD -n -v 2>/dev/null | head -40
+
+            echo "-- iptables DOCKER-USER chain --"
+            iptables -L DOCKER-USER -n -v 2>/dev/null || echo "No DOCKER-USER chain"
+
+            echo "-- Docker daemon icc setting --"
+            docker info 2>/dev/null | grep -i "icc\|ICC" || echo "icc not shown in docker info"
 
             echo "=== END DIAGNOSTICS ==="
 
