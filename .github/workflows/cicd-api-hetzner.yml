@@ -143,16 +143,17 @@ jobs:
             docker compose -f docker-compose.prod.yml up -d bagile-api
 
             echo "Fixing inter-container networking..."
-            echo "DOCKER-USER chain: $(iptables -L DOCKER-USER 2>&1 | head -3)"
+            sysctl -w net.bridge.bridge-nf-call-iptables=0 2>/dev/null && echo "bridge-nf-call-iptables set to 0" || echo "sysctl not available"
             for NET_ID in $(docker network ls --format '{{.ID}}'); do
               BR="br-${NET_ID}"
               if ip link show "${BR}" > /dev/null 2>&1; then
-                echo "  Fixing bridge: ${BR}"
-                iptables -I DOCKER-USER -i "${BR}" -o "${BR}" -j ACCEPT 2>/dev/null && echo "    DOCKER-USER OK" || echo "    DOCKER-USER failed — trying FORWARD"
-                iptables -I FORWARD -i "${BR}" -o "${BR}" -j ACCEPT 2>/dev/null && echo "    FORWARD OK" || echo "    FORWARD failed"
+                iptables -C DOCKER-USER -i "${BR}" -o "${BR}" -j ACCEPT 2>/dev/null \
+                  || iptables -I DOCKER-USER -i "${BR}" -o "${BR}" -j ACCEPT 2>/dev/null || true
+                iptables -C FORWARD -i "${BR}" -o "${BR}" -j ACCEPT 2>/dev/null \
+                  || iptables -I FORWARD -i "${BR}" -o "${BR}" -j ACCEPT 2>/dev/null || true
               fi
             done
-            echo "FORWARD chain (first 5): $(iptables -L FORWARD --line-numbers 2>&1 | head -8)"
+            echo "bridge-nf-call-iptables: $(cat /proc/sys/net/bridge/bridge-nf-call-iptables 2>/dev/null)"
 
             echo "Cleaning unused images..."
             docker system prune -f
