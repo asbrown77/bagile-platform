@@ -84,6 +84,9 @@ static void ConfigureDatabase(HostApplicationBuilder builder)
 
     builder.Services.AddScoped<IRawPaymentRepository>(sp =>
         new RawPaymentRepository(GetConnectionString(sp)));
+
+    builder.Services.AddSingleton<IServiceConfigRepository>(sp =>
+        new ServiceConfigRepository(GetConnectionString(sp)));
 }
 
 static string GetConnectionString(IServiceProvider sp)
