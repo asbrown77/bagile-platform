@@ -150,14 +150,24 @@ async function findAndCopyLatestCourse(
   //   Pass 1: prefer the trainer's own most-recent course (best template for dates/settings).
   //   Pass 2: fall back to any trainer's course of that type — used the first time a trainer
   //           runs a new course type and has no personal history to copy from.
+  // Exact-name match: the course name in the row must NOT be followed by " -" or " –",
+  // which would indicate a variant (e.g. "Professional Scrum Product Owner - AI Essentials"
+  // must not match when searching for "Professional Scrum Product Owner").
+  const exactName = (rowText: string) => {
+    const idx = rowText.indexOf(fullCourseName);
+    if (idx === -1) return false;
+    const after = rowText.slice(idx + fullCourseName.length).trimStart();
+    return !after.startsWith('-') && !after.startsWith('–');
+  };
+
   const passes: Array<{ label: string; match: (rowText: string) => boolean }> = [
     {
       label: `${fullCourseName} + ${trainerName}`,
-      match: (t) => t.includes(fullCourseName) && t.includes(trainerName),
+      match: (t) => exactName(t) && t.includes(trainerName),
     },
     {
       label: `${fullCourseName} (any trainer)`,
-      match: (t) => t.includes(fullCourseName),
+      match: (t) => exactName(t),
     },
   ];
 
