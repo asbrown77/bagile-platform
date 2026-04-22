@@ -172,13 +172,33 @@ public class CalendarQueries : ICalendarQueries
         // Also resolve aliases so e.g. "APS-SD" maps to its canonical duration.
         var durations = await GetCourseDurationsAsync(conn);
 
-        // Fetch publications for these course schedules
+        // Fetch publications for these course schedules.
+        // Publications may be linked EITHER directly via course_schedule_id (legacy / migrated)
+        // OR indirectly via a planned_course that shares the same WooCommerce product ID
+        // (new planned-courses flow stores only planned_course_id; the ETL later creates
+        // the course_schedules row but does not backfill course_publications).
         var ids = courses.Select(c => c.Id).ToArray();
         var pubs = (await conn.QueryAsync<PublicationRow>(
-            @"SELECT course_schedule_id AS CourseId, gateway,
-                     published_at AS PublishedAt, external_url AS ExternalUrl
-              FROM bagile.course_publications
-              WHERE course_schedule_id = ANY(@ids)",
+            @"SELECT cp.course_schedule_id AS CourseId, cp.gateway,
+                     cp.published_at AS PublishedAt, cp.external_url AS ExternalUrl
+              FROM bagile.course_publications cp
+              WHERE cp.course_schedule_id = ANY(@ids)
+              UNION ALL
+              SELECT cs.id AS CourseId, cp.gateway,
+                     cp.published_at AS PublishedAt, cp.external_url AS ExternalUrl
+              FROM bagile.course_schedules cs
+              JOIN bagile.course_publications cp_ecom
+                  ON cp_ecom.woocommerce_product_id = cs.source_product_id
+                 AND cp_ecom.gateway = 'ecommerce'
+                 AND cp_ecom.planned_course_id IS NOT NULL
+              JOIN bagile.course_publications cp
+                  ON cp.planned_course_id = cp_ecom.planned_course_id
+              WHERE cs.id = ANY(@ids)
+                AND NOT EXISTS (
+                    SELECT 1 FROM bagile.course_publications cp_direct
+                    WHERE cp_direct.course_schedule_id = cs.id
+                      AND cp_direct.gateway = cp.gateway
+                )",
             new { ids })).ToLookup(p => p.CourseId);
 
         return courses.Select(c =>

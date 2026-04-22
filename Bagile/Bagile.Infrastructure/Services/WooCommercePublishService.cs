@@ -346,7 +346,7 @@ public class WooCommercePublishService : IWooCommercePublishService
             ["slug"] = slug,
             ["sku"] = sku,
             ["type"] = "simple",
-            ["status"] = "draft",
+            ["status"] = "publish",
             ["menu_order"] = int.Parse(request.StartDate.ToString("yyyyMMdd")),
             ["catalog_visibility"] = "visible",
             ["description"] = UpdateDescriptionHeading(GetStringProp(root, "description"), productName),
