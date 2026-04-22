@@ -60,6 +60,13 @@ public class CalendarQueries : ICalendarQueries
             WHERE pc.start_date >= @from
               AND pc.start_date <= @to"
             + (trainerId.HasValue ? " AND pc.trainer_id = @trainerId" : "") + @"
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM bagile.course_schedules cs
+                  WHERE cs.start_date = pc.start_date
+                    AND cs.trainer_name = t.name
+                    AND cs.status != 'cancelled'
+              )
             ORDER BY pc.start_date;";
 
         var courses = (await conn.QueryAsync<PlannedCourseRow>(sql,
