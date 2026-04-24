@@ -27,13 +27,24 @@ export function EditAttendeeModal({ attendee, apiKey, onSaved, onClose, isPrivat
 
   async function handleSave() {
     setError("");
+
+    const changes = {
+      email: email !== attendee.email ? email : undefined,
+      firstName: firstName !== attendee.firstName ? firstName : undefined,
+      lastName: lastName !== attendee.lastName ? lastName : undefined,
+      company: company !== (attendee.organisation || "") ? company : undefined,
+    };
+
+    const hasChanges = Object.values(changes).some(v => v !== undefined);
+    if (!hasChanges) {
+      setError("No changes to save — edit a field first, or click Cancel.");
+      return;
+    }
+
     setSaving(true);
     try {
       await updateStudent(apiKey, attendee.studentId, {
-        email: email !== attendee.email ? email : undefined,
-        firstName: firstName !== attendee.firstName ? firstName : undefined,
-        lastName: lastName !== attendee.lastName ? lastName : undefined,
-        company: company !== (attendee.organisation || "") ? company : undefined,
+        ...changes,
         updatedBy: "portal",
         overrideNote: overrideNote.trim() || undefined,
       });
