@@ -64,34 +64,36 @@ namespace Bagile.Infrastructure.Repositories
         /// </summary>
         public async Task<Student?> OverrideAsync(long id, StudentOverride @override, CancellationToken ct = default)
         {
-            // Build the override_fields merge patch so we only flag what was actually changed.
-            // We use jsonb_set to add flags without wiping existing ones.
+            // Build column assignments and accumulate overridden_fields flags into a single
+            // JSON blob — Postgres rejects multiple assignments to the same column in one
+            // UPDATE statement, so we merge all flags into one `overridden_fields = ... ||` clause.
             var updates = new List<string>();
+            var overriddenFlags = new Dictionary<string, bool>();
             var parameters = new DynamicParameters();
             parameters.Add("id", id);
 
             if (@override.Email is not null)
             {
                 updates.Add("email = @email");
-                updates.Add("overridden_fields = overridden_fields || '{\"email\": true}'::jsonb");
+                overriddenFlags["email"] = true;
                 parameters.Add("email", @override.Email);
             }
             if (@override.FirstName is not null)
             {
                 updates.Add("first_name = @firstName");
-                updates.Add("overridden_fields = overridden_fields || '{\"first_name\": true}'::jsonb");
+                overriddenFlags["first_name"] = true;
                 parameters.Add("firstName", @override.FirstName);
             }
             if (@override.LastName is not null)
             {
                 updates.Add("last_name = @lastName");
-                updates.Add("overridden_fields = overridden_fields || '{\"last_name\": true}'::jsonb");
+                overriddenFlags["last_name"] = true;
                 parameters.Add("lastName", @override.LastName);
             }
             if (@override.Company is not null)
             {
                 updates.Add("company = @company");
-                updates.Add("overridden_fields = overridden_fields || '{\"company\": true}'::jsonb");
+                overriddenFlags["company"] = true;
                 parameters.Add("company", @override.Company);
             }
             if (@override.UpdatedBy is not null)
@@ -107,14 +109,16 @@ namespace Bagile.Infrastructure.Repositories
 
             if (updates.Count == 0) return await GetByIdAsync(id);
 
-            // Deduplicate — the jsonb merge expressions above get repeated if multiple fields
-            // are set. Postgres handles duplicate SET clauses by taking the last one,
-            // but we produce distinct jsonb merges so deduplicate by keeping uniques.
-            var distinctUpdates = updates.Distinct().ToList();
+            if (overriddenFlags.Count > 0)
+            {
+                var flagsJson = System.Text.Json.JsonSerializer.Serialize(overriddenFlags);
+                updates.Add("overridden_fields = overridden_fields || @overriddenFlags::jsonb");
+                parameters.Add("overriddenFlags", flagsJson);
+            }
 
             var sql = $@"
             UPDATE bagile.students
-            SET {string.Join(", ", distinctUpdates)},
+            SET {string.Join(", ", updates)},
                 updated_at = NOW()
             WHERE id = @id
             RETURNING id, email, first_name AS FirstName, last_name AS LastName,
