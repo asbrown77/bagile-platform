@@ -13,6 +13,7 @@ public static class TransferEndpoints
         // GET /api/transfers/pending already exists in TransfersController
         app.MapPost("/api/course-schedules/{id}/cancel-with-actions", CancelWithActions);
         app.MapPost("/api/admin/enrolments", AdminInsertEnrolment);
+        app.MapPost("/api/admin/students", AdminUpsertStudent);
     }
 
     private static async Task<IResult> MarkRefund(
@@ -177,6 +178,46 @@ public static class TransferEndpoints
         return Results.Ok(new { enrolmentId = id });
     }
 
+    /// <summary>
+    /// Find-or-create a student by email. Used for credit-note attendees and other
+    /// admin-added cases where no WooCommerce order exists yet, so the ETL would
+    /// not create the row. Returns the student ID either way (existing or new),
+    /// so callers can chain into POST /api/admin/enrolments without a separate
+    /// lookup. Email is the natural key.
+    /// </summary>
+    private static async Task<IResult> AdminUpsertStudent(
+        AdminUpsertStudentRequest body,
+        IConfiguration config)
+    {
+        if (string.IsNullOrWhiteSpace(body.Email))
+            return Results.BadRequest(new { error = "Email is required" });
+
+        var connStr = GetConnStr(config);
+        await using var conn = new NpgsqlConnection(connStr);
+
+        // Try to find existing student first to keep this idempotent.
+        var existingId = await conn.ExecuteScalarAsync<long?>(
+            "SELECT id FROM bagile.students WHERE LOWER(email) = LOWER(@email) LIMIT 1;",
+            new { body.Email });
+
+        if (existingId.HasValue)
+            return Results.Ok(new { studentId = existingId.Value, created = false });
+
+        var newId = await conn.ExecuteScalarAsync<long>(
+            @"INSERT INTO bagile.students (email, first_name, last_name, company)
+              VALUES (@email, @firstName, @lastName, @company)
+              RETURNING id;",
+            new
+            {
+                body.Email,
+                FirstName = body.FirstName ?? "",
+                LastName = body.LastName ?? "",
+                Company = body.Company ?? ""
+            });
+
+        return Results.Ok(new { studentId = newId, created = true });
+    }
+
     private static string GetConnStr(IConfiguration config) =>
         config.GetConnectionString("DefaultConnection")
         ?? config.GetValue<string>("ConnectionStrings:DefaultConnection")
@@ -185,5 +226,6 @@ public static class TransferEndpoints
     private record MarkTransferRequest(string? Reason);
     private record AttendeeAction(long EnrolmentId, string Action); // "refund" or "transfer"
     private record AdminInsertEnrolmentRequest(long StudentId, long? OrderId, long CourseScheduleId);
+    private record AdminUpsertStudentRequest(string Email, string? FirstName, string? LastName, string? Company);
     private record CancelWithActionsRequest(List<AttendeeAction> AttendeeActions);
 }
