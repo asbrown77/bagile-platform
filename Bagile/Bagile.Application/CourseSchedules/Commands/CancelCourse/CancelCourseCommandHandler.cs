@@ -53,6 +53,20 @@ public class CancelCourseCommandHandler
         try
         {
             await _repository.UpdateStatusAsync(request.CourseScheduleId, "cancelled");
+
+            // Flip every active attendee to pending_transfer so they appear on the
+            // /transfers chase list until rebooked or refunded. Without this, a
+            // cancelled course leaves enrolments as 'active' and the attendees fall
+            // off the radar entirely.
+            var marked = await _repository.MarkActiveEnrolmentsAsPendingTransferAsync(
+                request.CourseScheduleId);
+
+            if (marked > 0)
+            {
+                _logger.LogInformation(
+                    "Cancelled course {Id} ({Code}) — {Count} active enrolment(s) marked pending_transfer.",
+                    request.CourseScheduleId, existing.CourseCode, marked);
+            }
         }
         catch (Exception ex)
         {
