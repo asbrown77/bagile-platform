@@ -157,7 +157,10 @@ public class TransferQueries : ITransferQueries
     {
         var sql = @"
             WITH cancelled_enrolments AS (
-                -- Students with a pending_transfer or cancelled enrolment on a cancelled course
+                -- Anyone with a pending_transfer enrolment, regardless of source-course state.
+                -- Includes provider-cancelled courses, attendee-initiated transfers (e.g. bereavement
+                -- on a course already delivered), and past courses where the attendee left early.
+                -- The enrolment status alone is the source of truth for ""needs rebooking"".
                 SELECT DISTINCT
                     e.id AS enrolment_id,
                     e.student_id,
@@ -168,8 +171,7 @@ public class TransferQueries : ITransferQueries
                     cs.last_synced AS cancelled_date
                 FROM bagile.enrolments e
                 JOIN bagile.course_schedules cs ON e.course_schedule_id = cs.id
-                WHERE cs.status = 'cancelled'
-                  AND e.status IN ('pending_transfer', 'cancelled')
+                WHERE e.status = 'pending_transfer'
             ),
             rebooked_students AS (
                 -- Students who already have an active enrolment on the same course type,

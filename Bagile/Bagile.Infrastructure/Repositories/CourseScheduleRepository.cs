@@ -148,6 +148,20 @@ public class CourseScheduleRepository : ICourseScheduleRepository
         await conn.ExecuteAsync(sql, new { scheduleId, status });
     }
 
+    public async Task<int> MarkActiveEnrolmentsAsPendingTransferAsync(long scheduleId)
+    {
+        const string sql = @"
+            UPDATE bagile.enrolments
+            SET status = 'pending_transfer',
+                cancellation_reason = 'provider_cancelled',
+                refund_eligible = true
+            WHERE course_schedule_id = @scheduleId
+              AND status = 'active';";
+
+        await using var conn = new NpgsqlConnection(_connStr);
+        return await conn.ExecuteAsync(sql, new { scheduleId });
+    }
+
     public async Task<long> InsertPrivateCourseAsync(CourseSchedule schedule)
     {
         const string sql = @"

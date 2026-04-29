@@ -146,4 +146,88 @@ public class CourseSchedulesApiTests : IntegrationTestBase
         // Assert
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.NotFound);
     }
+
+    [Test]
+    public async Task POST_CancelSchedule_Should_Mark_Active_Enrolments_As_PendingTransfer()
+    {
+        // Arrange — course with two active enrolments and one already-transferred one
+        var scheduleId = await _db.ExecuteScalarAsync<long>(@"
+            INSERT INTO bagile.course_schedules (name, sku, status, start_date, is_public)
+            VALUES ('PSPO-AI - Cancel test', 'PSPOAI-CANCELTEST-CB', 'publish', '2026-06-01', true)
+            RETURNING id;
+        ");
+
+        var studentA = await _db.ExecuteScalarAsync<long>(@"
+            INSERT INTO bagile.students (email, first_name, last_name)
+            VALUES ('cancel-a@test.com', 'Active', 'A')
+            RETURNING id;
+        ");
+        var studentB = await _db.ExecuteScalarAsync<long>(@"
+            INSERT INTO bagile.students (email, first_name, last_name)
+            VALUES ('cancel-b@test.com', 'Active', 'B')
+            RETURNING id;
+        ");
+        var studentC = await _db.ExecuteScalarAsync<long>(@"
+            INSERT INTO bagile.students (email, first_name, last_name)
+            VALUES ('cancel-c@test.com', 'Already', 'Transferred')
+            RETURNING id;
+        ");
+
+        var orderId = await _db.ExecuteScalarAsync<long>(@"
+            INSERT INTO bagile.orders (external_id, source, type, status, total_amount, order_date)
+            VALUES ('ORD-CANCELTEST', 'woo', 'public', 'completed', 1650, NOW())
+            RETURNING id;
+        ");
+
+        await _db.ExecuteAsync(@"
+            INSERT INTO bagile.enrolments (student_id, order_id, course_schedule_id, status)
+            VALUES (@studentA, @orderId, @scheduleId, 'active'),
+                   (@studentB, @orderId, @scheduleId, 'active'),
+                   (@studentC, @orderId, @scheduleId, 'transferred');
+        ", new { studentA, studentB, studentC, orderId, scheduleId });
+
+        // Act
+        var response = await _client.PostAsJsonAsync(
+            $"/api/course-schedules/{scheduleId}/cancel",
+            new { reason = "force_majeure_test" });
+
+        // Assert — endpoint succeeded
+        response.EnsureSuccessStatusCode();
+
+        // Course flipped to cancelled
+        var courseStatus = await _db.ExecuteScalarAsync<string>(
+            "SELECT status FROM bagile.course_schedules WHERE id = @scheduleId;",
+            new { scheduleId });
+        courseStatus.Should().Be("cancelled");
+
+        // Both active enrolments are now pending_transfer with provider_cancelled reason
+        var enrolmentRows = (await _db.QueryAsync<(long student_id, string status, string? cancellation_reason, bool? refund_eligible)>(
+            @"SELECT student_id, status, cancellation_reason, refund_eligible
+              FROM bagile.enrolments
+              WHERE course_schedule_id = @scheduleId
+              ORDER BY student_id;",
+            new { scheduleId })).ToList();
+
+        enrolmentRows.Should().HaveCount(3);
+
+        var rowA = enrolmentRows.Single(r => r.student_id == studentA);
+        rowA.status.Should().Be("pending_transfer");
+        rowA.cancellation_reason.Should().Be("provider_cancelled");
+        rowA.refund_eligible.Should().BeTrue();
+
+        var rowB = enrolmentRows.Single(r => r.student_id == studentB);
+        rowB.status.Should().Be("pending_transfer");
+
+        // Already-transferred enrolment must NOT be touched
+        var rowC = enrolmentRows.Single(r => r.student_id == studentC);
+        rowC.status.Should().Be("transferred");
+
+        // And the pending ones now appear on /transfers
+        var pendingResponse = await _client.GetAsync("/api/transfers/pending");
+        pendingResponse.EnsureSuccessStatusCode();
+        var pending = await pendingResponse.Content.ReadFromJsonAsync<IEnumerable<Bagile.Application.Transfers.DTOs.PendingTransferDto>>();
+        pending.Should().Contain(p => p.StudentId == studentA);
+        pending.Should().Contain(p => p.StudentId == studentB);
+        pending.Should().NotContain(p => p.StudentId == studentC);
+    }
 }

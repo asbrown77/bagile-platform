@@ -11,6 +11,13 @@ namespace Bagile.Domain.Repositories
         Task<IEnumerable<CourseSchedule>> GetAllAsync();
         Task<long> UpsertFromWooPayloadAsync(long productId, string? courseName, string? sku, DateTime? startDate, DateTime? endDate, decimal? price, string? currency);
         Task UpdateStatusAsync(long scheduleId, string status);
+
+        /// <summary>
+        /// When a course is cancelled, every active enrolment must be flipped to
+        /// pending_transfer so the attendee surfaces on the /transfers chase list
+        /// until they are rebooked or refunded. Returns number of rows affected.
+        /// </summary>
+        Task<int> MarkActiveEnrolmentsAsPendingTransferAsync(long scheduleId);
         Task<long> InsertPrivateCourseAsync(CourseSchedule schedule);
         Task<bool> ExistsBySkuAsync(string sku);
         Task UpdatePrivateCourseAsync(long id, UpdatePrivateCourseFields fields);

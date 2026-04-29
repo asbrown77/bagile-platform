@@ -151,8 +151,11 @@ public class CalendarQueries : ICalendarQueries
                    cs.source_product_url          AS SourceProductUrl,
                    COUNT(e.id)::int               AS EnrolmentCount
             FROM bagile.course_schedules cs
+            -- Count only ACTIVE enrolments. Anyone in pending_transfer, transferred,
+            -- refunded or cancelled has effectively left the course; counting them
+            -- would inflate the calendar capacity number relative to the detail page.
             LEFT JOIN bagile.enrolments e ON e.course_schedule_id = cs.id
-                AND e.status NOT IN ('cancelled', 'transferred')
+                AND e.status = 'active'
             WHERE cs.start_date IS NOT NULL
               AND cs.start_date >= @from
               AND cs.start_date <= @to"
