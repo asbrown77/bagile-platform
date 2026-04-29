@@ -2,10 +2,9 @@
 --
 -- Updates the V39 thin seeded PSM template to match what trainers have been
 -- sending manually from Gmail (preserving Alex's voice and section structure)
--- with three high-value additions:
---   1. Mikhail Lapshin's free PSM I mocks (community gold standard)
---   2. PSM II 40% assessment discount mention (path to PSM-A)
---   3. Scrum.org profile My Classes association point (records attendance
+-- with two high-value additions:
+--   1. PSM II 40% assessment discount mention (path to PSM-A)
+--   2. Scrum.org profile My Classes association point (records attendance
 --      regardless of pass/fail)
 --
 -- Also corrects two issues from V39:
@@ -61,7 +60,6 @@ SET subject_template = 'PSM Training Follow-Up: Next Steps & Resources to Help Y
   <li>Read the <a href="https://www.scrum.org/resources/scrum-guide">Scrum Guide</a> thoroughly. Make sure you know the accountabilities, artifacts and their commitments, and the events.</li>
   <li>Take the <a href="https://www.scrum.org/open-assessments/scrum-open">Scrum Open Assessment</a> for practice. Aim to score 100% three times in a row before sitting PSM I.</li>
   <li>Take the <a href="https://www.scrum.org/open-assessments/product-owner-open">Product Owner Open Assessment</a> for broader Scrum perspective.</li>
-  <li>Try <a href="https://mlapshin.com/index.php/scrum-quizzes/">Mikhail Lapshin&rsquo;s free PSM I mocks</a>. Community gold standard, harder than the Scrum Open and great for stretching yourself.</li>
 </ul>
 
 <h3>&#128161; Helpful Resources</h3>
