@@ -49,7 +49,7 @@ public class CourseScheduleQueries : ICourseScheduleQueries
                 END AS NeedsAttention,
                 org.name AS ClientOrganisationName
             FROM bagile.course_schedules cs
-            LEFT JOIN bagile.enrolments e ON e.course_schedule_id = cs.id AND e.status NOT IN ('cancelled', 'transferred')
+            LEFT JOIN bagile.enrolments e ON e.course_schedule_id = cs.id AND e.status = 'active'
             LEFT JOIN bagile.organisations org ON org.id = cs.client_organisation_id
             WHERE 1=1
             " + (from != null ? " AND cs.start_date >= @from" : "") + @"
@@ -153,7 +153,7 @@ public class CourseScheduleQueries : ICourseScheduleQueries
                 END AS NeedsAttention
             FROM bagile.course_schedules cs
             LEFT JOIN bagile.organisations org ON org.id = cs.client_organisation_id
-            LEFT JOIN bagile.enrolments e ON e.course_schedule_id = cs.id AND e.status NOT IN ('cancelled', 'transferred')
+            LEFT JOIN bagile.enrolments e ON e.course_schedule_id = cs.id AND e.status = 'active'
             WHERE cs.id = @scheduleId
             GROUP BY cs.id, cs.sku, cs.name, cs.start_date, cs.end_date, cs.format_type,
                      cs.is_public, cs.status, cs.capacity, cs.price, cs.trainer_name,
@@ -182,7 +182,7 @@ public class CourseScheduleQueries : ICourseScheduleQueries
                 cs.status AS Status,
                 COUNT(e.id) AS CurrentEnrolmentCount
             FROM bagile.course_schedules cs
-            LEFT JOIN bagile.enrolments e ON e.course_schedule_id = cs.id AND e.status NOT IN ('cancelled', 'transferred')
+            LEFT JOIN bagile.enrolments e ON e.course_schedule_id = cs.id AND e.status = 'active'
             WHERE cs.start_date >= CURRENT_DATE - INTERVAL '2 days'
               AND cs.start_date <= CURRENT_DATE + @daysAhead * INTERVAL '1 day'
               AND cs.is_public = true
@@ -258,7 +258,7 @@ public class CourseScheduleQueries : ICourseScheduleQueries
                 END AS ConflictType
             FROM bagile.course_schedules cs
             LEFT JOIN bagile.enrolments e ON e.course_schedule_id = cs.id
-                AND e.status NOT IN ('cancelled', 'transferred')
+                AND e.status = 'active'
             WHERE cs.status NOT IN ('cancelled', 'completed')
               AND cs.start_date <= @endDate
               AND COALESCE(cs.end_date, cs.start_date) >= @startDate
