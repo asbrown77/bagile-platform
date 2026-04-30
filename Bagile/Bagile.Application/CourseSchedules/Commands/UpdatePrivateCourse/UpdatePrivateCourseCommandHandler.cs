@@ -23,11 +23,10 @@ public class UpdatePrivateCourseCommandHandler
         UpdatePrivateCourseCommand request,
         CancellationToken ct)
     {
-        // Use InvoiceReference as the new SKU when course type has changed.
-        // InvoiceReference follows the ORG-TYPE-DATE convention and is the canonical
-        // identifier for portal-created courses.
-        var newSku = !string.IsNullOrWhiteSpace(request.InvoiceReference)
-            ? request.InvoiceReference.Trim().ToUpperInvariant()
+        // CourseCode drives the SKU when explicitly provided; InvoiceReference is the
+        // Xero invoice number and must not overwrite the course's canonical SKU.
+        var newSku = !string.IsNullOrWhiteSpace(request.CourseCode)
+            ? request.CourseCode.Trim().ToUpperInvariant()
             : null;
 
         var fields = new UpdatePrivateCourseFields(
