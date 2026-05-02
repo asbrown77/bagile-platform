@@ -7,6 +7,12 @@ services:
       - "8080:8080"
     env_file:
       - config/api.env
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/localhost/8080' || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     networks:
       - default
       - shared
